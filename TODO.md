@@ -1,10 +1,10 @@
 - [ ] Connect Supabase auth, tables, and realtime queue
 - [ ] Verify Google voice end-to-end in browser with a real key
 - [ ] Clinician-review Gemini conclusions on real transcripts
-- [ ] Wave 1: CSS expert refactors styling app-wide, rewrites DESIGN.md styling scope
+- [x] Wave 1: CSS expert refactors styling app-wide, rewrites DESIGN.md styling scope
 - [x] Wave 1: Architect writes docs/AGENT-EXPERIENCE.md (voice-first Mira, questionnaire, safety, migration)
 - [x] Wave 1: UX expert writes docs/UX-FINDINGS.md (flows, both apps, 3 breakpoints)
-- [ ] Wave 2: QA agent writes docs/QA-FINDINGS.md (functional + UI + UX, every page)
+- [x] Wave 2: QA agent writes docs/QA-FINDINGS.md (functional + UI + UX, every page)
 - [x] Wave 2: Data architect writes docs/DATA-MODEL.md (JSON models, API spec, bucket plan) for review
 - [ ] Wave 3: Developer works the combined UX + QA finding queue in severity order
 - [ ] Wave 3: Commit everything once all agents are done
@@ -28,3 +28,5 @@
 - [ ] P1: one completed consult creates two identical pending_review cases (UX-01)
 - [ ] P1: doctor approve/decline does not survive reload; ClinicProvider persists only `mine` cases (UX-02)
 - [ ] P1: patient can never re-read their own prescription — /patient/recommendation is empty on reload, History drops items/dosage (UX-03, UX-04)
+- [ ] Backend: Supabase implementation of DATA-MODEL §4 in src/backend — migrations, RLS policies, pg functions, Edge Functions, buckets (local artifacts only, nothing deployed)
+- [ ] Wire apps/web to the src/backend API (replaces localStorage store) — separate task, after QA fixes land

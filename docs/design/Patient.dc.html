@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#414FA0">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#414FA0"/>
+    <defs>
+      <radialGradient id="orb" cx="42%" cy="38%" r="65%">
+        <stop offset="0%" stop-color="#EAF3FF"/>
+        <stop offset="55%" stop-color="#8FA8E6"/>
+        <stop offset="100%" stop-color="#6E5FD0"/>
+      </radialGradient>
+    </defs>
+    <circle cx="600" cy="360" r="150" fill="url(#orb)"/>
+    <circle cx="600" cy="360" r="185" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="4"/>
+    <text x="600" y="600" font-family="'Plus Jakarta Sans',sans-serif" font-size="60" font-weight="700" fill="#FFFFFF" text-anchor="middle">Virtual Doctor</text>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:linear-gradient(180deg,#C9C0EE 0%,#BCB2E9 100%);font-family:"Plus Jakarta Sans",system-ui,sans-serif;min-height:100vh}
+*{box-sizing:border-box}
+.vd-scroll::-webkit-scrollbar{width:0;height:0}
+.vd-scroll{scrollbar-width:none;-ms-overflow-style:none}
+@keyframes vd-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes vd-ring{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.55);opacity:0}}
+@keyframes vd-bar{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+@keyframes vd-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes vd-spin-r{from{transform:rotate(360deg)}to{transform:rotate(0)}}
+@keyframes vd-drift{0%,100%{transform:translate(-8%,-6%) scale(1)}50%{transform:translate(8%,6%) scale(1.15)}}
+@keyframes vd-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes vd-dot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes vd-listen{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
+@keyframes vd-think{0%,100%{transform:scale(.97) rotate(-1deg)}50%{transform:scale(1.01) rotate(1deg)}}
+@keyframes vd-speak{0%,100%{transform:scale(1.02)}25%{transform:scale(1.06)}50%{transform:scale(1.0)}75%{transform:scale(1.07)}}
+@keyframes vd-slidein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div data-om-label="AppsCanvas" style="min-height: 100vh; display: flex; flex-direction: row; align-items: flex-start; justify-content: center; flex-wrap: wrap; padding: 40px 40px 60px; gap: 56px; background: linear-gradient(180deg, #cccccc, #28211a)">
+
+  <!-- ==================== APP 1: PATIENT ==================== -->
+  <div data-om-label="PatientApp" style="display:flex;flex-direction:column;align-items:center;gap:18px">
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px" style="width:402px;height:874px;flex:none">
+    <div style="position: relative; height: 100%; width: 100%; overflow: hidden; background: linear-gradient(180deg,#CDB6EC 0%,#D3C2EC 38%,#D8D0EA 72%,#D5D2E4 100%); font-family: 'Plus Jakarta Sans',sans-serif">
+      
+      
+      
+      
+
+      <!-- ============ LOGIN ============ -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div data-om-label="LoginScreen" data-screen-label="Patient · Login" style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:66px 26px 40px;text-align:center">
+        <div style="height:38px;flex:none"></div>
+        <div data-om-label="LoginHero" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;min-height:0">
+        <div data-om-label="LoginOrbWrapper" style="position:relative;width:152px;height:162px;display:flex;align-items:flex-start;justify-content:center">
+          <div style="position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);width:116px;height:20px;border-radius:50%;background:radial-gradient(ellipse,rgba(90,70,170,.4),transparent 70%);filter:blur(4px)"></div>
+          <div style="position:absolute;inset:0 7px 24px 7px;border-radius:50%;border:1.5px solid rgba(120,95,225,.45);animation:vd-ring 2.8s ease-out infinite"></div>
+          <div data-om-label="LoginOrbCircle" style="position:relative;width:138px;height:138px;border-radius:50%;overflow:hidden;background:#F4FAFF;box-shadow:0 24px 48px oklch(0.35 0.15 270 / .55),0 0 42px rgba(255,255,255,.6),inset 0 0 0 1px rgba(255,255,255,.85);animation:vd-pulse 3.6s ease-in-out infinite">
+            <svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><defs><clipPath id="orbClip1"><circle cx="50" cy="50" r="50"></circle></clipPath><filter id="orbBlur1" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"></feGaussianBlur></filter><radialGradient id="orbHighlight1" cx="33%" cy="22%" r="45%"><stop offset="0%" stop-color="#fff" stop-opacity="0.9"></stop><stop offset="100%" stop-color="#fff" stop-opacity="0"></stop></radialGradient><radialGradient id="orbShadow1" cx="50%" cy="88%" r="55%"><stop offset="0%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0.45"></stop><stop offset="100%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0"></stop></radialGradient></defs><circle cx="50" cy="50" r="50" fill="#F4FAFF"></circle><g clip-path="url(#orbClip1)"><g filter="url(#orbBlur1)"><g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="9s" repeatCount="indefinite"></animateTransform><circle cx="27" cy="20" r="27" fill="oklch(0.70 0.19 232)"></circle><circle cx="80" cy="85" r="25" fill="oklch(0.68 0.21 335)"></circle></g><g><animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="13s" repeatCount="indefinite"></animateTransform><circle cx="85" cy="38" r="24" fill="oklch(0.77 0.19 188)"></circle><circle cx="20" cy="78" r="20" fill="oklch(0.72 0.21 8)"></circle></g></g><circle cx="50" cy="50" r="50" fill="url(#orbShadow1)"></circle><circle cx="50" cy="50" r="50" fill="url(#orbHighlight1)"></circle></g></svg>
+          </div>
+        </div>
+        <div data-om-label="LoginCopy">
+          <div style="font-size:34px;font-weight:700;color:#241B45">Virtual Doctor</div>
+          <div style="font-size:17px;line-height:1.55;color:#6B6790;margin-top:12px;max-width:280px">A calm, private doctor’s visit — whenever you need one. Speak naturally, get clear next steps.</div>
+        </div>
+        </div>
+        <div onClick="{{ loginGoogle }}" style="cursor:pointer;width:100%;height:56px;border-radius:28px;background:linear-gradient(158deg,oklch(0.72 0.12 300),oklch(0.58 0.17 292));display:flex;align-items:center;justify-content:center;gap:11px;font-size:17px;font-weight:600;color:#fff;box-shadow:0 12px 26px oklch(0.55 0.19 295 / .5),inset 0 1.5px 1px rgba(255,255,255,.4)">
+          <span style="width:28px;height:28px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none">
+          <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6.1C12.2 13.2 17.6 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 6.9l7.1 5.5c4.1-3.8 6.5-9.4 6.5-16z"></path><path fill="#FBBC05" d="M10.3 28.4c-.5-1.4-.7-2.9-.7-4.4s.3-3 .7-4.4l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.5 10.5l7.8-6.1z"></path><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.5l-7.1-5.5c-2 1.3-4.6 2.1-8.2 2.1-6.4 0-11.8-3.7-13.7-9.9l-7.8 6.1C6.4 42.6 14.6 48 24 48z"></path></svg>
+          </span>
+          Continue with Google
+        </div>
+        <div style="font-size:12px;color:#8480A5;margin-top:16px;line-height:1.5">One tap. New here? We create your account automatically.</div>
+      </div>
+      </sc-if>
+
+      <!-- ============ HOME ============ -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ false }}">
+      <div data-om-label="HomeScreen" data-screen-label="Patient · Home" style="position:relative;height:100%;display:flex;flex-direction:column;padding:66px 26px 118px">
+        <div data-om-label="HomeHero" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center">
+          <div data-om-label="HomeOrbWrapper" style="position:relative;width:152px;height:162px;display:flex;align-items:flex-start;justify-content:center">
+            <div style="position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);width:116px;height:20px;border-radius:50%;background:radial-gradient(ellipse,rgba(90,70,170,.4),transparent 70%);filter:blur(4px)"></div>
+            <div style="position:absolute;inset:0 7px 24px 7px;border-radius:50%;border:1.5px solid rgba(120,95,225,.45);animation:vd-ring 2.8s ease-out infinite"></div>
+            <div data-om-label="HomeOrbCircle" style="position:relative;width:138px;height:138px;border-radius:50%;overflow:hidden;background:#F4FAFF;box-shadow:0 24px 48px oklch(0.35 0.15 270 / .55),0 0 42px rgba(255,255,255,.6),inset 0 0 0 1px rgba(255,255,255,.85);animation:vd-pulse 3.6s ease-in-out infinite">
+              <svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><defs><clipPath id="orbClip2"><circle cx="50" cy="50" r="50"></circle></clipPath><filter id="orbBlur2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"></feGaussianBlur></filter><radialGradient id="orbHighlight2" cx="33%" cy="22%" r="45%"><stop offset="0%" stop-color="#fff" stop-opacity="0.9"></stop><stop offset="100%" stop-color="#fff" stop-opacity="0"></stop></radialGradient><radialGradient id="orbShadow2" cx="50%" cy="88%" r="55%"><stop offset="0%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0.45"></stop><stop offset="100%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0"></stop></radialGradient></defs><circle cx="50" cy="50" r="50" fill="#F4FAFF"></circle><g clip-path="url(#orbClip2)"><g filter="url(#orbBlur2)"><g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="9s" repeatCount="indefinite"></animateTransform><circle cx="27" cy="20" r="27" fill="oklch(0.70 0.19 232)"></circle><circle cx="80" cy="85" r="25" fill="oklch(0.68 0.21 335)"></circle></g><g><animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="13s" repeatCount="indefinite"></animateTransform><circle cx="85" cy="38" r="24" fill="oklch(0.77 0.19 188)"></circle><circle cx="20" cy="78" r="20" fill="oklch(0.72 0.21 8)"></circle></g></g><circle cx="50" cy="50" r="50" fill="url(#orbShadow2)"></circle><circle cx="50" cy="50" r="50" fill="url(#orbHighlight2)"></circle></g></svg>
+            </div>
+          </div>
+          <div data-om-label="HomeCopy">
+            <div style="font-size:28px;font-weight:700;color:#241B45">Hi Alex 👋</div>
+            <div style="font-size:17px;line-height:1.55;color:#6B6790;margin-top:8px;max-width:270px">Dr. Mira is ready whenever you are. Start a consult and just talk — no forms.</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CONSULT (independent child component) ============ -->
+      <sc-if value="{{ isConsult }}" hint-placeholder-val="{{ true }}">
+      <dc-import name="Assistant" embedded="true" on-complete="{{ onConsultComplete }}" on-end="{{ onConsultEnd }}" style="position: absolute; inset: 0; width: 100%; height: 100%" hint-size="100%,100%" mode="patient"></dc-import>
+      </sc-if>
+
+      <!-- ============ RECOMMENDATION ============ -->
+      <sc-if value="{{ isRec }}" hint-placeholder-val="{{ false }}">
+      <div data-om-label="RecommendationScreen" data-screen-label="Patient · Recommendation" class="vd-scroll" style="position:relative;height:100%;overflow-y:auto;padding:66px 22px 34px">
+        <div onClick="{{ backToConsult }}" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;margin-bottom:20px;background:#F0ECFB;backdrop-filter:blur(14px);border-radius:12px;font-size:13px;font-weight:600;color:#3D3568">‹ Back</div>
+
+        <div data-om-label="RecIntroGroup" style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:18px">
+          <div data-om-label="RecOrbWrapper" style="position:relative;width:76px;height:82px;display:flex;align-items:flex-start;justify-content:center">
+            <div style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:58px;height:12px;border-radius:50%;background:radial-gradient(ellipse,rgba(90,70,170,.4),transparent 70%);filter:blur(3px)"></div>
+            <div style="position:absolute;inset:0 3px 12px 3px;border-radius:50%;border:1.5px solid rgba(120,95,225,.45);animation:vd-ring 2.8s ease-out infinite"></div>
+            <div data-om-label="RecOrbCircle" style="position:relative;width:70px;height:70px;border-radius:50%;overflow:hidden;background:#F4FAFF;box-shadow:0 14px 30px oklch(0.35 0.15 270 / .5),0 0 30px rgba(255,255,255,.6),inset 0 0 0 1px rgba(255,255,255,.85);animation:vd-pulse 3.6s ease-in-out infinite">
+              <svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block"><defs><clipPath id="orbClip3"><circle cx="50" cy="50" r="50"></circle></clipPath><filter id="orbBlur3" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"></feGaussianBlur></filter><radialGradient id="orbHighlight3" cx="33%" cy="22%" r="45%"><stop offset="0%" stop-color="#fff" stop-opacity="0.9"></stop><stop offset="100%" stop-color="#fff" stop-opacity="0"></stop></radialGradient><radialGradient id="orbShadow3" cx="50%" cy="88%" r="55%"><stop offset="0%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0.45"></stop><stop offset="100%" stop-color="oklch(0.4 0.13 275)" stop-opacity="0"></stop></radialGradient></defs><circle cx="50" cy="50" r="50" fill="#F4FAFF"></circle><g clip-path="url(#orbClip3)"><g filter="url(#orbBlur3)"><g><animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="9s" repeatCount="indefinite"></animateTransform><circle cx="27" cy="20" r="27" fill="oklch(0.70 0.19 232)"></circle><circle cx="80" cy="85" r="25" fill="oklch(0.68 0.21 335)"></circle></g><g><animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="13s" repeatCount="indefinite"></animateTransform><circle cx="85" cy="38" r="24" fill="oklch(0.77 0.19 188)"></circle><circle cx="20" cy="78" r="20" fill="oklch(0.72 0.21 8)"></circle></g></g><circle cx="50" cy="50" r="50" fill="url(#orbShadow3)"></circle><circle cx="50" cy="50" r="50" fill="url(#orbHighlight3)"></circle></g></svg>
+            </div>
+          </div>
+          <div style="font-size:17px;font-weight:600;line-height:1.4;color:#3A3266;text-align:center;max-width:290px">{{ recHeadline }}</div>
+        </div>
+
+        <div data-om-label="PlanCard" style="background:#fff;border-radius:14px;padding:20px;box-shadow:none">
+          <div data-om-label="PlanBadgeRow" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <div style="{{ rec.badgeStyle }}">{{ rec.typeLabel }}</div>
+            <div style="{{ rec.urgencyStyle }}">{{ rec.urgencyLabel }}</div>
+          </div>
+          <sc-for list="{{ rec.items }}" as="it" hint-placeholder-count="2">
+            <div data-om-label="PlanItemCard" style="border:1px solid rgba(30,50,90,.1);border-radius:14px;padding:14px 15px;margin-bottom:10px">
+              <div style="font-size:17px;font-weight:700;color:#241B45">{{ it.name }}</div>
+              <div data-om-label="PlanItemMetaRow" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+                <sc-if value="{{ it.hasDosage }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1 1 120px;background:#F4F1FC;border-radius:12px;padding:9px 11px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8493AC">Dosage</div><div style="font-size:17px;font-weight:600;color:#241B45;margin-top:2px">{{ it.dosage }}</div></div>
+                </sc-if>
+                <sc-if value="{{ it.hasTiming }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1 1 120px;background:#F4F1FC;border-radius:12px;padding:9px 11px"><div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8493AC">Timing</div><div style="font-size:17px;font-weight:600;color:#241B45;margin-top:2px">{{ it.timing }}</div></div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ it.hasNotes }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:7px;align-items:baseline;margin-top:10px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#B9526B;flex:none">Note</span><span style="font-size:13px;line-height:1.45;color:#6B7A92">{{ it.notes }}</span></div>
+              </sc-if>
+              <sc-if value="{{ it.hasWhy }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:7px;align-items:baseline;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(30,50,90,.12)"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5F6FD6;flex:none">Why</span><span style="font-size:13px;line-height:1.45;color:#5A6B82">{{ it.why }}</span></div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <sc-if value="{{ rec.hasAdvice }}" hint-placeholder-val="{{ false }}">
+            <div data-om-label="SeekHelpBox" style="background:oklch(0.7 0.13 200 / .12);border-radius:14px;padding:12px 15px;margin-top:4px">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.45 0.12 220);margin-bottom:5px">When to seek help</div>
+              <div style="font-size:13px;line-height:1.5;color:#3A4E6E">{{ rec.advice }}</div>
+            </div>
+          </sc-if>
+          <div data-om-label="SafetyCheckRow" style="display:flex;align-items:center;gap:9px;background:oklch(0.72 0.13 160 / .12);border-radius:14px;padding:11px 14px;margin-top:10px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex:none"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z" stroke="oklch(0.45 0.13 160)" stroke-width="1.8" stroke-linejoin="round"></path><path d="M9 11.5l2 2 4-4" stroke="oklch(0.45 0.13 160)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <div style="font-size:12px;line-height:1.45;color:oklch(0.4 0.12 160);font-weight:600">Safety checks done — your Penicillin allergy was respected and drug interactions were reviewed.</div>
+          </div>
+        </div>
+
+        <!-- reviewer thread -->
+        <div data-om-label="ReviewerThreadCard" style="background:#F4F1FC;backdrop-filter:blur(10px);border:1px solid rgba(90,70,180,.14);border-radius:14px;padding:15px 16px;margin-top:16px">
+          <div data-om-label="ReviewerIdentityRow" style="display:flex;align-items:center;gap:11px">
+            <div style="position:relative;width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#3E6FD6,#7B4DE0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:700;flex:none">SW<div style="{{ reviewerDotStyle }}"></div></div>
+            <div data-om-label="ReviewerInfoStack" style="flex:1">
+              <div style="font-size:17px;font-weight:700;color:#241B45">Dr. Sara Whitfield, MD</div>
+              <div style="font-size:12px;color:#8480A5;margin-top:1px">General Physician · GMC-483920</div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#6B6790;margin-top:10px;line-height:1.45"><span style="font-weight:700">{{ statusTitle }}</span> — {{ statusSub }}</div>
+        </div>
+
+        <!-- what happens next timeline -->
+        <div data-om-label="NextStepsTimeline" style="background:#F4F1FC;border-radius:14px;padding:16px;margin-top:12px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8480A5;margin-bottom:12px">What happens next</div>
+          <sc-for list="{{ timeline }}" as="step" hint-placeholder-count="4">
+            <div data-om-label="TimelineStepRow" style="display:flex;gap:11px;padding-bottom:12px">
+              <div style="{{ step.dotStyle }}"></div>
+              <div><div style="{{ step.titleStyle }}">{{ step.t }}</div><div style="font-size:12px;color:#8480A5;margin-top:1px">{{ step.d }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div data-om-label="RecActionsRow" style="display:flex;gap:10px;margin-top:16px">
+          <div onClick="{{ askFollowUp }}" style="cursor:pointer;flex:1;height:52px;border-radius:14px;background:#F0ECFB;backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:600;color:#3D3568;box-shadow:0 6px 16px rgba(90,70,170,.2)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="6" height="11" rx="3" stroke="#3D3568" stroke-width="1.8"></rect><path d="M4 10v1a6 6 0 0012 0v-1" stroke="#3D3568" stroke-width="1.8" stroke-linecap="round"></path></svg>Ask a follow-up</div>
+          <sc-if value="{{ showOrder }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ orderMeds }}" style="cursor:pointer;flex:1.2;height:52px;border-radius:14px;background:linear-gradient(135deg,oklch(0.69 0.15 287),oklch(0.54 0.19 290));display:flex;align-items:center;justify-content:center;gap:8px;font-size:17px;font-weight:700;color:#fff;box-shadow:0 8px 22px oklch(0.42 0.2 290 / .5)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16l-1.4 10.3a2 2 0 01-2 1.7H7.4a2 2 0 01-2-1.7L4 7zM8 7V5a4 4 0 018 0v2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{ orderLabel }}</div>
+          </sc-if>
+        </div>
+        <div onClick="{{ shareCaregiver }}" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:46px;border-radius:14px;margin-top:10px;background:#F4F1FC;font-size:17px;font-weight:600;color:#fff">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7" stroke="#fff" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 15V3m0 0L8 7m4-4l4 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{ caregiverLabel }}</div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PROFILE ============ -->
+      <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div data-om-label="ProfileScreen" data-screen-label="Patient · Records" class="vd-scroll" style="position:relative;height:100%;overflow-y:auto;padding:66px 20px 118px">
+        <!-- HISTORY TAB -->
+        <sc-if value="{{ recIsHistory }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:22px;font-weight:700;color:#241B45;margin:2px 4px 4px">Consultation history</div>
+          <div style="font-size:13px;color:#6B6790;margin:0 4px 16px">Your past visits with Dr. Mira · tap to view details</div>
+          <sc-for list="{{ consultsView }}" as="c" hint-placeholder-count="4">
+            <div style="background:#fff;border-radius:14px;margin-bottom:10px;box-shadow:none;overflow:hidden">
+              <div onClick="{{ c.onToggle }}" style="cursor:pointer;padding:15px 16px;-webkit-tap-highlight-color:transparent">
+                <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:17px;font-weight:700;color:#241B45">{{ c.title }}</div><div style="{{ c.tagStyle }}">{{ c.status }}</div></div>
+                <div style="font-size:13px;color:#8493AC;margin-top:3px">{{ c.date }} · Dr. Mira</div>
+                <div style="font-size:13px;color:#5A6B82;margin-top:8px;line-height:1.5">{{ c.note }}</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:11px;font-size:12px;font-weight:700;color:oklch(0.56 0.19 290)">{{ c.toggleLabel }}<span style="{{ c.chevronStyle }}">›</span></div>
+              </div>
+              <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:0 16px 16px;animation:vd-fade .25s ease both">
+                  <div style="background:#F4F1FC;border-radius:12px;padding:12px 13px">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8493AC;margin-bottom:6px">AI consultation summary</div>
+                    <div style="font-size:13px;line-height:1.6;color:#3A4E6E">{{ c.summary }}</div>
+                  </div>
+                  <div style="background:oklch(0.62 0.2 290 / .08);border-radius:12px;padding:12px 13px;margin-top:10px">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5F6FD6;margin-bottom:6px">Evaluation</div>
+                    <div style="font-size:17px;line-height:1.45;font-weight:600;color:#4A3E86">{{ c.evaluation }}</div>
+                  </div>
+                  <div style="background:#F4F1FC;border-radius:12px;padding:13px 14px;margin-top:10px">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8493AC;margin-bottom:10px">Next steps</div>
+                    <sc-if value="{{ c.hasTests }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-bottom:10px">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 3v6l-4.5 8A2 2 0 006.3 20h11.4a2 2 0 001.8-3L15 9V3" stroke="#3E86C4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 3h6" stroke="#3E86C4" stroke-width="1.7" stroke-linecap="round"></path></svg><span style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#3E86C4">Tests</span></div>
+                        <sc-for list="{{ c.tests }}" as="it" hint-placeholder-count="1">
+                          <div style="background:#fff;border-radius:12px;padding:8px 11px;margin-bottom:6px"><div style="font-size:13px;font-weight:700;color:#241B45">{{ it.name }}</div><div style="font-size:11px;color:#6B7A92;margin-top:1px;line-height:1.4">{{ it.detail }}</div></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ c.hasRx }}" hint-placeholder-val="{{ false }}">
+                      <div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 3h5a4 4 0 010 8H6V3zM6 11l8 10" stroke="#8B4FD6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8B4FD6">Prescription</span></div>
+                        <sc-for list="{{ c.rx }}" as="it" hint-placeholder-count="1">
+                          <div style="background:#fff;border-radius:12px;padding:8px 11px;margin-bottom:6px"><div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#241B45">{{ it.name }}</span><span style="font-size:11px;font-weight:700;color:#8B4FD6">{{ it.dosage }}</span></div><div style="font-size:11px;color:#6B7A92;margin-top:1px;line-height:1.4">{{ it.timing }}</div></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ c.hasAdvice }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:oklch(0.7 0.13 200 / .1);border-radius:12px;padding:11px 14px;margin-top:10px">
+                      <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.45 0.12 220);margin-bottom:5px">Advice</div>
+                      <div style="font-size:13px;color:#3A4E6E;line-height:1.5">{{ c.advice }}</div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </sc-if>
+
+        <!-- ---------- LABS TAB ---------- -->
+        <sc-if value="{{ recIsLabs }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:22px;font-weight:700;color:#241B45;margin:2px 4px 4px">Lab tests</div>
+          <div style="font-size:13px;color:#6B6790;margin:0 4px 16px">Results from your previous blood work &amp; tests</div>
+          <sc-for list="{{ labs }}" as="l" hint-placeholder-count="5">
+            <div data-om-label="LabResultRow" style="background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:none;display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:17px;font-weight:700;color:#241B45">{{ l.name }}</div><div style="font-size:13px;color:#8493AC;margin-top:2px">{{ l.date }}</div></div>
+              <div style="{{ l.tagStyle }}">{{ l.result }}</div>
+            </div>
+          </sc-for>
+        </sc-if>
+
+        <!-- ---------- PROFILE TAB ---------- -->
+        <sc-if value="{{ recIsProfile }}" hint-placeholder-val="{{ false }}">
+          <div data-om-label="ProfileHeaderRow" style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+            <div style="width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,oklch(0.66 0.2 265),oklch(0.62 0.21 320));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;box-shadow:0 8px 20px oklch(0.45 0.2 290 / .45)">AK</div>
+            <div><div style="font-size:20px;font-weight:700;color:#241B45">Alex Kumar</div><div style="font-size:13px;color:#6B6790;margin-top:2px">alex.kumar@gmail.com</div></div>
+          </div>
+
+          <div data-om-label="ProfileStatsRow" style="display:flex;gap:8px;margin-bottom:18px">
+            <div style="flex:1;background:rgba(255,255,255,.85);border-radius:14px;padding:11px 12px;text-align:center"><div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8493AC">Age</div><div style="font-size:17px;font-weight:700;color:#241B45;margin-top:2px">34</div></div>
+            <div style="flex:1;background:rgba(255,255,255,.85);border-radius:14px;padding:11px 12px;text-align:center"><div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8493AC">Blood</div><div style="font-size:17px;font-weight:700;color:#241B45;margin-top:2px">O+</div></div>
+            <div style="flex:1.4;background:rgba(255,255,255,.85);border-radius:14px;padding:11px 12px;text-align:center"><div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8493AC">Allergy</div><div style="font-size:17px;font-weight:700;color:#C0405A;margin-top:3px">Penicillin</div></div>
+          </div>
+
+          <!-- insurance + payment row -->
+          <div data-om-label="InsurancePaymentRow" style="display:flex;gap:10px;margin-bottom:18px">
+            <div style="flex:1;border-radius:16px;padding:15px;background:linear-gradient(150deg,oklch(0.62 0.16 262),oklch(0.55 0.19 288));color:#fff;box-shadow:0 10px 24px oklch(0.5 0.18 285 / .4)">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Insurance</div>
+              <div style="font-size:17px;font-weight:700;margin-top:8px">{{ insurance.provider }}</div>
+              <div style="font-size:12px;opacity:.9;margin-top:2px">{{ insurance.plan }}</div>
+              <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:11px;opacity:.9"><span>Member</span><span style="font-weight:600">{{ insurance.member }}</span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;opacity:.9"><span>Copay</span><span style="font-weight:600">{{ insurance.copay }}</span></div>
+            </div>
+            <div style="flex:1;border-radius:16px;padding:15px;background:#fff;box-shadow:0 8px 20px rgba(46,37,71,.1);display:flex;flex-direction:column">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8493AC">Payment</div>
+              <div style="margin-top:8px;width:30px;height:20px;border-radius:5px;background:linear-gradient(135deg,#F5C24B,#E39B2E)"></div>
+              <div style="font-size:17px;font-weight:700;color:#241B45;margin-top:10px;letter-spacing:.06em">•••• {{ payment.last4 }}</div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#8493AC"><span>{{ payment.brand }}</span><span>Exp {{ payment.exp }}</span></div>
+              <div style="font-size:11px;color:#8493AC;margin-top:2px">{{ payment.name }}</div>
+            </div>
+          </div>
+
+          <div style="font-size:13px;font-weight:700;color:#fff;margin:4px 4px 10px;text-shadow:0 1px 6px rgba(20,30,80,.3)">Consultations</div>
+          <sc-for list="{{ consults }}" as="c" hint-placeholder-count="2">
+            <div data-om-label="ConsultationCard" style="background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:10px;box-shadow:none">
+              <div style="display:flex;justify-content:space-between;align-items:start"><div style="font-size:17px;font-weight:600;color:#241B45">{{ c.title }}</div><div style="{{ c.tagStyle }}">{{ c.status }}</div></div>
+              <div style="font-size:13px;color:#8493AC;margin-top:3px">{{ c.date }} · Dr. Mira</div>
+              <div style="font-size:13px;color:#5A6B82;margin-top:8px;line-height:1.5">{{ c.note }}</div>
+            </div>
+          </sc-for>
+
+          <div style="font-size:13px;font-weight:700;color:#fff;margin:14px 4px 10px;text-shadow:0 1px 6px rgba(20,30,80,.3)">Prescriptions</div>
+          <sc-for list="{{ prescriptions }}" as="p" hint-placeholder-count="1">
+            <div data-om-label="PrescriptionCard" style="background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:10px;box-shadow:none;display:flex;gap:12px;align-items:center">
+              <div data-om-label="PrescriptionIconBadge" style="width:40px;height:40px;border-radius:12px;background:#EFEBFB;display:flex;align-items:center;justify-content:center;flex:none">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 3h6a4 4 0 010 8H6V3zM6 11l8 10" stroke="#7A5AE0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="flex:1"><div style="font-size:17px;font-weight:600;color:#241B45">{{ p.name }}</div><div style="font-size:13px;color:#8493AC;margin-top:2px">{{ p.detail }} · {{ p.date }}</div></div>
+            </div>
+          </sc-for>
+
+          <div style="font-size:13px;font-weight:700;color:#fff;margin:14px 4px 10px;text-shadow:0 1px 6px rgba(20,30,80,.3)">Lab results</div>
+          <sc-for list="{{ labs }}" as="l" hint-placeholder-count="2">
+            <div data-om-label="LabResultRow" style="background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:none;display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:17px;font-weight:600;color:#241B45">{{ l.name }}</div><div style="font-size:13px;color:#8493AC;margin-top:2px">{{ l.date }}</div></div>
+              <div style="{{ l.tagStyle }}">{{ l.result }}</div>
+            </div>
+          </sc-for>
+
+          <div style="font-size:13px;font-weight:700;color:#fff;margin:14px 4px 10px;text-shadow:0 1px 6px rgba(20,30,80,.3)">Documents</div>
+          <div data-om-label="DocumentsRow" style="display:flex;gap:10px">
+            <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="vd-doc-1" shape="rounded" radius="14" placeholder="Upload report" style="width:100%;height:104px" hint-size="120px,104px"></x-import>
+            <x-import component-from-global-scope="image-slot" from="./image-slot.js" id="vd-doc-2" shape="rounded" radius="14" placeholder="Upload scan" style="width:100%;height:104px" hint-size="120px,104px"></x-import>
+          </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ============ FLOATING BOTTOM BAR (nav) ============ -->
+      <sc-if value="{{ showNav }}" hint-placeholder-val="{{ false }}">
+      <div data-om-label="BottomBar" style="position:absolute;left:0;right:0;bottom:26px;display:flex;justify-content:center;padding:0 18px;z-index:40">
+        <div data-om-label="NavBarWrapper" style="position:relative;width:100%;max-width:352px">
+          <div style="{{ navBarStyle }}">
+            <div data-om-label="NavItemsRow" style="display:flex;align-items:flex-end;justify-content:space-between;height:100%;padding:0 20px">
+              <!-- Home -->
+              <div data-om-label="NavItemHome" onClick="{{ navHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 0 6px;-webkit-tap-highlight-color:transparent">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navHomeColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .2s"><path d="M3 9.6 12 3l9 6.6V20a1 1 0 0 1-1 1h-5v-6.2H9V21H4a1 1 0 0 1-1-1z"></path></svg>
+                <div style="font-size:11px;font-weight:600;color:{{ navHomeColor }};transition:color .2s">Home</div>
+                <div style="width:5px;height:5px;border-radius:50%;background:{{ navHomeDotBg }};margin-top:1px;box-shadow:{{ navHomeDotShadow }}"></div>
+              </div>
+              <!-- History -->
+              <div data-om-label="NavItemHistory" onClick="{{ navHistory }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 0 6px;-webkit-tap-highlight-color:transparent">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navHistoryColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .2s"><path d="M3.5 11.5a8.5 8.5 0 1 1 2.6 6.1"></path><path d="M3.5 20v-4.6h4.6"></path><path d="M12 7.6V12l3 1.9"></path></svg>
+                <div style="font-size:11px;font-weight:600;color:{{ navHistoryColor }};transition:color .2s">History</div>
+                <div style="width:5px;height:5px;border-radius:50%;background:{{ navHistoryDotBg }};margin-top:1px;box-shadow:{{ navHistoryDotShadow }}"></div>
+              </div>
+              <!-- center gap -->
+              <div style="flex:none;width:72px"></div>
+              <!-- Labs -->
+              <div data-om-label="NavItemLabs" onClick="{{ navLabs }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 0 6px;-webkit-tap-highlight-color:transparent">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navLabsColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .2s"><path d="M12 2.5c3.4 3.9 5.6 6.9 5.6 9.9a5.6 5.6 0 0 1-11.2 0c0-3 2.2-6 5.6-9.9z"></path><path d="M12 10v4M10 12h4"></path></svg>
+                <div style="font-size:11px;font-weight:600;color:{{ navLabsColor }};transition:color .2s">Labs</div>
+                <div style="width:5px;height:5px;border-radius:50%;background:{{ navLabsDotBg }};margin-top:1px;box-shadow:{{ navLabsDotShadow }}"></div>
+              </div>
+              <!-- Profile -->
+              <div data-om-label="NavItemProfile" onClick="{{ navSettings }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 0 6px;-webkit-tap-highlight-color:transparent">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navSettingsColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="transition:stroke .2s"><circle cx="12" cy="8" r="3.8"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+                <div style="font-size:11px;font-weight:600;color:{{ navSettingsColor }};transition:color .2s">Profile</div>
+                <div style="width:5px;height:5px;border-radius:50%;background:{{ navSettingsDotBg }};margin-top:1px;box-shadow:{{ navSettingsDotShadow }}"></div>
+              </div>
+            </div>
+          </div>
+          <!-- raised center button — New call / Start consultation -->
+          <div onClick="{{ navCall }}" style="position:absolute;left:50%;top:-26px;transform:translateX(-50%);width:66px;height:66px;border-radius:50%;cursor:pointer;background:linear-gradient(158deg,oklch(0.75 0.12 300),oklch(0.6 0.17 292));box-shadow:0 12px 26px oklch(0.55 0.19 295 / .55),inset 0 1.5px 1px rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent">
+            <svg width="29" height="29" viewBox="0 0 24 24" fill="#fff" style="filter:drop-shadow(0 1px 4px oklch(0.4 0.15 295 / .5))"><path d="M6.6 3.4c.5-.1 1 .2 1.2.7l1.1 2.6c.2.5.1 1-.3 1.4L7.3 9.4a12.5 12.5 0 0 0 5.3 5.3l1.3-1.3c.4-.4.9-.5 1.4-.3l2.6 1.1c.5.2.8.7.7 1.2l-.5 2.6c-.1.6-.6 1-1.2 1A15.2 15.2 0 0 1 3 6.7c0-.6.4-1.1 1-1.2z"></path></svg>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </x-import>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1780&quot;,&quot;height&quot;:&quot;980&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'login', // login | home | consult | recommendation | profile
+    recordsTab: 'profile', // history | labs | profile
+    expandedConsult: null,
+    orderPlaced: false,
+    sharedCaregiver: false,
+    recommendation: null,
+    reviewStatus: 'idle', // idle | pending | approved
+    consults: [
+      { id: 'h1', title: 'Seasonal allergy check', date: 'Mar 4, 2026', status: 'Completed', note: 'Advised antihistamine; symptoms resolved within a week.',
+        summary: 'Recurrent sneezing, itchy watery eyes and nasal congestion each spring, worse outdoors and in the mornings. No fever or facial pain.',
+        evaluation: 'Seasonal allergic rhinitis',
+        tests: [],
+        rx: [{ name: 'Cetirizine 10mg', dosage: '10 mg', timing: 'Once daily for 14 days' }],
+        advice: 'Start the antihistamine before your symptoms usually peak, and limit time outdoors when pollen counts are high.' },
+      { id: 'h2', title: 'Lower back pain', date: 'Jan 18, 2026', status: 'Completed', note: 'Recommended stretching routine and posture review.',
+        summary: 'Dull lower-back ache for about a week after a long drive, no leg pain, numbness or weakness. Eased by movement, worse after sitting.',
+        evaluation: 'Mechanical (non-specific) lower back pain',
+        tests: [],
+        rx: [{ name: 'Ibuprofen 400mg', dosage: '400 mg', timing: 'As needed, up to 3× daily with food' }],
+        advice: 'Keep gently active and avoid prolonged sitting. Seek review if pain radiates down a leg or you notice any numbness.' },
+      { id: 'h3', title: 'Persistent dry cough', date: 'Dec 2, 2025', status: 'Completed', note: 'Likely post-viral; advised fluids and rest, follow up if >3 weeks.',
+        summary: 'Dry, tickly cough for two weeks following a cold, worse at night. No shortness of breath, chest pain or fever.',
+        evaluation: 'Likely post-viral cough',
+        tests: [{ name: 'Chest X-ray (PA view)', detail: 'Only if cough persists beyond 3 weeks' }],
+        rx: [],
+        advice: 'Stay well hydrated, try warm honey and lemon, and book a follow-up if the cough lasts more than three weeks.' },
+      { id: 'h4', title: 'Sleep & fatigue review', date: 'Oct 21, 2025', status: 'Completed', note: 'Discussed sleep hygiene; ordered thyroid panel (normal).',
+        summary: 'Daytime tiredness and difficulty falling asleep for a month, high screen use late at night, irregular bedtime. Mood otherwise stable.',
+        evaluation: 'Sleep-onset insomnia, likely lifestyle-related',
+        tests: [{ name: 'Thyroid panel (TSH)', detail: 'Fasting sample — result came back normal' }],
+        rx: [],
+        advice: 'Keep a consistent wake time, avoid screens for an hour before bed, and limit caffeine after midday.' },
+    ],
+    prescriptions: [
+      { name: 'Cetirizine 10mg', detail: 'Once daily, 14 days', date: 'Mar 4, 2026' },
+    ],
+    labs: [
+      { name: 'Complete Blood Count', date: 'Feb 2, 2026', result: 'Normal', ok: true },
+      { name: 'Lipid Profile', date: 'Feb 2, 2026', result: 'Borderline', ok: false },
+      { name: 'Thyroid Panel (TSH)', date: 'Oct 24, 2025', result: 'Normal', ok: true },
+      { name: 'Vitamin D', date: 'Oct 24, 2025', result: 'Low', ok: false },
+      { name: 'Fasting Glucose', date: 'Jul 9, 2025', result: 'Normal', ok: true },
+    ],
+    insurance: { provider: 'BlueCross Shield', plan: 'PPO · Gold', member: 'AK-4827193', group: 'GRP-20461', copay: '$25' },
+    payment: { brand: 'Visa', last4: '4291', exp: '08/28', name: 'Alex Kumar' },
+  };
+
+  componentWillUnmount() { this.stopVoice(); }
+
+  componentDidUpdate(pp, ps) {
+    // speak the confirmation when the plan flips to approved while on the rec screen
+    if (ps.reviewStatus !== 'approved' && this.state.reviewStatus === 'approved' && this.state.screen === 'recommendation') {
+      this.speakRec('approved');
+    }
+  }
+
+  // ---- spoken confirmation on the recommendation screen ----
+  speak(text) {
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const vs = window.speechSynthesis.getVoices();
+      const v = vs.find(x => /en/i.test(x.lang) && /female|samantha|karen|victoria|zira|google uk english female/i.test(x.name)) || vs.find(x => /en/i.test(x.lang));
+      if (v) u.voice = v;
+      u.rate = 0.98; u.pitch = 1.05;
+      this._utter = u;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  stopVoice() { this._utter = null; try { window.speechSynthesis.cancel(); } catch (e) {} }
+  speakRec(status) {
+    const rec = this.state.recommendation;
+    const kind = rec && rec.type === 'prescription' ? 'prescription' : 'plan';
+    const line = status === 'approved'
+      ? `Dr. Whitfield has reviewed your ${kind}. Here it is.`
+      : `Thanks, Alex. I've prepared your ${kind} and sent it to Dr. Whitfield for a quick review.`;
+    this.speak(line);
+  }
+
+  startConsult() { this.stopVoice(); this.setState({ screen: 'consult' }); }
+
+  // Called by the Consult child when Dr. Mira finalises a plan
+  onConsultComplete(payload) {
+    const { rec } = payload || {};
+    if (!rec) return;
+    this.stopVoice();
+    this.setState({ recommendation: rec, reviewStatus: 'pending', screen: 'recommendation' },
+      () => setTimeout(() => this.speakRec('pending'), 400));
+  }
+
+  // Called by the Consult child when the patient ends the call
+  onConsultEnd() {
+    this.stopVoice();
+    this.setState({ screen: 'home' });
+  }
+
+  renderVals() {
+    const s = this.state;
+
+    // recommendation view
+    const rec = s.recommendation;
+    let recVals = null;
+    if (rec) {
+      const isRx = rec.type === 'prescription';
+      const uMap = { routine: 'oklch(0.72 0.13 160)|#062018|Routine', soon: 'oklch(0.8 0.15 85)|#332600|Follow up soon', urgent: 'oklch(0.65 0.19 25)|#fff|Urgent' };
+      const [ubg, ufg, ul] = (uMap[rec.urgency] || uMap.routine).split('|');
+      recVals = {
+        typeLabel: isRx ? 'Prescription' : 'Investigation',
+        badgeStyle: `font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 11px;border-radius:14px;background:${isRx ? 'oklch(0.62 0.2 300 / .14)' : 'oklch(0.6 0.14 200 / .16)'};color:${isRx ? 'oklch(0.5 0.2 300)' : 'oklch(0.45 0.14 220)'}`,
+        urgencyLabel: ul, urgencyStyle: `font-size:11px;font-weight:700;padding:5px 11px;border-radius:14px;background:${ubg};color:${ufg}`,
+        title: rec.title, advice: rec.advice || '', hasAdvice: !!(rec.advice && rec.advice.trim()),
+        items: (rec.items || []).map(it => ({
+          name: it.name,
+          dosage: it.dosage || '', hasDosage: !!(it.dosage && it.dosage.trim()),
+          timing: it.timing || it.detail || '', hasTiming: !!((it.timing || it.detail || '').trim()),
+          notes: it.notes || '', hasNotes: !!(it.notes && it.notes.trim()),
+          why: it.why || '', hasWhy: !!(it.why && it.why.trim()),
+        })),
+      };
+    }
+    // patient-facing "what happens next" timeline
+    const approved = s.reviewStatus === 'approved';
+    const isRxRec = rec && rec.type === 'prescription';
+    const timeline = [
+      { t: 'Consult complete', d: 'Dr. Mira prepared your plan', state: 'done' },
+      { t: approved ? 'Reviewed by Dr. Whitfield' : 'Doctor review', d: approved ? 'Approved just now' : 'A licensed doctor is checking your plan', state: approved ? 'done' : 'active' },
+      { t: 'Plan ready', d: approved ? 'Saved to your records' : 'You’ll be notified when it’s confirmed', state: approved ? 'done' : 'todo' },
+      isRxRec
+        ? { t: 'Collect medicine', d: approved ? (s.orderPlaced ? 'Order placed' : 'Order for delivery or pickup') : 'Available once approved', state: approved ? (s.orderPlaced ? 'done' : 'active') : 'todo' }
+        : { t: 'Book your test', d: approved ? 'Choose a lab and time' : 'Available once approved', state: approved ? 'active' : 'todo' },
+    ].map(step => {
+      const c = step.state === 'done' ? 'oklch(0.72 0.15 160)' : step.state === 'active' ? 'oklch(0.78 0.16 90)' : 'rgba(120,95,225,.35)';
+      return { ...step, dotStyle: `width:11px;height:11px;border-radius:50%;flex:none;margin-top:3px;background:${c};box-shadow:0 0 8px ${c}`,
+        titleStyle: `font-size:17px;font-weight:700;color:${step.state === 'todo' ? 'rgba(90,80,140,.6)' : '#241B45'}` };
+    });
+
+    // reviewer thread status
+    const stMap = {
+      pending: 'oklch(0.8 0.15 85)|Awaiting doctor review|A licensed doctor is reviewing Dr. Mira’s plan. You’ll be notified shortly.',
+      approved: 'oklch(0.72 0.15 160)|Approved by Dr. Whitfield|Your plan is confirmed and saved to your records.',
+    };
+    const [stDot, stTitle, stSub] = (stMap[s.reviewStatus] || stMap.pending).split('|');
+
+    // profile / history tags
+    const consults = s.consults.map(c => ({ ...c, tagStyle: `font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:${c.status === 'Approved' ? 'oklch(0.72 0.13 160 / .16)' : '#EFEBFB'};color:${c.status === 'Approved' ? 'oklch(0.45 0.13 160)' : '#6B7A92'}` }));
+    const consultsView = consults.map(c => {
+      const expanded = s.expandedConsult === c.id;
+      const tests = (c.tests || []).map(t => ({ ...t }));
+      const rx = (c.rx || []).map(r => ({ ...r }));
+      return { ...c, expanded,
+        onToggle: () => this.setState(st => ({ expandedConsult: st.expandedConsult === c.id ? null : c.id })),
+        toggleLabel: expanded ? 'Hide details' : 'View consultation',
+        chevronStyle: `display:inline-block;transition:transform .2s;transform:rotate(${expanded ? 90 : 0}deg);font-size:17px`,
+        tests, rx, hasTests: tests.length > 0, hasRx: rx.length > 0,
+        hasAdvice: !!(c.advice && c.advice.trim()) };
+    });
+    const labs = s.labs.map(l => ({ ...l, tagStyle: `font-size:12px;font-weight:700;padding:5px 11px;border-radius:14px;background:${l.ok ? 'oklch(0.72 0.13 160 / .16)' : 'oklch(0.8 0.14 70 / .2)'};color:${l.ok ? 'oklch(0.45 0.13 160)' : 'oklch(0.5 0.14 60)'}` }));
+
+    return {
+      isLogin: s.screen === 'login', isHome: s.screen === 'home', isConsult: s.screen === 'consult', isRec: s.screen === 'recommendation', isProfile: s.screen === 'profile',
+
+      // ---- floating bottom-bar nav ----
+      ...(() => {
+        const accent = 'oklch(0.56 0.19 290)';
+        const muted = '#8480A5';
+        const navActive = s.screen === 'home' ? 'home' : (s.screen === 'profile' ? (s.recordsTab === 'history' ? 'history' : (s.recordsTab === 'labs' ? 'labs' : 'settings')) : '');
+        const col = (id) => navActive === id ? accent : muted;
+        const dotBg = (id) => navActive === id ? accent : 'transparent';
+        const dotSh = (id) => navActive === id ? `0 0 8px ${accent}` : 'none';
+        const barStyle = [
+          'position:relative', 'height:66px', 'border-radius:34px',
+          'background:linear-gradient(180deg, oklch(0.93 0.045 300 / .58), oklch(0.9 0.05 298 / .42))',
+          'backdrop-filter:blur(22px) saturate(180%)', '-webkit-backdrop-filter:blur(22px) saturate(180%)',
+          'border:1px solid oklch(0.97 0.02 300 / .75)',
+          'box-shadow:0 14px 34px oklch(0.45 0.12 295 / .3), 0 2px 8px rgba(46,37,71,.14), inset 0 1px 1px rgba(255,255,255,.6)',
+          '-webkit-mask:radial-gradient(circle 38px at 50% 7px, transparent 37px, #000 37.5px)',
+          'mask:radial-gradient(circle 38px at 50% 7px, transparent 37px, #000 37.5px)',
+        ].join(';');
+        return {
+          showNav: s.screen === 'home' || s.screen === 'profile',
+          navBarStyle: barStyle,
+          navHomeColor: col('home'), navHistoryColor: col('history'), navLabsColor: col('labs'), navSettingsColor: col('settings'),
+          navHomeDotBg: dotBg('home'), navHistoryDotBg: dotBg('history'), navLabsDotBg: dotBg('labs'), navSettingsDotBg: dotBg('settings'),
+          navHomeDotShadow: dotSh('home'), navHistoryDotShadow: dotSh('history'), navLabsDotShadow: dotSh('labs'), navSettingsDotShadow: dotSh('settings'),
+          navHome: () => this.setState({ screen: 'home' }),
+          navHistory: () => this.setState({ screen: 'profile', recordsTab: 'history' }),
+          navLabs: () => this.setState({ screen: 'profile', recordsTab: 'labs' }),
+          navSettings: () => this.setState({ screen: 'profile', recordsTab: 'profile' }),
+          navCall: () => this.startConsult(),
+        };
+      })(),
+
+      loginGoogle: () => this.setState({ screen: 'home' }),
+      backToConsult: () => this.setState({ screen: 'consult' }),
+      onConsultComplete: (p) => this.onConsultComplete(p),
+      onConsultEnd: () => this.onConsultEnd(),
+
+      rec: recVals || { items: [], badgeStyle: '', urgencyStyle: '', hasAdvice: false },
+      recHeadline: rec
+        ? (s.reviewStatus === 'approved'
+            ? 'Dr. Whitfield reviewed your ' + (rec.type === 'prescription' ? 'prescription' : 'plan') + ' — here it is.'
+            : 'Sent to Dr. Whitfield for a quick review.')
+        : '',
+      showOrder: !!(rec && rec.type === 'prescription' && s.reviewStatus === 'approved'),
+      orderLabel: s.orderPlaced ? 'Order placed ✓' : 'Order medicine',
+      orderMeds: () => { if (!this.state.orderPlaced) this.setState({ orderPlaced: true }); },
+      timeline,
+      shareCaregiver: () => this.setState({ sharedCaregiver: true }),
+      caregiverLabel: s.sharedCaregiver ? 'Shared with caregiver ✓' : 'Share with a caregiver',
+      askFollowUp: () => this.startConsult(),
+      statusTitle: stTitle, statusSub: stSub,
+      reviewerDotStyle: `position:absolute;bottom:-3px;right:-3px;width:13px;height:13px;border-radius:50%;background:${stDot};border:2px solid #7A5AE0`,
+
+      consults, labs, prescriptions: s.prescriptions,
+      consultsView,
+      recIsHistory: s.recordsTab === 'history',
+      recIsLabs: s.recordsTab === 'labs',
+      recIsProfile: s.recordsTab === 'profile',
+      recTitle: s.recordsTab === 'history' ? 'History' : (s.recordsTab === 'labs' ? 'Lab results' : 'Profile'),
+      insurance: s.insurance,
+      payment: s.payment,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

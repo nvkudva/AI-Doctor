@@ -1,0 +1,14 @@
+- [x] Scaffold app/ from docs/design shell and verify parity in browser
+- [x] Implement consult lifecycle states plus one-open-consult guard
+- [x] Persist consults and records in local store mirroring PRD schema
+- [x] Harden doctor review: approve, edit, reject with audit diff and queue order
+- [x] Add review SLA timers (2h nudge, 24h expiry) and 30-min abandonment
+- [x] Enforce 18-plus onboarding and transcripts-only audio policy in copy
+- [x] Put STT and TTS behind provider seam keeping typed fallback
+- [ ] Connect Supabase auth, tables, and realtime queue
+- [x] Add per-hospital theming and tenant resolution
+- [x] Rebuild as React Vite Bun PWA monorepo per ARCH layout
+- [x] Port consult loop, review desk, timers, and gates to new modules
+- [ ] Remove legacy app/ Preact prototype after parity check
+- [x] Survey PRD, architecture, and design mocks as implementation base
+- [x] Build single-file flow mock in mock/index.html

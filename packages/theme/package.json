@@ -1,0 +1,1 @@
+{"name": "@vd/theme", "version": "0.0.0", "private": true, "exports": {".": "./src/index.ts", "./theme.css": "./src/theme.css"}}

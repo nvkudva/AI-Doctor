@@ -1,0 +1,14 @@
+{
+  "name": "virtual-doctor",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun --filter web dev",
+    "build": "bun --filter web build",
+    "typecheck": "bun --filter web typecheck"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}

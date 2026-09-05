@@ -1,9 +1,14 @@
-// Mira visuals: state-animated presence sphere. Props in, elements out.
+// Mira visuals: the one voice surface (MC-1). State-animated presence sphere,
+// plus the minimised floating glass puck it owns (MC-4) so modules never wrap
+// it themselves. Durations come from the --vd-dur-* scale.
+import { radius, z } from '../theme';
+import { useBreakpoint } from '../../shell/viewport';
+import { Icon } from './Primitives';
 
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 const STATE_RING: Record<VoiceState, string> = {
-  idle: 'rgba(120,95,225,.45)',
+  idle: 'var(--vd-state-idle)',
   listening: 'var(--vd-state-listen)',
   thinking: 'var(--vd-state-think)',
   speaking: 'var(--vd-state-speak)',
@@ -12,10 +17,10 @@ const STATE_RING: Record<VoiceState, string> = {
 // Whole-sphere motion per state. Thinking moves the fluid layer only (see
 // MiraOrb), so the core stays still while the mind swirls.
 const SPHERE_ANIM: Record<VoiceState, string | undefined> = {
-  idle: 'vd-breathe 4s ease-in-out infinite',
-  listening: 'vd-listen 1.2s ease-in-out infinite',
+  idle: 'vd-breathe var(--vd-dur-orb-breathe) var(--vd-ease-spring) infinite',
+  listening: 'vd-listen var(--vd-dur-orb-listen) var(--vd-ease-spring) infinite',
   thinking: undefined,
-  speaking: 'vd-speak 0.9s ease-in-out infinite',
+  speaking: 'vd-speak var(--vd-dur-orb-speak) var(--vd-ease-spring) infinite',
 };
 
 // The sphere itself: volumetric core + one counter-rotating fluid layer +
@@ -33,7 +38,9 @@ export function MiraOrb({ size = 138, voiceState = 'idle' }: { size?: number; vo
       <div
         style={{
           position: 'absolute', inset: '-20%',
-          animation: voiceState === 'thinking' ? 'vd-swirl 6s linear infinite' : 'vd-spin 12s linear infinite',
+          animation: voiceState === 'thinking'
+            ? 'vd-swirl var(--vd-dur-orb-think) linear infinite'
+            : 'vd-spin var(--vd-dur-orb-spin) linear infinite',
         }}
       >
         <div style={{ position: 'absolute', top: '8%', left: '10%', width: '68%', height: '68%', borderRadius: '50%', background: 'var(--vd-orb-mid)', filter: 'blur(0.14em)', opacity: 0.85 }} />
@@ -51,22 +58,57 @@ export function MiraOrb({ size = 138, voiceState = 'idle' }: { size?: number; vo
 
 // State-animated presence: ground shadow + dual staggered aura rings + sphere.
 export function MiraPresence({
-  voiceState = 'idle', size = 138, onTap,
+  voiceState = 'idle', size = 138, onTap, minimized = false, onMinimize, onMaximize, navOffset = false,
 }: {
   voiceState?: VoiceState;
   size?: number;
   onTap?: () => void;
+  /** Collapse into the floating glass puck (app-shell level, MC-4/MC-5). */
+  minimized?: boolean;
+  /** Shows a minimise control on the maximised presence. */
+  onMinimize?: () => void;
+  /** Tapping the puck maximises back into the consultation. */
+  onMaximize?: () => void;
+  /** Lift the puck above a bottom nav or sticky action bar on mobile. */
+  navOffset?: boolean;
 }) {
+  const bp = useBreakpoint();
   const h = Math.round(size * 1.07);
   const ring = STATE_RING[voiceState];
-  const ringAnim = voiceState === 'listening' ? 'vd-ring 1.4s ease-out infinite' : 'vd-ring 2.8s ease-out infinite';
+  const ringAnim = voiceState === 'listening'
+    ? 'vd-ring var(--vd-dur-ring) var(--vd-ease-out) infinite'
+    : 'vd-ring var(--vd-dur-ring-slow) var(--vd-ease-out) infinite';
+
+  if (minimized) {
+    const puck = bp === 'mobile' ? 60 : 64;
+    const orb = bp === 'mobile' ? 38 : 40;
+    const edge = bp === 'mobile' ? 16 : bp === 'tablet' ? 24 : 28;
+    return (
+      <button
+        type="button"
+        className="vd-glass"
+        onClick={onMaximize ?? onTap}
+        aria-label="Open Dr. Mira"
+        style={{
+          position: 'fixed', right: edge, zIndex: z.nav, cursor: 'pointer',
+          bottom: navOffset && bp === 'mobile' ? 'calc(78px + env(safe-area-inset-bottom))' : `calc(${edge}px + env(safe-area-inset-bottom))`,
+          width: puck, height: puck, borderRadius: radius.pill, padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'vd-pop var(--vd-dur-4) var(--vd-ease-overshoot) both',
+        }}
+      >
+        <MiraOrb size={orb} voiceState={voiceState} />
+      </button>
+    );
+  }
+
   return (
     <div style={{ position: 'relative', width: size, height: h, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', flex: 'none' }}>
       <div
         style={{
           position: 'absolute', left: '50%', bottom: -2, transform: 'translateX(-50%)',
           width: size * 0.84, height: Math.max(12, size * 0.14), borderRadius: '50%',
-          background: 'radial-gradient(ellipse,rgba(90,70,170,.4),transparent 70%)', filter: 'blur(4px)',
+          background: 'var(--vd-orb-ground)', filter: 'blur(4px)',
         }}
       />
       <div style={{ position: 'absolute', inset: `0 0 ${h - size}px 0`, borderRadius: '50%', border: `1.5px solid ${ring}`, animation: ringAnim }} />
@@ -76,6 +118,21 @@ export function MiraPresence({
       <div onClick={onTap} style={{ cursor: onTap ? 'pointer' : 'default', borderRadius: '50%' }}>
         <MiraOrb size={size} voiceState={voiceState} />
       </div>
+      {onMinimize && (
+        <button
+          type="button"
+          className="vd-glass"
+          onClick={onMinimize}
+          aria-label="Minimise Dr. Mira"
+          style={{
+            position: 'absolute', right: -6, bottom: 0, width: 44, height: 44, padding: 0,
+            borderRadius: radius.pill, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'var(--vd-ink-on-glass)',
+          }}
+        >
+          <Icon name="chevD" size={18} />
+        </button>
+      )}
     </div>
   );
 }

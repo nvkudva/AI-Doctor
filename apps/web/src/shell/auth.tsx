@@ -31,6 +31,9 @@ export function useAuth(): AuthCtx {
 }
 
 const AUTH_KEY = 'vd_auth_v1';
+// The session gate must never hold the loading skeleton hostage: if the auth
+// host is slow or unreachable we fall back to the locally restored user.
+const SESSION_TIMEOUT_MS = 4000;
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
@@ -75,17 +78,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    sb.auth.getSession().then(({ data }) => {
-      const s = data.session?.user;
-      if (s) {
-        const u = toUser(s.id, s.email || '', (s.user_metadata || {}) as Record<string, unknown>);
-        setUser(u);
-        try {
-          localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-        } catch { /* private mode */ }
-      }
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
       setReady(true);
-    });
+    };
+    const timer = setTimeout(finish, SESSION_TIMEOUT_MS);
+    sb.auth
+      .getSession()
+      .then(({ data }) => {
+        const s = data.session?.user;
+        if (s) {
+          const u = toUser(s.id, s.email || '', (s.user_metadata || {}) as Record<string, unknown>);
+          setUser(u);
+          try {
+            localStorage.setItem(AUTH_KEY, JSON.stringify(u));
+          } catch { /* private mode */ }
+        }
+      })
+      .catch(() => { /* offline or unreachable: keep the restored session */ })
+      .finally(() => {
+        clearTimeout(timer);
+        finish();
+      });
     const { data: sub } = sb.auth.onAuthStateChange((_ev, session) => {
       const s = session?.user;
       if (s) {
@@ -96,7 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch { /* private mode */ }
       }
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const persist = (u: AuthUser | null) => {

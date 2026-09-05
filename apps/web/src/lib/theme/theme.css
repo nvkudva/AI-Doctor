@@ -1,5 +1,7 @@
 /* Virtual Doctor design system. :root = light, [data-theme="dark"] = dark.
-   Components consume var(--vd-*) only — no color literals in app code. */
+   Components consume var(--vd-*) only — no color literals in app code.
+   Metric + motion scales are theme-independent (second :root block); every
+   colour token is defined in BOTH theme blocks. */
 
 :root {
   --vd-bg-app: linear-gradient(180deg, #cdb6ec 0%, #d3c2ec 38%, #d8d0ea 72%, #d5d2e4 100%);
@@ -10,20 +12,24 @@
   --vd-surface-panel: #f4f1fc;
   --vd-surface-chip: #f0ecfb;
   --vd-surface-mine: #cfb0f4;
+  --vd-surface-raised: #faf8ff;
   --vd-case-header: #e8d5ff;
 
   --vd-ink-1: #241b45;
   --vd-ink-2: #3a2e5c;
-  --vd-ink-3: #5a6b82;
-  --vd-ink-soft: #6b6790;
-  --vd-ink-4: #8480a5;
-  --vd-accent-ink: #3d3568;
+  --vd-ink-3: #4a5a72;
+  --vd-ink-soft: #585379;
+  --vd-ink-4: #67628a;
+  --vd-ink-on-glass: #3d3568;
+  --vd-accent-ink: var(--vd-ink-on-glass); /* deprecated alias */
+  --vd-ink-on-approve: #06231a;
 
   --vd-brand-1: #3e6fd6;
   --vd-brand-2: #7b4de0;
   --vd-send-1: oklch(0.69 0.15 287);
   --vd-send-2: oklch(0.54 0.19 290);
-  --vd-nav-active: oklch(0.56 0.19 290);
+  --vd-nav-active: oklch(0.46 0.19 290);
+  --vd-nav-idle: #585379;
 
   --vd-ok-bg: #bfebd5; --vd-ok-fg: #0e5a38;
   --vd-warn-bg: #ffe9a8; --vd-warn-fg: #6b4e00;
@@ -31,11 +37,35 @@
   --vd-bad-bg: #fbd2da; --vd-bad-fg: #8e2440;
   --vd-neutral-bg: #e5e7eb; --vd-neutral-fg: #4b5563;
 
+  --vd-lab-ok-bg: #dcf3e7; --vd-lab-ok-fg: #0f5537;
+  --vd-lab-warn-bg: #fdeccf; --vd-lab-warn-fg: #6d4406;
+  --vd-rx-bg: #efe1fb; --vd-rx-fg: #5a2496;
+  --vd-inv-bg: #d9edf5; --vd-inv-fg: #12495e;
+  --vd-advice-bg: #dbeef5; --vd-advice-fg: #14495c;
+  --vd-safety-bg: #ddf2e7; --vd-safety-fg: #0e5136;
+  --vd-assessment-bg: #f0e7fd; --vd-assessment-bd: #dcc9f7;
+
   --vd-glass-bg: linear-gradient(180deg, oklch(0.93 0.045 300 / 0.58), oklch(0.9 0.05 298 / 0.42));
   --vd-glass-blur: blur(22px) saturate(180%);
+  --vd-glass-blur-thin: blur(14px) saturate(150%);
+  --vd-glass-blur-thick: blur(32px) saturate(190%);
   --vd-glass-border: oklch(0.97 0.02 300 / 0.75);
   --vd-glass-hi: inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  --vd-glass-lo: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+  --vd-glass-solid: #ede7fa;
   --vd-border: rgba(30, 50, 90, 0.1);
+  --vd-border-strong: rgba(30, 50, 90, 0.2);
+  --vd-scrim: rgba(23, 19, 51, 0.45);
+  --vd-focus: #7b4de0;
+  --vd-selected-ring: oklch(0.6 0.2 290 / 0.7);
+  --vd-urgent-glow: 0 0 0 3px rgba(190, 60, 90, 0.16);
+
+  --vd-elev-0: none;
+  --vd-elev-1: 0 2px 8px rgba(12, 20, 60, 0.1);
+  --vd-elev-2: 0 6px 18px rgba(12, 20, 60, 0.14);
+  --vd-elev-3: 0 12px 28px rgba(12, 20, 60, 0.2);
+  --vd-elev-4: 0 14px 34px oklch(0.45 0.12 295 / 0.3), 0 2px 8px rgba(46, 37, 71, 0.14);
+  --vd-elev-5: 0 24px 60px rgba(12, 20, 60, 0.35);
 
   --vd-orb-deep: oklch(0.6 0.19 265);
   --vd-orb-mid: oklch(0.72 0.18 250);
@@ -47,6 +77,8 @@
   --vd-state-listen: oklch(0.8 0.14 200);
   --vd-state-think: oklch(0.82 0.15 90);
   --vd-state-speak: oklch(0.72 0.2 300);
+  --vd-state-idle: rgba(120, 95, 225, 0.45);
+  --vd-orb-ground: radial-gradient(ellipse, rgba(90, 70, 170, 0.4), transparent 70%);
 }
 
 [data-theme="dark"] {
@@ -58,20 +90,24 @@
   --vd-surface-panel: #1c1929;
   --vd-surface-chip: #2a2540;
   --vd-surface-mine: #4a3f7d;
+  --vd-surface-raised: #2a2740;
   --vd-case-header: #262138;
 
   --vd-ink-1: #f2eeff;
   --vd-ink-2: #d7cff5;
   --vd-ink-3: #a79fd0;
   --vd-ink-soft: #9b94c7;
-  --vd-ink-4: #7e78a8;
-  --vd-accent-ink: #e4dcff;
+  --vd-ink-4: #928bbd;
+  --vd-ink-on-glass: #e4dcff;
+  --vd-accent-ink: var(--vd-ink-on-glass); /* deprecated alias */
+  --vd-ink-on-approve: #06231a;
 
   --vd-brand-1: #7b8cff;
   --vd-brand-2: #9b5cf0;
   --vd-send-1: oklch(0.72 0.16 287);
   --vd-send-2: oklch(0.6 0.2 290);
   --vd-nav-active: oklch(0.78 0.16 290);
+  --vd-nav-idle: #9b94c7;
 
   --vd-ok-bg: #123f2c; --vd-ok-fg: #7fe0b2;
   --vd-warn-bg: #4a3a08; --vd-warn-fg: #ffd97a;
@@ -79,10 +115,32 @@
   --vd-bad-bg: #57202f; --vd-bad-fg: #ff9eb4;
   --vd-neutral-bg: #33334a; --vd-neutral-fg: #b9b9d0;
 
+  --vd-lab-ok-bg: #16382a; --vd-lab-ok-fg: #86e2b6;
+  --vd-lab-warn-bg: #3f2f0d; --vd-lab-warn-fg: #f2c281;
+  --vd-rx-bg: #332248; --vd-rx-fg: #d5b4f7;
+  --vd-inv-bg: #182f3a; --vd-inv-fg: #a4d8ea;
+  --vd-advice-bg: #17313c; --vd-advice-fg: #a8d9e8;
+  --vd-safety-bg: #15342a; --vd-safety-fg: #8ee0bb;
+  --vd-assessment-bg: #2b2340; --vd-assessment-bd: #3d3159;
+
   --vd-glass-bg: linear-gradient(180deg, oklch(0.35 0.06 295 / 0.55), oklch(0.3 0.06 295 / 0.45));
   --vd-glass-border: oklch(0.6 0.08 295 / 0.35);
   --vd-glass-hi: inset 0 1px 1px rgba(255, 255, 255, 0.18);
+  --vd-glass-lo: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  --vd-glass-solid: #2b2740;
   --vd-border: rgba(255, 255, 255, 0.14);
+  --vd-border-strong: rgba(255, 255, 255, 0.26);
+  --vd-scrim: rgba(8, 6, 18, 0.6);
+  --vd-focus: #b48cff;
+  --vd-selected-ring: oklch(0.72 0.18 292 / 0.8);
+  --vd-urgent-glow: 0 0 0 3px rgba(255, 140, 170, 0.18);
+
+  --vd-elev-0: none;
+  --vd-elev-1: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --vd-elev-2: 0 6px 16px rgba(0, 0, 0, 0.45);
+  --vd-elev-3: 0 12px 26px rgba(0, 0, 0, 0.5);
+  --vd-elev-4: 0 14px 32px rgba(0, 0, 0, 0.55);
+  --vd-elev-5: 0 24px 56px rgba(0, 0, 0, 0.6);
 
   --vd-orb-deep: oklch(0.55 0.2 270);
   --vd-orb-mid: oklch(0.68 0.2 280);
@@ -94,6 +152,104 @@
   --vd-state-listen: oklch(0.85 0.14 200);
   --vd-state-think: oklch(0.87 0.15 90);
   --vd-state-speak: oklch(0.77 0.2 300);
+  --vd-state-idle: rgba(150, 130, 240, 0.45);
+  --vd-orb-ground: radial-gradient(ellipse, rgba(10, 6, 30, 0.55), transparent 70%);
+}
+
+/* Metric + motion scales (DESIGN §4–§6) — theme-independent. */
+:root {
+  --vd-space-1: 4px;
+  --vd-space-2: 6px;
+  --vd-space-3: 8px;
+  --vd-space-4: 12px;
+  --vd-space-5: 16px;
+  --vd-space-6: 20px;
+  --vd-space-7: 24px;
+  --vd-space-8: 32px;
+  --vd-space-9: 40px;
+  --vd-space-10: 56px;
+
+  --vd-radius-xs: 8px;
+  --vd-radius-sm: 12px;
+  --vd-radius-md: 16px;
+  --vd-radius-lg: 20px;
+  --vd-radius-xl: 24px;
+  --vd-radius-2xl: 28px;
+  --vd-radius-pill: 999px;
+
+  --vd-dur-1: 120ms;
+  --vd-dur-2: 180ms;
+  --vd-dur-3: 240ms;
+  --vd-dur-4: 320ms;
+  --vd-dur-5: 420ms;
+
+  --vd-ease-spring: cubic-bezier(0.32, 0.72, 0.35, 1);
+  --vd-ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --vd-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --vd-ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --vd-spring: var(--vd-ease-spring); /* deprecated alias */
+
+  /* Ambient loops, derived from the duration scale so there is still one
+     source: 1.4s / 2.8s rings, 1.2s listen, 0.9s speak, 4s breathe. */
+  --vd-dur-ring: calc(var(--vd-dur-5) * 10 / 3);
+  --vd-dur-ring-slow: calc(var(--vd-dur-5) * 20 / 3);
+  --vd-dur-orb-listen: calc(var(--vd-dur-3) * 5);
+  --vd-dur-orb-speak: calc(var(--vd-dur-3) * 3.75);
+  --vd-dur-orb-think: calc(var(--vd-dur-3) * 25);
+  --vd-dur-orb-spin: calc(var(--vd-dur-3) * 50);
+  --vd-dur-orb-breathe: calc(var(--vd-dur-4) * 12.5);
+}
+
+/* Document base — moved out of index.html so font.family has one definition. */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #cdb6ec;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+}
+[data-theme="dark"] body { background: #241b45; }
+
+button, input, textarea, select { font: inherit; color: inherit; }
+
+.vd-scroll::-webkit-scrollbar { width: 0; }
+
+/* Section labels: 12/8 rhythm between sections, flush when first in a surface. */
+.vd-microlabel { margin: var(--vd-space-4) 0 var(--vd-space-3); }
+.vd-microlabel:first-child { margin-top: 0; }
+
+:focus-visible {
+  outline: 2px solid var(--vd-focus);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Liquid Glass (DESIGN §8.1) — the ONLY way to make a glass surface.
+   Components apply the class and keep geometry inline. */
+.vd-glass,
+.vd-glass-thin,
+.vd-glass-thick {
+  background: var(--vd-glass-bg);
+  border: 1px solid var(--vd-glass-border);
+  box-shadow: var(--vd-glass-hi), var(--vd-glass-lo), var(--vd-elev-4);
+  border-radius: var(--vd-radius-2xl);
+}
+
+.vd-glass { backdrop-filter: var(--vd-glass-blur); -webkit-backdrop-filter: var(--vd-glass-blur); }
+.vd-glass-thin { backdrop-filter: var(--vd-glass-blur-thin); -webkit-backdrop-filter: var(--vd-glass-blur-thin); }
+.vd-glass-thick { backdrop-filter: var(--vd-glass-blur-thick); -webkit-backdrop-filter: var(--vd-glass-blur-thick); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .vd-glass, .vd-glass-thin, .vd-glass-thick { background: var(--vd-glass-solid); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .vd-glass, .vd-glass-thin, .vd-glass-thick {
+    background: var(--vd-glass-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 /* Shared motion: every lib/ui consumer gets these via theme.css. */
@@ -111,29 +267,17 @@
 @keyframes vd-slidein { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes vd-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 @keyframes vd-swirl { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+@keyframes vd-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes vd-shimmer { 0% { opacity: 0.45; } 50% { opacity: 0.9; } 100% { opacity: 0.45; } }
 
-:root { --vd-spring: cubic-bezier(0.32, 0.72, 0.35, 1); }
-
-:focus-visible {
-  outline: 2px solid var(--vd-brand-2);
-  outline-offset: 2px;
+/* Shared press physics for every CTA (see pressProps): spring in, .97 out. */
+[role="button"], button {
+  transition: transform var(--vd-dur-2) var(--vd-ease-spring), opacity var(--vd-dur-2) var(--vd-ease-spring);
 }
-
-/* Shared press physics for every div CTA (see pressProps): spring in, .97 out. */
-[role="button"] {
-  transition: transform 0.18s var(--vd-spring), opacity 0.18s var(--vd-spring);
-}
-[role="button"]:active {
-  transform: scale(0.97);
-}
-
-@keyframes vd-shimmer {
-  0% { opacity: 0.45; }
-  50% { opacity: 0.9; }
-  100% { opacity: 0.45; }
-}
+[role="button"]:active, button:active { transform: scale(0.97); }
 
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

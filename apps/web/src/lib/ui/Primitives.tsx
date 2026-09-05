@@ -1,24 +1,16 @@
 // Generic presentational primitives: pills, labels, icons, disclosure,
 // tap-target helper. Props in, elements out — no app state.
 import { useState } from 'react';
-import { font, ink, pillStyle } from '../theme';
+import { ink, pillStyle, space, statusPill, type } from '../theme';
 
+// theme.statusPill is the single label source — no local duplicate map.
 export function StatusPill({ status }: { status: string }) {
-  return <span style={pillStyle(status) as React.CSSProperties}>{labelOf(status)}</span>;
-}
-
-function labelOf(status: string): string {
-  const map: Record<string, string> = {
-    pending: 'Pending', pending_review: 'Pending review', approved: 'Approved',
-    changes: 'Changes', rejected: 'Declined', expired: 'Expired',
-    high: 'High', medium: 'Medium', low: 'Low',
-  };
-  return map[status] || status;
+  return <span style={pillStyle(status) as React.CSSProperties}>{statusPill[status]?.label || status}</span>;
 }
 
 export function MicroLabel({ children, accent: acc = false }: { children: React.ReactNode; accent?: boolean }) {
   return (
-    <div style={{ fontSize: font.micro, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: acc ? 'var(--vd-brand-1)' : ink.muted }}>
+    <div className="vd-microlabel" style={{ ...type.micro, color: acc ? 'var(--vd-brand-1)' : ink.secondary }}>
       {children}
     </div>
   );
@@ -41,9 +33,14 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   home: <path d="M3 9.6 12 3l9 6.6V20a1 1 0 0 1-1 1h-5v-6.2H9V21H4a1 1 0 0 1-1-1z" />,
   speaker: <><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /></>,
   send: <path d="M4 12h13M12 5l7 7-7 7" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  moon: <path d="M20 13.5A8.5 8.5 0 0 1 10.5 4a8.5 8.5 0 1 0 9.5 9.5z" />,
+  sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></>,
 };
 
-export function Icon({ name, size = 20 }: { name: keyof typeof ICON_PATHS; size?: number }) {
+export type IconName = keyof typeof ICON_PATHS;
+
+export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {ICON_PATHS[name]}
@@ -70,9 +67,11 @@ export function Disclosure({ title, defaultOpen, children }: {
             setOpen(o => !o);
           }
         }}
-        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: ink.secondary, padding: '6px 0', minHeight: 44 }}
+        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: space[2], ...type.footnote, fontWeight: 700, color: ink.secondary, padding: '6px 0', minHeight: 44 }}
       >
-        <span style={{ display: 'inline-block', transition: 'transform .2s var(--vd-spring)', transform: open ? 'rotate(90deg)' : 'none', fontSize: 10 }}>▶</span>
+        <span style={{ display: 'inline-flex', transition: 'transform var(--vd-dur-3) var(--vd-ease-spring)', transform: open ? 'none' : 'rotate(-90deg)' }}>
+          <Icon name="chevD" size={16} />
+        </span>
         {title}
       </div>
       {open && <div style={{ animation: 'vd-fade .25s ease both' }}>{children}</div>}

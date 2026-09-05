@@ -1,56 +1,91 @@
-import { AccountMenu, Icon, MiraPresence, pressProps } from '../../../lib/ui';
-import { gradients, ink, media, type } from '../../../lib/theme';
+// Patient home: greeting header, Mira hero, and a right rail at ≥800.
+import { AccountMenu, AppHeader, Button, Card, MiraPresence, StatusPill } from '../../../lib/ui';
+import { gradients, ink, media, radius, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
+import { useBreakpoint } from '../../../shell/viewport';
+import { useClinic } from '../../../store';
 
 function daypart(): string {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 }
 
+const STEPS = ['Talk with Dr. Mira — no forms', 'A doctor reviews your plan', 'Confirmed plan lands in History'];
+
 export function HomeScreen({ onStart }: { onStart: () => void }) {
   const { user } = useAuth();
+  const clinic = useClinic();
+  const bp = useBreakpoint();
+  const mobile = bp === 'mobile';
   const first = (user?.name || 'Alex Kumar').replace(/^Dr\.\s*/, '').split(' ')[0] || 'there';
+  const latest = clinic.queue.find(c => c.mine);
+  const callout = mobile ? type.callout : type.calloutT;
   return (
     <div className="vd-scroll vd-home" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: '20px 20px 118px' }}>
-      <style>{`${media.tabletUp}{.vd-home{max-width:960px;margin:0 auto;width:100%}.vd-home-grid{display:flex;gap:28px;align-items:center;justify-content:center;flex:1;width:100%}.vd-home-hero{flex:1.2;min-width:0}.vd-home-side{display:flex!important}}`}</style>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ ...type.largeTitle, color: ink.primary, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{daypart()}, {first}</div>
-        <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} />
-      </div>
+      <style>{`
+        ${media.tabletUp}{
+          .vd-home{max-width:900px;margin:0 auto;width:100%;padding:20px 28px 32px!important}
+          .vd-home-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;width:100%;flex:1}
+          .vd-home-hero{min-height:calc(100dvh - 160px)}
+          .vd-home-side{display:flex!important;position:sticky;top:28px}
+        }
+        ${media.desktopUp}{
+          .vd-home{max-width:1200px;padding:24px 32px 32px!important}
+          .vd-home-grid{grid-template-columns:minmax(0,640px) 340px;gap:32px;justify-content:center}
+          .vd-home-side{top:32px}
+        }
+      `}</style>
+
+      <AppHeader
+        title={`${daypart()}, ${first}`}
+        sticky={false}
+        actions={mobile ? <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} /> : undefined}
+      />
+
       <div className="vd-home-grid">
-      <div className="vd-home-hero" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, textAlign: 'center', padding: '12px 0' }}>
-        <MiraPresence size={152} />
-        <div>
-          <div style={{ ...type.headline, color: ink.primary }}>Dr. Mira is ready</div>
-          <div style={{ ...type.body, lineHeight: 1.55, color: ink.soft, marginTop: 8, maxWidth: 270 }}>
-            Start a consult and just talk — no forms.
-          </div>
-        </div>
-        <div
-          {...pressProps(onStart, 'Start consultation')}
-          style={{
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, height: 48, padding: '0 28px',
-            borderRadius: 99, background: gradients.primary, color: 'var(--vd-ink-on-brand)', fontSize: 15, fontWeight: 700,
-            boxShadow: 'var(--vd-shadow-cta)',
-          }}
-        >
-          <Icon name="mic" size={19} /> Start consultation
-        </div>
-      </div>
-      <aside className="vd-home-side" aria-label="How it works" style={{ display: 'none', flexDirection: 'column', gap: 12, flex: '1 1 280px', maxWidth: 340 }}>
-        <div style={{ background: 'var(--vd-surface-card)', border: '1px solid var(--vd-glass-border)', borderRadius: 20, padding: '16px 18px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--vd-ink-3)' }}>How a visit works</div>
-          {['Talk with Dr. Mira — no forms', 'A doctor reviews your plan', 'Confirmed plan lands in History'].map((s, i) => (
-            <div key={s} style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 10, fontSize: 13, fontWeight: 600, color: 'var(--vd-ink-2)' }}>
-              <span style={{ flex: 'none', width: 22, height: 22, borderRadius: 99, background: gradients.primary, color: 'var(--vd-ink-on-brand)', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
-              {s}
+        <div className="vd-home-hero" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, textAlign: 'center', padding: '12px 0' }}>
+          <MiraPresence size={mobile ? 152 : bp === 'tablet' ? 168 : 184} />
+          <div>
+            <div style={{ ...(mobile ? type.headline : type.headlineT), color: ink.primary }}>Dr. Mira is ready</div>
+            <div style={{ ...(mobile ? type.body : type.bodyT), color: ink.soft, marginTop: 8, maxWidth: 270 }}>
+              Start a consult and just talk — no forms.
             </div>
-          ))}
+          </div>
+          <Button icon="mic" onClick={onStart}>Start consultation</Button>
         </div>
-        <div style={{ background: 'var(--vd-surface-card)', border: '1px solid var(--vd-glass-border)', borderRadius: 20, padding: '16px 18px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--vd-ink-2)' }}>
-          Usual review wait is under an hour. If symptoms worsen, seek urgent care right away.
-        </div>
-      </aside>
+
+        <aside className="vd-home-side" aria-label="How it works" style={{ display: 'none', flexDirection: 'column', gap: 12 }}>
+          <Card>
+            <div style={{ ...type.micro, color: ink.secondary }}>How a visit works</div>
+            {STEPS.map((s, i) => (
+              <div key={s} style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 10, ...type.subhead, color: ink.body }}>
+                <span style={{ flex: 'none', width: 22, height: 22, borderRadius: radius.pill, background: gradients.primary, color: 'var(--vd-ink-on-brand)', ...type.caption, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                {s}
+              </div>
+            ))}
+          </Card>
+          {bp === 'desktop' && (
+            <Card>
+              <div style={{ ...type.micro, color: ink.secondary }}>Latest plan</div>
+              {latest ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <StatusPill status={latest.status} />
+                    <div style={{ ...type.footnoteT, color: ink.secondary, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{latest.meta}</div>
+                  </div>
+                  <div style={{ ...type.subheadT, fontWeight: 700, color: ink.primary, marginTop: 6 }}>{latest.title}</div>
+                </>
+              ) : (
+                <div style={{ ...type.calloutD, color: ink.secondary, marginTop: 8 }}>No plan yet — your first consult creates one.</div>
+              )}
+            </Card>
+          )}
+          <Card>
+            <div style={{ ...callout, color: ink.body }}>
+              Usual review wait is under an hour. If symptoms worsen, seek urgent care right away.
+            </div>
+          </Card>
+        </aside>
       </div>
     </div>
   );

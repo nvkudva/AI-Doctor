@@ -5,6 +5,9 @@ import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
 import { isOpenConsult } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
+import { AccountMenu, SideNav, type SideNavItem } from '../../../lib/ui';
+import { useAuth } from '../../../shell/auth';
+import { useIsMobile } from '../../../shell/viewport';
 import { seedLabs } from '../../../store/seeds';
 import { useConsult } from '../useConsult';
 import { ConsultView } from '../ConsultView';
@@ -19,8 +22,18 @@ type Screen = 'home' | 'consult' | 'recommendation' | 'records';
 const SCREENS: Screen[] = ['home', 'consult', 'recommendation', 'records'];
 const TABS: RecordsTab[] = ['history', 'labs', 'profile'];
 
+// The rail/sidebar at ≥800 carries the same four tabs as the bottom nav.
+const NAV_ITEMS: SideNavItem[] = [
+  { key: 'home', label: 'Home', icon: 'home' },
+  { key: 'history', label: 'History', icon: 'clock' },
+  { key: 'labs', label: 'Labs', icon: 'drop' },
+  { key: 'profile', label: 'Profile', icon: 'person' },
+];
+
 export function PatientFlow() {
   const clinic = useClinic();
+  const { user } = useAuth();
+  const mobile = useIsMobile();
   const loc = useLocation();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -129,42 +142,55 @@ export function PatientFlow() {
     return <Navigate to="/patient" replace />;
   }
 
+  const goTab = (t: NavTab) => {
+    if (t === 'home') nav('/patient');
+    else {
+      setRecordsTab(t);
+      nav('/patient/records');
+    }
+  };
+
   return (
     <>
-      {screen === 'home' && <HomeScreen onStart={startConsult} />}
-      {screen === 'consult' && <ConsultView consult={consult} onEnd={endVisit} />}
-      {screen === 'recommendation' && rec && (
-        <RecommendationScreen
-          rec={rec}
-          reviewStatus={clinic.reviewStatus}
-          rejectReason={clinic.rejectReason}
-          onFollowUp={() => nav('/patient/consult')}
-          onBack={() => nav('/patient')}
-          onViewRecords={() => { setRecordsTab('history'); nav('/patient/records'); }}
+      {!mobile && (
+        <SideNav
+          items={NAV_ITEMS}
+          active={screen === 'home' ? 'home' : screen === 'records' ? recordsTab : ''}
+          onSelect={k => goTab(k as NavTab)}
+          action={{ label: 'Start consultation', icon: 'phone', onClick: startConsult }}
+          account={<AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} />}
         />
       )}
-      {screen === 'recommendation' && !rec && (
-        <EmptyRecommendation onHome={() => nav('/patient')} />
-      )}
-      {screen === 'records' && (
-        <RecordsScreen
-          consults={clinic.consults}
-          prescriptions={clinic.prescriptions}
-          labs={seedLabs}
-          tab={recordsTab}
-          onTab={setRecordsTab}
-        />
-      )}
+      <div style={{ position: 'relative', flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {screen === 'home' && <HomeScreen onStart={startConsult} />}
+        {screen === 'consult' && <ConsultView consult={consult} onEnd={endVisit} />}
+        {screen === 'recommendation' && rec && (
+          <RecommendationScreen
+            rec={rec}
+            reviewStatus={clinic.reviewStatus}
+            rejectReason={clinic.rejectReason}
+            onFollowUp={() => nav('/patient/consult')}
+            onBack={() => nav('/patient')}
+            onViewRecords={() => { setRecordsTab('history'); nav('/patient/records'); }}
+          />
+        )}
+        {screen === 'recommendation' && !rec && (
+          <EmptyRecommendation onHome={() => nav('/patient')} />
+        )}
+        {screen === 'records' && (
+          <RecordsScreen
+            consults={clinic.consults}
+            prescriptions={clinic.prescriptions}
+            labs={seedLabs}
+            tab={recordsTab}
+            onTab={setRecordsTab}
+          />
+        )}
+      </div>
       {(screen === 'home' || screen === 'records') && (
         <BottomNav
           active={screen === 'home' ? 'home' : recordsTab === 'profile' ? 'profile' : recordsTab}
-          onTab={(t: NavTab) => {
-            if (t === 'home') nav('/patient');
-            else {
-              setRecordsTab(t);
-              nav('/patient/records');
-            }
-          }}
+          onTab={goTab}
           onCall={startConsult}
         />
       )}

@@ -7,11 +7,10 @@
 <title>Virtual Doctor</title>
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <script>try{var t=localStorage.getItem('vd_theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}</script>
+<!-- Pre-paint ground only; the font stack, box-sizing and .vd-scroll live in lib/theme/theme.css. -->
 <style>
-body{margin:0;background:#CDB6EC;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;min-height:100vh}
+body{margin:0;background:#CDB6EC;min-height:100vh}
 [data-theme="dark"] body{background:#241B45}
-*{box-sizing:border-box}
-.vd-scroll::-webkit-scrollbar{width:0}
 </style>
 </head>
 <body>

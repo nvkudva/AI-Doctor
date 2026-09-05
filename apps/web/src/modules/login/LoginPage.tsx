@@ -1,13 +1,23 @@
 // Login module: adult gate + Google / demo sign-in.
+// One column on mobile; brand column + sign-in card at ≥800 (DESIGN §10.9).
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Icon, MiraPresence, pressProps } from '../../lib/ui';
-import { gradients, ink, surfaces } from '../../lib/theme';
+import { Button, Card, Icon, MiraPresence } from '../../lib/ui';
+import { elevation, gradients, ink, lines, media, radius, surfaces, type } from '../../lib/theme';
 import { useAuth, type Role } from '../../shell/auth';
+import { useBreakpoint } from '../../shell/viewport';
+
+const TRUST = [
+  'A licensed doctor reviews every plan',
+  'Your visit notes stay private to you',
+  'No forms — just talk to Dr. Mira',
+];
 
 export function LoginPage({ hospitalName }: { hospitalName: string }) {
   const { signInGoogle, signInDemo, googleConfigured, googlePending, authErr } = useAuth();
   const nav = useNavigate();
+  const bp = useBreakpoint();
+  const mobile = bp === 'mobile';
   const [adultOk, setAdultOk] = useState(false);
   const [err, setErr] = useState('');
 
@@ -32,19 +42,54 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
     if (!googleConfigured) nav('/patient');
   };
 
+  const brandName = mobile ? type.display : bp === 'tablet' ? type.displayT : type.displayD;
+  const callout = mobile ? type.callout : type.calloutT;
+
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center', background: gradients.app }}>
-      <div style={{ width: 'min(560px,100%)', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '66px 26px 40px', textAlign: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, minHeight: 0 }}>
-          <MiraPresence size={138} />
+      <style>{`
+        ${media.tabletUp}{
+          .vd-login{width:min(900px,100%)!important;display:grid!important;grid-template-columns:minmax(0,1fr) 420px;gap:48px;align-items:center;text-align:left!important;padding:40px 32px!important}
+          .vd-login-brand{align-items:flex-start!important;text-align:left!important}
+          .vd-login-card{width:100%!important}
+        }
+        ${media.desktopUp}{
+          .vd-login{width:min(1080px,100%)!important;grid-template-columns:minmax(0,1fr) 440px;gap:64px}
+        }
+      `}</style>
+
+      <div className="vd-login" style={{ width: 'min(420px,100%)', margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px 40px', textAlign: 'center' }}>
+        <div className="vd-login-brand" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, marginBottom: 28 }}>
+          <MiraPresence size={mobile ? 138 : bp === 'tablet' ? 152 : 184} />
           <div>
-            <div style={{ fontSize: 30, fontWeight: 700, color: ink.primary }}>{hospitalName}</div>
-            <div style={{ fontSize: 14, lineHeight: 1.55, color: ink.soft, marginTop: 12, maxWidth: 300 }}>
+            <div style={{ ...brandName, color: ink.primary }}>{hospitalName}</div>
+            <div style={{ ...(mobile ? type.callout : type.bodyT), color: ink.soft, marginTop: 12, maxWidth: 320 }}>
               A calm, private doctor's visit — whenever you need one. Sign in to begin.
             </div>
           </div>
+          {bp === 'desktop' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {TRUST.map(t => (
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, ...type.calloutD, color: ink.body }}>
+                  <span style={{ flex: 'none', display: 'flex', color: 'var(--vd-ok-fg)' }}><Icon name="check" size={18} /></span>
+                  {t}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div style={{ width: '100%' }}>
+
+        <Card
+          className="vd-login-card"
+          level={mobile ? 0 : 3}
+          bordered={!mobile}
+          pad={mobile ? 0 : bp === 'tablet' ? 28 : 32}
+          style={{
+            width: '100%', textAlign: 'left',
+            background: mobile ? 'transparent' : surfaces.card,
+            borderRadius: radius.xl,
+          }}
+        >
           <div
             onClick={() => { setAdultOk(a => !a); setErr(''); }}
             role="switch"
@@ -52,54 +97,73 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdultOk(a => !a); setErr(''); } }}
             aria-label="Confirm you are 18 or older"
-            style={{ cursor: 'pointer', width: '100%', borderRadius: 16, background: 'rgba(255,255,255,.55)', border: `1.5px solid ${adultOk ? ink.primary : 'rgba(36,27,69,.25)'}`, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', fontSize: 13.5, fontWeight: 600, color: ink.primary, marginBottom: 12 }}
+            style={{
+              cursor: 'pointer', width: '100%', height: 56, boxSizing: 'border-box', borderRadius: radius.md,
+              background: surfaces.card, border: `1.5px solid ${adultOk ? ink.primary : lines.strong}`,
+              display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
+              ...type.subhead, color: ink.primary, marginBottom: 12,
+            }}
           >
-            <span style={{ width: 38, height: 23, borderRadius: 99, background: adultOk ? ink.primary : 'rgba(36,27,69,.25)', display: 'inline-flex', alignItems: 'center', padding: 2, justifyContent: adultOk ? 'flex-end' : 'flex-start', flex: 'none', transition: 'background .2s var(--vd-spring)' }}>
-              <span style={{ width: 19, height: 19, borderRadius: '50%', background: 'var(--vd-surface-card)' }} />
+            <span style={{ width: 38, height: 23, borderRadius: radius.pill, background: adultOk ? ink.primary : lines.strong, display: 'inline-flex', alignItems: 'center', padding: 2, justifyContent: adultOk ? 'flex-end' : 'flex-start', flex: 'none', transition: 'background var(--vd-dur-2) var(--vd-ease-spring)' }}>
+              <span style={{ width: 19, height: 19, borderRadius: '50%', background: surfaces.card }} />
             </span>
-            <span style={{ textAlign: 'left' }}>I confirm I am 18 or older</span>
+            <span>I confirm I am 18 or older</span>
           </div>
-          {(err || authErr) && <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--vd-bad-fg)', marginBottom: 10 }}>{err || authErr}</div>}
-          <div {...pressProps(google, 'Continue with Google')} style={{ cursor: 'pointer', width: '100%', height: 48, borderRadius: 99, background: surfaces.card, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 11, fontSize: 15, fontWeight: 700, color: ink.primary, boxShadow: '0 10px 26px rgba(46,37,71,.25)', opacity: googlePending ? 0.7 : 1 }}>
+
+          {(err || authErr) && <div style={{ ...type.footnote, fontWeight: 600, color: 'var(--vd-bad-fg)', marginBottom: 10 }}>{err || authErr}</div>}
+
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={google}
+            disabled={googlePending}
+            style={{ background: surfaces.card, border: `1px solid ${lines.hairline}`, boxShadow: elevation[2], gap: 11 }}
+          >
             <GoogleG />
             {googlePending ? 'Redirecting…' : 'Continue with Google'}
-          </div>
+          </Button>
+
           {!googleConfigured && (
-            <div style={{ fontSize: 12, color: ink.soft, marginTop: 10, lineHeight: 1.5 }}>
+            <div style={{ ...type.footnote, color: ink.soft, marginTop: 10 }}>
               Demo mode — add Supabase keys to enable real Google sign-in.
             </div>
           )}
+
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 14px' }}>
-            <span style={{ flex: 1, height: 1, background: 'rgba(36,27,69,.2)' }} />
-            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: ink.soft }}>Demo accounts</span>
-            <span style={{ flex: 1, height: 1, background: 'rgba(36,27,69,.2)' }} />
+            <span style={{ flex: 1, height: 1, background: lines.strong }} />
+            <span style={{ ...type.micro, letterSpacing: '.06em', color: ink.soft }}>Demo accounts</span>
+            <span style={{ flex: 1, height: 1, background: lines.strong }} />
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div {...pressProps(() => demo('patient'), 'Sign in as demo patient Alex Kumar')} style={demoBtn}>
-              <span style={{ display: 'flex', color: ink.primary }}><Icon name="person" size={22} /></span>
-              <span>Fake patient</span>
-              <small style={{ fontWeight: 500, opacity: 0.7 }}>Alex Kumar</small>
-            </div>
-            <div {...pressProps(() => demo('doctor'), 'Sign in as demo doctor Dr. Whitfield')} style={demoBtn}>
-              <span style={{ display: 'flex', color: ink.primary }}><Icon name="person" size={22} /></span>
-              <span>Fake doctor</span>
-              <small style={{ fontWeight: 500, opacity: 0.7 }}>Dr. Whitfield</small>
-            </div>
+
+          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+            <DemoCard onClick={() => demo('patient')} label="Fake patient" who="Alex Kumar" />
+            <DemoCard onClick={() => demo('doctor')} label="Fake doctor" who="Dr. Whitfield" />
           </div>
-          <div style={{ fontSize: 12, color: ink.soft, marginTop: 16, lineHeight: 1.5 }}>One tap to sign in — your visits stay private and a licensed doctor reviews every plan.</div>
-        </div>
+
+          <div style={{ ...callout, color: ink.soft, marginTop: 16 }}>
+            One tap to sign in — your visits stay private and a licensed doctor reviews every plan.
+          </div>
+        </Card>
       </div>
     </div>
   );
 }
 
-const demoBtn = {
-  cursor: 'pointer', flex: 1, borderRadius: 16, background: surfaces.card,
-  border: '1px solid rgba(36,27,69,.12)', display: 'flex', flexDirection: 'column' as const,
-  alignItems: 'center', gap: 4, padding: '14px 10px', fontSize: 14, fontWeight: 700, color: ink.primary,
-  boxShadow: '0 10px 24px rgba(46,37,71,.18)',
-};
+function DemoCard({ onClick, label, who }: { onClick: () => void; label: string; who: string }) {
+  return (
+    <Card
+      onClick={onClick}
+      pad="14px 10px"
+      style={{ flex: 1, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textAlign: 'center' }}
+    >
+      <span style={{ display: 'flex', color: ink.primary }}><Icon name="person" size={22} /></span>
+      <span style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{label}</span>
+      <span style={{ ...type.footnote, color: ink.secondary }}>{who}</span>
+    </Card>
+  );
+}
 
+// Google's brand mark — fixed brand colours, not themeable.
 function GoogleG() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">

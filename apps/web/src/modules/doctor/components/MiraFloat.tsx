@@ -1,48 +1,70 @@
-// Floating Dr. Mira review assistant: orb button + voice/text review panel.
+// Dr. Mira in coordinator mode (PRD MC-1/MC-3): the shared <MiraPresence> plus
+// the doctor's review controls as its suggestion/action slot. No second voice UI.
 import { useState } from 'react';
-import { Icon, MiraPresence, pressProps, useDismiss } from '../../../lib/ui';
-import { z } from '../../../lib/theme';
+import { Button, Card, Chip, IconButton, MicroLabel, MiraPresence, Sheet } from '../../../lib/ui';
+import { useBreakpoint } from '../../../shell/viewport';
+import { ink, lines, radius, space, surfaces, type, z } from '../../../lib/theme';
 import type { useReview } from '../useReview';
 
-export function MiraFloat({ review, onEdit, mobile }: { review: ReturnType<typeof useReview>; onEdit: (() => void) | null; mobile: boolean }) {
-  const [open, setOpen] = useState(false);
-  useDismiss(() => setOpen(false), open);
+export function MiraFloat({ review, onEdit, open, onOpen, onClose }: {
+  review: ReturnType<typeof useReview>;
+  onEdit: (() => void) | null;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const bp = useBreakpoint();
+  const mobile = bp === 'mobile';
+  // Below 800 the bottom-nav FAB is the entry point, so no floating orb.
+  const edge = bp === 'tablet' ? 24 : 28;
+  const panel = <ReviewPanel review={review} onEdit={onEdit} />;
   return (
     <>
-      {!open && (
-      <div
-        {...pressProps(() => setOpen(true), 'Open Dr. Mira')}
-        aria-expanded={open}
-        title="Dr. Mira"
-        style={{
-          cursor: 'pointer', position: 'fixed', zIndex: z.popover, right: mobile ? 12 : 20, bottom: mobile ? 12 : 20,
-          width: 60, height: 60, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(28,24,55,.85)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-          border: '1px solid rgba(255,255,255,.2)', boxShadow: '0 12px 32px rgba(20,12,60,.5), 0 0 24px oklch(0.72 0.2 300 / .45)',
-        }}
-      >
-        <MiraPresence voiceState={review.status} size={38} />
-        {review.active && (
-          <span style={{ position: 'absolute', top: 2, right: 2, width: 12, height: 12, borderRadius: 99, background: 'oklch(0.72 0.2 145)', border: '2px solid rgba(28,24,55,.9)' }} />
-        )}
-      </div>
+      {!mobile && !open && (
+        <>
+          <MiraPresence minimized voiceState={review.status} onMaximize={onOpen} />
+          {review.active && (
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'fixed', zIndex: z.nav, right: edge + 2, bottom: `calc(${edge + 48}px + env(safe-area-inset-bottom))`,
+                width: 12, height: 12, borderRadius: radius.pill,
+                background: 'var(--vd-ok-fg)', border: `2px solid ${lines.glass}`,
+              }}
+            />
+          )}
+        </>
       )}
-      {open && (
-        <div role="dialog" aria-label="Dr. Mira chat" style={{ position: 'fixed', zIndex: z.popover, right: mobile ? 12 : 20, bottom: mobile ? 80 : 88, width: 'min(380px, calc(100vw - 24px))', height: 'min(600px, calc(100dvh - 170px))', display: 'flex', flexDirection: 'column', borderRadius: 22, overflow: 'hidden', background: 'rgba(28,24,55,.9)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', border: '1px solid rgba(255,255,255,.16)', boxShadow: '0 24px 60px rgba(12,8,40,.55)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px 10px 16px', borderBottom: '1px solid rgba(255,255,255,.12)', flex: 'none' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.85)', flex: 1 }}>Dr. Mira</div>
-            <div {...pressProps(() => setOpen(false), 'Close chat')} style={{ cursor: 'pointer', width: 44, height: 44, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,.85)', fontSize: 18 }}>×</div>
-          </div>
-          <div className="vd-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 12 }}>
-            <ReviewPanel review={review} onEdit={onEdit} mobile={mobile} />
-          </div>
+      {open && (mobile ? (
+        <Sheet open onClose={onClose} title="Dr. Mira" label="Dr. Mira">{panel}</Sheet>
+      ) : (
+        <div
+          role="dialog"
+          aria-label="Dr. Mira"
+          style={{
+            position: 'fixed', zIndex: z.popover, right: edge, bottom: edge,
+            width: 'min(380px, calc(100vw - 48px))', maxHeight: 'min(640px, calc(100dvh - 140px))',
+            display: 'flex', animation: 'vd-pop var(--vd-dur-4) var(--vd-ease-overshoot) both',
+          }}
+        >
+          <Card level={5} pad={space[5]} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: space[3], overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: space[3] }}>
+              <div style={{ flex: 1, minWidth: 0 }}><MicroLabel>Dr. Mira</MicroLabel></div>
+              <IconButton icon="x" label="Close Dr. Mira" tone="plain" onClick={onClose} />
+            </div>
+            <div className="vd-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{panel}</div>
+          </Card>
         </div>
-      )}
+      ))}
     </>
   );
 }
 
-function ReviewPanel({ review, onEdit, mobile }: { review: ReturnType<typeof useReview>; onEdit: (() => void) | null; mobile: boolean }) {
+// The doctor-audience suggestion/action slot (MC-3): presence, transcript,
+// quick commands, and the explicit review controls.
+function ReviewPanel({ review, onEdit }: { review: ReturnType<typeof useReview>; onEdit: (() => void) | null }) {
+  const bp = useBreakpoint();
+  const mobile = bp === 'mobile';
   const [input, setInput] = useState('');
   const send = () => {
     if (!input.trim()) return;
@@ -50,48 +72,56 @@ function ReviewPanel({ review, onEdit, mobile }: { review: ReturnType<typeof use
     setInput('');
   };
   return (
-    <div style={mobile ? { flex: 'none', width: '100%', minWidth: 0, borderRadius: 22, background: 'rgba(28,24,55,.78)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', border: '1px solid rgba(255,255,255,.14)', padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' } : { flex: '1 1 280px', minWidth: 0, alignSelf: 'flex-start', position: 'sticky', top: 12, borderRadius: 22, background: 'rgba(28,24,55,.78)', backdropFilter: 'blur(24px) saturate(160%)', WebkitBackdropFilter: 'blur(24px) saturate(160%)', border: '1px solid rgba(255,255,255,.14)', padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: space[3] }}>
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <MiraPresence voiceState={review.status} size={mobile ? 72 : 92} onTap={review.orbTap} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.85)', textAlign: 'center' }}>Dr. Mira</div>
-      <div style={{ fontSize: 13, color: 'var(--vd-ink-on-brand)', minHeight: 40 }}>{review.line || 'Start the review and I’ll walk you through this case — change the tests, prescription, or advice by voice or text, or approve to send it to the patient.'}</div>
-      <div className="vd-scroll" style={{ maxHeight: 320, overflowY: 'auto', fontSize: 12.5, color: 'var(--vd-ink-on-brand)' }}>
-        {review.notes.map((n, i) => (
-          <div key={i} style={{ marginBottom: 6 }}><b>{n.who}:</b> {n.t}</div>
-        ))}
+      <div style={{ ...(mobile ? type.callout : type.calloutT), color: ink.body, minHeight: 40 }}>
+        {review.line || 'Start the review and I’ll walk you through this case — change the tests, prescription, or advice by voice or text, or approve to send it to the patient.'}
       </div>
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.75)' }}>Voice edits update the draft — nothing is sent until you approve.</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {review.notes.length > 0 && (
+        <div className="vd-scroll" style={{ maxHeight: 240, overflowY: 'auto', ...(mobile ? type.footnote : type.footnoteT), color: ink.secondary }}>
+          {review.notes.map((n, i) => (
+            <div key={i} style={{ marginBottom: space[2] }}><b style={{ color: ink.body }}>{n.who}:</b> {n.t}</div>
+          ))}
+        </div>
+      )}
+      <div style={{ ...type.caption, fontWeight: 400, color: ink.soft }}>
+        Voice edits update the draft — nothing is sent until you approve.
+      </div>
+      <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap' }}>
         {['Approve it', 'Add CBC', 'Change advice'].map(c => (
-          <div key={c} {...pressProps(() => review.command(c), c)} style={{ cursor: 'pointer', background: 'rgba(255,255,255,.85)', borderRadius: 99, padding: '10px 13px', minHeight: 44, display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 600, color: '#3A2E5C' }}>
-            {c}
-          </div>
+          <Chip key={c} onSelect={() => review.command(c)}>{c}</Chip>
         ))}
         {review.failedCmd && (
-          <div onClick={() => review.command(review.failedCmd!)} style={{ cursor: 'pointer', background: 'var(--vd-bad-bg)', borderRadius: 99, padding: '10px 13px', minHeight: 44, display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 700, color: 'var(--vd-bad-fg)' }}>
+          <Chip
+            onSelect={() => review.command(review.failedCmd!)}
+            style={{ background: 'var(--vd-bad-bg)', color: 'var(--vd-bad-fg)', border: '1px solid transparent' }}
+          >
             Retry last command
-          </div>
+          </Chip>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: space[3] }}>
         <input
           value={input}
           aria-label="Type to Mira"
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="Type to Mira…"
-          style={{ flex: 1, border: 0, borderRadius: 99, height: 44, padding: '0 16px', fontSize: 16 }}
+          style={{
+            flex: 1, minWidth: 0, height: 44, padding: `0 ${space[5]}px`, fontSize: 16,
+            borderRadius: radius.pill, border: `1px solid ${lines.hairline}`,
+            background: surfaces.panel, color: ink.body,
+          }}
         />
-        <button onClick={send} aria-label="Send to Mira" style={{ cursor: 'pointer', border: 0, width: 44, height: 44, borderRadius: 99, background: 'rgba(255,255,255,.9)', color: '#241B45', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}><Icon name="send" size={18} /></button>
+        <IconButton icon="send" label="Send to Mira" tone="card" onClick={send} size={44} />
       </div>
-      <button onClick={review.active ? review.stop : review.start} style={{ cursor: 'pointer', border: 0, height: 48, borderRadius: 99, background: 'rgba(255,255,255,.92)', fontSize: 15, fontWeight: 700, color: '#241B45', fontFamily: 'inherit' }}>
+      <Button variant="primary" fullWidth icon={review.active ? undefined : 'mic'} onClick={review.active ? review.stop : review.start}>
         {review.active ? 'End review' : 'Talk'}
-      </button>
+      </Button>
       {onEdit && (
-        <button onClick={onEdit} style={{ cursor: 'pointer', border: '1px solid rgba(255,255,255,.5)', height: 48, borderRadius: 99, background: 'transparent', fontSize: 13, fontWeight: 600, color: 'var(--vd-ink-on-brand)', fontFamily: 'inherit' }}>
-          Send back for changes
-        </button>
+        <Button variant="tertiary" fullWidth onClick={onEdit}>Send back for changes</Button>
       )}
     </div>
   );

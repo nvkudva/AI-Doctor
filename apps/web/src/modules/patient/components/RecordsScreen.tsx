@@ -1,7 +1,10 @@
+// Records: history · labs · profile, behind a segmented control.
+// Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
-import { AccountMenu, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
-import { gradients, ink, media, surfaces, type } from '../../../lib/theme';
+import { AccountMenu, AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
+import { gradients, ink, lines, media, radius, surfaces, tints, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
+import { useBreakpoint } from '../../../shell/viewport';
 import type { UserConsult, UserRx } from '../../../store';
 
 export type RecordsTab = 'history' | 'labs' | 'profile';
@@ -16,21 +19,49 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
   onTab: (t: RecordsTab) => void;
 }) {
   const { user } = useAuth();
+  const bp = useBreakpoint();
+  const mobile = bp === 'mobile';
   const activeIdx = RECORD_TABS.indexOf(tab);
   return (
     <div className="vd-scroll vd-records" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 118px' }}>
-      <style>{`${media.tabletUp}{.vd-records{max-width:960px;margin:0 auto;width:100%}}`}</style>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <div style={{ ...type.largeTitle, color: ink.primary, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Records</div>
-        <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} />
-      </div>
-      <div role="tablist" aria-label="Records sections" style={{ position: 'relative', display: 'flex', marginBottom: 18, background: 'color-mix(in srgb, var(--vd-surface-card) 65%, transparent)', backdropFilter: 'var(--vd-glass-blur)', WebkitBackdropFilter: 'var(--vd-glass-blur)', border: '1px solid var(--vd-border)', borderRadius: 99, padding: 3 }}>
+      <style>{`
+        ${media.tabletUp}{
+          .vd-records{max-width:860px;margin:0 auto;width:100%;padding:20px 28px 40px!important}
+          .vd-records-seg{max-width:420px}
+          .vd-records-list{max-width:720px}
+          .vd-records-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+          .vd-records-grid>*{margin-bottom:0!important}
+          .vd-records-stats{max-width:560px}
+          .vd-records-cover{max-width:720px}
+        }
+        ${media.desktopUp}{
+          .vd-records{max-width:1180px;padding:24px 32px 40px!important}
+          .vd-records-list{max-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px;align-items:start}
+          .vd-records-list>*{margin-bottom:0!important}
+          .vd-records-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+          .vd-records-stats{max-width:640px}
+        }
+      `}</style>
+
+      <AppHeader
+        title="Records"
+        sticky={false}
+        actions={mobile ? <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} /> : undefined}
+        style={{ marginBottom: 14 }}
+      />
+
+      <div
+        role="tablist"
+        aria-label="Records sections"
+        className="vd-records-seg"
+        style={{ position: 'relative', display: 'flex', marginBottom: 18, height: mobile || bp === 'tablet' ? 44 : 40, background: surfaces.panel, border: `1px solid ${lines.hairline}`, borderRadius: radius.pill, padding: 3 }}
+      >
         <div
           style={{
-            position: 'absolute', top: 3, bottom: 3, borderRadius: 99, background: surfaces.card,
-            boxShadow: '0 3px 10px rgba(46,37,71,.18)',
+            position: 'absolute', top: 3, bottom: 3, borderRadius: radius.pill, background: surfaces.raised,
+            boxShadow: 'var(--vd-elev-1)',
             left: `calc(${activeIdx} * (100% - 6px) / 3 + 3px)`, width: 'calc((100% - 6px) / 3)',
-            transition: 'left .25s var(--vd-spring)',
+            transition: 'left var(--vd-dur-3) var(--vd-ease-spring)',
           }}
         />
         {RECORD_TABS.map(t => (
@@ -55,8 +86,8 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
             }}
             tabIndex={tab === t ? 0 : -1}
             style={{
-              cursor: 'pointer', flex: 1, position: 'relative', textAlign: 'center', padding: '9px 0',
-              fontSize: 13, fontWeight: 700, textTransform: 'capitalize',
+              cursor: 'pointer', flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              ...(mobile ? type.subhead : type.subheadT), fontWeight: 700, textTransform: 'capitalize',
               color: tab === t ? ink.primary : ink.soft,
             }}
           >
@@ -69,8 +100,9 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
         <>
           <SectionTitle>Consultation history</SectionTitle>
           <SectionSub>Your past visits with Dr. Mira · tap to view details</SectionSub>
-          {consults.length === 0 && <EmptyState>Nothing here yet — your visits will appear after your first consult.</EmptyState>}
-          {consults.map(c => <ConsultCard key={c.id} c={c} />)}
+          {consults.length === 0
+            ? <EmptyState icon="clock" title="No visits yet" body="Your visits will appear here after your first consult." />
+            : <div className="vd-records-list">{consults.map(c => <ConsultCard key={c.id} c={c} />)}</div>}
         </>
       )}
 
@@ -78,58 +110,66 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
         <>
           <SectionTitle>Lab tests</SectionTitle>
           <SectionSub>Results from your previous blood work &amp; tests</SectionSub>
-          {labs.length === 0 && <EmptyState>No lab results yet.</EmptyState>}
-          {labs.map((l, i) => <LabRow key={i} name={l.name} date={l.date} result={l.result} ok={l.ok} />)}
+          {labs.length === 0
+            ? <EmptyState icon="drop" title="No lab results yet" body="Results ordered through a consult land here." />
+            : <div className="vd-records-grid">{labs.map((l, i) => <LabRow key={i} name={l.name} date={l.date} result={l.result} ok={l.ok} />)}</div>}
           <SectionTitle>Documents</SectionTitle>
-          {[['Chest X-ray report.pdf', 'Mar 2026'], ['CBC results.pdf', 'Feb 2026']].map(([n, d]) => (
-            <div key={n} style={{ background: surfaces.card, borderRadius: 16, padding: '13px 15px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ display: 'flex', color: ink.soft }}><Icon name="doc" size={19} /></span>
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: ink.primary }}>{n}</div>
-                <div style={{ fontSize: 12, color: ink.secondary }}>{d}</div>
-              </div>
-            </div>
-          ))}
+          <div className="vd-records-grid">
+            {[['Chest X-ray report.pdf', 'Mar 2026'], ['CBC results.pdf', 'Feb 2026']].map(([n, d]) => (
+              <Card key={n} level={1} pad="13px 15px" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ display: 'flex', color: ink.soft }}><Icon name="doc" size={19} /></span>
+                <div>
+                  <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{n}</div>
+                  <div style={{ ...type.footnote, color: ink.secondary }}>{d}</div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </>
       )}
 
       {tab === 'profile' && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <div style={{ width: 52, height: 52, borderRadius: 99, background: gradients.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vd-ink-on-brand)', ...type.headline, flex: 'none' }}>AK</div>
+            <div style={{ width: 52, height: 52, borderRadius: radius.pill, background: gradients.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vd-ink-on-brand)', ...type.headline, flex: 'none' }}>AK</div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: ink.primary }}>Alex Kumar</div>
-              <div style={{ fontSize: 12.5, color: ink.soft }}>alex.kumar@gmail.com</div>
+              <div style={{ ...(mobile ? type.title : type.titleT), color: ink.primary }}>Alex Kumar</div>
+              <div style={{ ...type.footnote, color: ink.soft }}>alex.kumar@gmail.com</div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          <div className="vd-records-stats" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
             {[['Age', '34'], ['Blood', 'O+'], ['Allergy', 'Penicillin']].map(([k, v]) => (
-              <div key={k} style={{ flex: 1, background: surfaces.card, borderRadius: 16, padding: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: ink.muted }}>{k}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: k === 'Allergy' ? 'var(--vd-bad-fg)' : ink.primary }}>{v}</div>
-              </div>
+              <Card key={k} level={1} pad={12} style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ ...type.micro, color: ink.secondary }}>{k}</div>
+                <div style={{ ...type.callout, fontWeight: 700, color: k === 'Allergy' ? 'var(--vd-bad-fg)' : ink.primary }}>{v}</div>
+              </Card>
             ))}
           </div>
           <SectionTitle>Prescriptions</SectionTitle>
-          {prescriptions.length === 0 && <EmptyState>No prescriptions on file.</EmptyState>}
-          {prescriptions.map((p, i) => (
-            <div key={i} style={{ background: surfaces.card, borderRadius: 16, padding: '13px 15px', marginBottom: 8 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: ink.primary }}>{p.name}</div>
-              <div style={{ fontSize: 12, color: ink.secondary }}>{p.detail} · {p.date}</div>
-            </div>
-          ))}
-          <SectionTitle>Coverage & payment</SectionTitle>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1, borderRadius: 14, padding: 12, background: surfaces.card, border: '1px solid var(--vd-border)' }}>
-              <div style={{ ...type.micro, color: ink.muted }}>Insurance</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: ink.primary, marginTop: 4 }}>Star Health · AX-48291</div>
-              <div style={{ fontSize: 12, color: ink.secondary, marginTop: 2 }}>Family Floater · ₹500 copay</div>
-            </div>
-            <div style={{ flex: 1, borderRadius: 14, padding: 12, background: surfaces.card, border: '1px solid var(--vd-border)' }}>
-              <div style={{ ...type.micro, color: ink.muted }}>Payment</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: ink.primary, marginTop: 4 }}>•••• 4291</div>
-              <div style={{ fontSize: 12, color: ink.secondary, marginTop: 2 }}>HDFC · Exp 09/28</div>
-            </div>
+          {prescriptions.length === 0
+            ? <EmptyState icon="doc" title="No prescriptions on file" body="Approved prescriptions are saved here." />
+            : (
+              <div className="vd-records-list">
+                {prescriptions.map((p, i) => (
+                  <Card key={i} level={1} pad="13px 15px" style={{ marginBottom: 8 }}>
+                    <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{p.name}</div>
+                    <div style={{ ...type.footnote, color: ink.secondary }}>{p.detail} · {p.date}</div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          <SectionTitle>Coverage &amp; payment</SectionTitle>
+          <div className="vd-records-cover" style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+            <Card level={1} pad={12} style={{ flex: 1 }}>
+              <div style={{ ...type.micro, color: ink.secondary }}>Insurance</div>
+              <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>Star Health · AX-48291</div>
+              <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>Family Floater · ₹500 copay</div>
+            </Card>
+            <Card level={1} pad={12} style={{ flex: 1 }}>
+              <div style={{ ...type.micro, color: ink.secondary }}>Payment</div>
+              <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>•••• 4291</div>
+              <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>HDFC · Exp 09/28</div>
+            </Card>
           </div>
         </>
       )}
@@ -138,22 +178,18 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 13, fontWeight: 700, color: ink.primary, margin: '14px 4px 10px' }}>{children}</div>;
+  return <div style={{ ...type.subhead, fontWeight: 700, color: ink.primary, margin: '14px 4px 10px' }}>{children}</div>;
 }
 
 function SectionSub({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: 12.5, color: ink.soft, marginBottom: 12 }}>{children}</div>;
-}
-
-function EmptyState({ children }: { children: React.ReactNode }) {
-  return <div style={{ background: surfaces.card, borderRadius: 16, padding: '15px 16px', marginBottom: 10, fontSize: 13, color: ink.secondary }}>{children}</div>;
+  return <div style={{ ...type.footnote, color: ink.soft, marginBottom: 12 }}>{children}</div>;
 }
 
 function ConsultCard({ c }: { c: UserConsult }) {
   const [open, setOpen] = useState(false);
   const d = c.detail;
   return (
-    <div style={{ background: surfaces.card, borderRadius: 16, padding: '15px 16px', marginBottom: 10 }}>
+    <Card pad="15px 16px" style={{ marginBottom: 10 }}>
       <div
         onClick={() => d && setOpen(o => !o)}
         role={d ? 'button' : undefined}
@@ -168,45 +204,53 @@ function ConsultCard({ c }: { c: UserConsult }) {
         style={{ cursor: d ? 'pointer' : 'default' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: ink.primary }}>{c.title}</div>
+          <div style={{ ...type.headline, fontWeight: 600, color: ink.primary }}>{c.title}</div>
           <span style={{ flex: 'none' }}><StatusPill status={c.status === 'Approved' ? 'approved' : c.status} /></span>
         </div>
-        <div style={{ fontSize: 13, color: ink.muted, marginTop: 3 }}>{c.date} · Dr. Mira</div>
-        <div style={{ fontSize: 13, color: ink.secondary, marginTop: 8, lineHeight: 1.5 }}>{c.note}</div>
-        {d && <div style={{ fontSize: 12, fontWeight: 700, color: ink.soft, marginTop: 6 }}>{open ? 'Show less ‹' : 'View details ›'}</div>}
+        <div style={{ ...type.subhead, fontWeight: 400, color: ink.secondary, marginTop: 3 }}>{c.date} · Dr. Mira</div>
+        <div style={{ ...type.callout, color: ink.secondary, marginTop: 8 }}>{c.note}</div>
+        {d && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: 44, ...type.footnote, fontWeight: 700, color: ink.soft, marginTop: 6 }}>
+            {open ? 'Show less' : 'View details'}
+            <span style={{ display: 'inline-flex', transition: 'transform var(--vd-dur-3) var(--vd-ease-spring)', transform: open ? 'rotate(180deg)' : 'none' }}>
+              <Icon name="chevD" size={14} />
+            </span>
+          </div>
+        )}
       </div>
       {d && open && (
-        <div style={{ marginTop: 10, borderTop: '1px solid var(--vd-border)', paddingTop: 10 }}>
+        <div style={{ marginTop: 10, borderTop: `1px solid ${lines.hairline}`, paddingTop: 10 }}>
           <MicroLabel>AI consultation summary</MicroLabel>
-          <div style={{ fontSize: 13, color: ink.body, lineHeight: 1.5 }}>{d.summary}</div>
+          <div style={{ ...type.callout, color: ink.body }}>{d.summary}</div>
           <MicroLabel>Evaluation</MicroLabel>
-          <div style={{ fontSize: 13, fontWeight: 600, color: ink.body }}>{d.evaluation}</div>
+          <div style={{ ...type.callout, fontWeight: 600, color: ink.body }}>{d.evaluation}</div>
           {(d.tests.length > 0 || d.rx.length > 0) && <MicroLabel>Next steps</MicroLabel>}
           {d.tests.map((t, i) => <div key={i} style={miniRow}><b>{t.name}</b> · {t.detail}</div>)}
           {d.rx.map((t, i) => <div key={i} style={miniRow}><b>{t.name}</b>{t.dosage ? ` · ${t.dosage}` : ''}{t.timing ? ` · ${t.timing}` : ''}</div>)}
           <MicroLabel>Advice</MicroLabel>
-          <div style={{ fontSize: 13, color: ink.body, lineHeight: 1.5 }}>{d.advice}</div>
+          <div style={{ ...type.callout, color: ink.body }}>{d.advice}</div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
 const miniRow = {
-  fontSize: 12.5, color: ink.body, background: surfaces.panel,
-  borderRadius: 12, padding: '8px 11px', marginBottom: 6,
+  ...type.footnote, color: ink.body, background: surfaces.panel,
+  borderRadius: radius.sm, padding: '8px 11px', marginBottom: 6,
 } as const;
 
 function LabRow({ name, date, result, ok }: { name: string; date: string; result: string; ok: boolean }) {
+  const t = ok ? tints.labOk : tints.labWarn;
   return (
-    <div style={{ background: surfaces.card, borderRadius: 16, padding: '13px 15px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: ink.primary }}>{name}</div>
-        <div style={{ fontSize: 12, color: ink.secondary }}>{date}</div>
+    <Card level={1} pad="13px 15px" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{name}</div>
+        <div style={{ ...type.footnote, color: ink.secondary }}>{date}</div>
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, padding: '5px 11px', borderRadius: 99, background: ok ? 'oklch(0.72 0.13 160 / .16)' : 'oklch(0.8 0.14 70 / .2)', color: ok ? 'oklch(0.45 0.13 160)' : 'oklch(0.5 0.14 60)' }}>
+      <span style={{ ...type.caption, fontWeight: 700, padding: '5px 11px', borderRadius: radius.pill, background: t.bg, color: t.fg, flex: 'none' }}>
         {result}
       </span>
-    </div>
+    </Card>
   );
 }

@@ -56,7 +56,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline,
               variant="approve"
               half="right"
               icon="chevD"
-              width={48}
+              width={36}
               onClick={() => setMenu(o => !o)}
               aria-label="More decision actions"
               aria-haspopup="menu"
@@ -128,11 +128,11 @@ export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline,
           style={{
             position: 'fixed', left: space[5], right: space[5], zIndex: z.sticky,
             bottom: 'calc(78px + env(safe-area-inset-bottom))',
-            height: 72, borderRadius: radius['2xl'], padding: `0 ${space[4]}px`,
-            display: 'flex', alignItems: 'center', gap: space[3],
+            height: 60, borderRadius: radius['2xl'], padding: `0 ${space[4]}px`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: space[3],
           }}
         >
-          <Button variant="approve" onClick={onApprove} style={{ flex: 1 }}>Approve &amp; send</Button>
+          <Button variant="approve" onClick={onApprove}>Approve &amp; send</Button>
           <div style={{ position: 'relative', flex: 'none' }}>
             <button
               type="button"

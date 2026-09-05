@@ -16,8 +16,9 @@ function metrics(variant: ButtonVariant, bp: Breakpoint): Metrics {
       return { h: bp === 'mobile' ? 48 : 50, padX: bp === 'mobile' ? 20 : 24, font: { ...small, fontWeight: 700 } };
     case 'tertiary':
       return { h: 48, padX: 20, font: { ...small, fontWeight: 600 } };
+    // A compact glass pill, not a hero CTA — it sits inside chrome.
     case 'approve':
-      return { h: 48, padX: 18, font: { ...label, fontWeight: 700 } };
+      return { h: 36, padX: 14, font: { ...type.caption, fontWeight: 700 } };
     default:
       return {
         h: bp === 'mobile' ? 48 : bp === 'tablet' ? 50 : 52,
@@ -36,7 +37,10 @@ function skin(variant: ButtonVariant): React.CSSProperties {
     case 'danger':
       return { background: gradients.danger, color: ink.onBrand, border: '1px solid transparent', boxShadow: 'var(--vd-elev-2)' };
     case 'approve':
-      return { background: gradients.approve, color: ink.onApprove, border: '1px solid transparent', boxShadow: 'var(--vd-elev-2)' };
+      return {
+        background: 'var(--vd-ok-bg)', color: 'var(--vd-ok-fg)',
+        border: '1px solid var(--vd-glass-border)', boxShadow: 'var(--vd-glass-hi), var(--vd-elev-1)',
+      };
     default:
       return { background: gradients.primary, color: ink.onBrand, border: '1px solid transparent', boxShadow: 'var(--vd-shadow-cta)' };
   }

@@ -1,8 +1,8 @@
 // The shared screen header (DESIGN §11.1): large title, optional subtitle or
-// badge, 44 circular glass actions on the right, sticky glass-thin at ≥800.
-// Patient home/records and the doctor desk render this same component.
+// badge, 44 circular glass actions on the right. No background of its own, so
+// it sits on the module's ground identically in both apps.
 import { useState } from 'react';
-import { getTheme, gradients, ink, lines, radius, setTheme, type, z, type Theme } from '../theme';
+import { getTheme, gradients, ink, radius, setTheme, type, type Theme } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 import { IconButton } from './Button';
 
@@ -36,7 +36,7 @@ function initialsOf(name: string): string {
 }
 
 export function AppHeader({
-  title, subtitle, badge, actions, identity, sticky = true, style,
+  title, subtitle, badge, actions, identity, style,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -46,26 +46,17 @@ export function AppHeader({
   actions?: React.ReactNode;
   /** Profile screens lead with the account instead of a title. */
   identity?: { name: string; email: string };
-  sticky?: boolean;
   style?: React.CSSProperties;
 }) {
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  const glassy = sticky && !mobile;
   const titleType = mobile ? type.largeTitle : bp === 'tablet' ? type.largeTitleT : type.largeTitleD;
   return (
     <header
-      className={glassy ? 'vd-glass-thin' : undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         ...(identity && mobile ? { flexDirection: 'column-reverse', alignItems: 'stretch' } : {}),
         minHeight: mobile ? 64 : bp === 'tablet' ? 72 : 76,
-        ...(glassy
-          ? {
-            position: 'sticky', top: 0, zIndex: z.header, borderRadius: 0,
-            border: 'none', borderBottom: `1px solid ${lines.glass}`, boxShadow: 'var(--vd-elev-1)',
-          }
-          : {}),
         ...style,
       }}
     >

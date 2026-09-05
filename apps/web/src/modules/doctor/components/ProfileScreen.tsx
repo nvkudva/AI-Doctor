@@ -22,7 +22,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
       <style>{profileCss}</style>
 
       <AppHeader
-        sticky={false}
+
         title=""
         identity={{ name: user?.name || 'Dr. Sara Whitfield', email: user?.email || 'sara.whitfield@example.com' }}
         actions={(

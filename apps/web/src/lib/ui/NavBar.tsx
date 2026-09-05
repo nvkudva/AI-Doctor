@@ -5,7 +5,7 @@
 // In either vertical form the `railTop` item floats to the top of the rail.
 import { useSyncExternalStore } from 'react';
 import { Icon, pressProps, type IconName } from './Primitives';
-import { MiraOrb, type VoiceState } from './Mira';
+import { MiraOrb, STATE_RING, type VoiceState } from './Mira';
 import { gradients, ink, lines, nav as navTone, radius, space, type, z } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 
@@ -114,12 +114,13 @@ export function NavBar({ items, active, onSelect, orb, railTop }: {
         }}
       >
         <span style={{
-          flex: 'none', width: 48, height: 48, borderRadius: radius.pill,
+          position: 'relative', flex: 'none', width: 48, height: 48, borderRadius: radius.pill,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: wide ? 'transparent' : gradients.call,
           border: wide ? 'none' : '1px solid var(--vd-glass-border)',
           boxShadow: wide ? 'none' : 'var(--vd-shadow-cta), var(--vd-glass-hi)',
         }}>
+          <VoiceAura state={orb.voiceState ?? 'idle'} />
           <MiraOrb size={32} voiceState={orb.voiceState ?? 'idle'} />
         </span>
         {wide && <span style={{ ...type.subheadD, fontWeight: 700 }}>{orb.label}</span>}
@@ -186,10 +187,34 @@ function BottomBar({ items, active, onSelect, orb }: {
             display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
           }}
         >
+          <VoiceAura state={orb.voiceState ?? 'idle'} />
           <MiraOrb size={34} voiceState={orb.voiceState ?? 'idle'} />
         </div>
       </div>
     </div>
+  );
+}
+
+// Expanding rings behind the nav orb, so a live session reads from the bar
+// itself — the panel no longer carries an orb of its own.
+function VoiceAura({ state }: { state: VoiceState }) {
+  if (state === 'idle') return null;
+  const dur = state === 'listening' ? 'var(--vd-dur-ring)' : 'var(--vd-dur-ring-slow)';
+  return (
+    <>
+      {[0, 1].map(i => (
+        <span
+          key={i}
+          aria-hidden="true"
+          style={{
+            position: 'absolute', inset: 0, borderRadius: radius.pill, pointerEvents: 'none',
+            border: `2px solid ${STATE_RING[state]}`,
+            animation: `vd-ring ${dur} var(--vd-ease-out) infinite`,
+            animationDelay: i ? `calc(${dur} / 2)` : '0s',
+          }}
+        />
+      ))}
+    </>
   );
 }
 

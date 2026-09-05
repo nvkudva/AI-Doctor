@@ -120,22 +120,16 @@ export function PatientFlow() {
       nav('/patient/recommendation');
       return;
     }
+    setMiraOpen(true);
+    // Reopening resumes: only a fresh panel starts a new conversation.
+    if (consult.messages.length > 0) return;
     consult.reset();
     setRec(null);
-    setMiraOpen(true);
     setTimeout(() => consult.start(), 0);
   };
 
-  const endVisit = () => {
-    if (consult.messages.length > 1 && !rec) {
-      clinic.addConsultRecord({
-        id: `ab-${Date.now()}`, title: 'Visit ended early', date: 'Today', status: 'Unfinished',
-        note: 'Ended before a plan was prepared. Start a fresh consult anytime.', user: true,
-      });
-    }
-    consult.reset();
-    setMiraOpen(false);
-  };
+  // The nav orb is also the panel's only dismiss control now.
+  const toggleMira = () => (miraOpen ? setMiraOpen(false) : startConsult());
 
   if (seg && !SCREENS.includes(seg as Screen)) {
     return <Navigate to="/patient" replace />;
@@ -154,7 +148,7 @@ export function PatientFlow() {
           items={NAV_ITEMS}
           active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
           onSelect={k => goTab(k as NavTab)}
-          orb={{ label: 'Start consultation', voiceState: consult.status, onClick: startConsult }}
+          orb={{ label: 'Dr. Mira', voiceState: consult.status, onClick: toggleMira }}
           railTop="profile"
         />
       )}
@@ -166,10 +160,6 @@ export function PatientFlow() {
         youLabel="You"
         placeholder="Type instead — e.g. fever 3 days…"
         draftKey="vd_consult_draft"
-        endTitle="End this visit?"
-        endBody="Your notes are kept — you can start a fresh consult anytime."
-        endConfirm="End visit"
-        onEnd={endVisit}
       />
       <div style={{ position: 'relative', flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {screen === 'home' && <HomeScreen onStart={startConsult} />}

@@ -43,7 +43,7 @@ export function RecordsScreen({ consults, labs, tab, onTab }: {
 
       <AppHeader
         title="Records"
-        sticky={false}
+
         actions={<><ThemeToggle /><PatientNotify /></>}
         style={{ marginBottom: 14 }}
       />

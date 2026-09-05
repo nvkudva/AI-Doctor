@@ -41,7 +41,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
       <AppHeader
         title={greeting(user?.name || 'Alex Kumar')}
         subtitle={mobile ? undefined : 'Here’s what needs you today.'}
-        sticky={false}
+
         actions={<><ThemeToggle /><PatientNotify /></>}
         style={{ marginBottom: space[3] }}
       />

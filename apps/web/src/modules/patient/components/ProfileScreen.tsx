@@ -18,7 +18,7 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       <style>{profileCss}</style>
 
       <AppHeader
-        sticky={false}
+
         title=""
         identity={{ name: user?.name || 'Alex Kumar', email: user?.email || 'alex.kumar@gmail.com' }}
         actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}

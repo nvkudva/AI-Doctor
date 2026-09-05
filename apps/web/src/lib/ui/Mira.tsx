@@ -7,7 +7,7 @@ import { Icon } from './Primitives';
 
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
-const STATE_RING: Record<VoiceState, string> = {
+export const STATE_RING: Record<VoiceState, string> = {
   idle: 'var(--vd-state-idle)',
   listening: 'var(--vd-state-listen)',
   thinking: 'var(--vd-state-think)',

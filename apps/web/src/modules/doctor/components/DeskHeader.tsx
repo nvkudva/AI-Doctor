@@ -15,7 +15,7 @@ export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotif
   const { user } = useAuth();
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  // Align the full-bleed sticky header with the 1560/40 desk gutters.
+  // Align the full-bleed header with the 1560/40 desk gutters.
   const pad = mobile ? '0 16px' : bp === 'tablet' ? '0 28px' : '0 max(40px, calc((100% - 1560px) / 2 + 40px))';
   return (
     <AppHeader

@@ -110,7 +110,8 @@ function Desk({ tenantName }: { tenantName: string }) {
     onApprove: () => ac && clinic.decide(ac.id, 'approved'),
   });
 
-  const openMira = () => {
+  const toggleMira = () => {
+    if (miraOpen) { setMiraOpen(false); return; }
     setMiraOpen(true);
     if (!review.active) setTimeout(() => review.start(), 0);
   };
@@ -161,7 +162,7 @@ function Desk({ tenantName }: { tenantName: string }) {
           setTab(k as DeskTab);
           backToQueue();
         }}
-        orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: openMira }}
+        orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: toggleMira }}
         railTop="profile"
       />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
@@ -259,10 +260,6 @@ function Desk({ tenantName }: { tenantName: string }) {
         youLabel="You"
         placeholder="Type a command — e.g. add a CBC…"
         draftKey="vd_review_draft"
-        endTitle="End this review session?"
-        endBody="The case is left exactly as it is — nothing is sent to the patient."
-        endConfirm="End session"
-        onEnd={() => { review.stop(); setMiraOpen(false); }}
       />
 
     </div>

@@ -12,13 +12,14 @@ import { useConsult } from '../useConsult';
 import { ConsultView } from '../ConsultView';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
+import { ProfileScreen } from './ProfileScreen';
 import { RecommendationScreen } from './RecommendationScreen';
 import { EmptyRecommendation } from './EmptyRecommendation';
 
-type Screen = 'home' | 'consult' | 'recommendation' | 'records';
+type Screen = 'home' | 'consult' | 'recommendation' | 'records' | 'profile';
 
-const SCREENS: Screen[] = ['home', 'consult', 'recommendation', 'records'];
-const TABS: RecordsTab[] = ['history', 'labs', 'profile'];
+const SCREENS: Screen[] = ['home', 'consult', 'recommendation', 'records', 'profile'];
+const TABS: RecordsTab[] = ['history', 'labs'];
 
 type NavTab = 'home' | 'history' | 'labs' | 'profile';
 
@@ -141,15 +142,17 @@ export function PatientFlow() {
   }
 
   const goTab = (t: NavTab) => {
-    nav(t === 'home' ? '/patient' : `/patient/records?tab=${t}`);
+    if (t === 'home') nav('/patient');
+    else if (t === 'profile') nav('/patient/profile');
+    else nav(`/patient/records?tab=${t}`);
   };
 
   return (
     <>
-      {(!mobile || screen === 'home' || screen === 'records') && (
+      {(!mobile || screen === 'home' || screen === 'records' || screen === 'profile') && (
         <NavBar
           items={NAV_ITEMS}
-          active={screen === 'home' ? 'home' : screen === 'records' ? recordsTab : ''}
+          active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
           onSelect={k => goTab(k as NavTab)}
           orb={{ label: 'Start consultation', onClick: startConsult }}
           railTop="profile"
@@ -171,10 +174,10 @@ export function PatientFlow() {
         {screen === 'recommendation' && !rec && (
           <EmptyRecommendation onHome={() => nav('/patient')} />
         )}
+        {screen === 'profile' && <ProfileScreen prescriptions={clinic.prescriptions} />}
         {screen === 'records' && (
           <RecordsScreen
             consults={clinic.consults}
-            prescriptions={clinic.prescriptions}
             labs={seedLabs}
             tab={recordsTab}
             onTab={setRecordsTab}

@@ -16,6 +16,7 @@ import { CaseDetail, PatientPanel, caseDetailCss } from './components/CaseDetail
 import { DeclineSheet } from './components/DeclineSheet';
 import { MiraFloat } from './components/MiraFloat';
 import { DoctorHome, doctorHomeCss } from './components/DoctorHome';
+import { ProfileScreen } from './components/ProfileScreen';
 
 type Filter = 'all' | 'pending' | 'urgent';
 type DeskTab = 'home' | 'appointments' | 'reviews';
@@ -72,9 +73,9 @@ function Desk({ tenantName }: { tenantName: string }) {
   // remounts (and the Mira session survives) when it changes.
   const { pathname } = useLocation();
   const caseId = /\/case\/([^/]+)/.exec(pathname)?.[1];
+  const onProfile = /\/profile\/?$/.test(pathname);
   const [showNotifs, setShowNotifs] = useState(false);
   const [miraOpen, setMiraOpen] = useState(false);
-  const [account, setAccount] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   const [tab, setTab] = useState<DeskTab>('home');
   // Refresh wait-time labels every minute.
@@ -151,16 +152,17 @@ function Desk({ tenantName }: { tenantName: string }) {
     <div className="vd-desk-shell">
       <NavBar
         items={NAV_ITEMS}
-        active={ac ? '' : tab}
+        active={onProfile ? 'profile' : ac ? '' : tab}
         onSelect={(k: string) => {
-          if (k === 'profile') { setAccount(true); return; }
+          if (k === 'profile') { review.stop(); nav('/doctor/profile'); return; }
           setTab(k as DeskTab);
           backToQueue();
         }}
         orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: () => setMiraOpen(true) }}
         railTop="profile"
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+      {onProfile ? <ProfileScreen onSelectCase={selectCase} /> : <>
       <DeskHeader
         tenantName={tenantName}
         pendingCount={pendingCount}
@@ -234,6 +236,7 @@ function Desk({ tenantName }: { tenantName: string }) {
           </aside>
         </div>
       </div>
+      </>}
       </div>
 
       {declineFor && (
@@ -254,7 +257,6 @@ function Desk({ tenantName }: { tenantName: string }) {
         onClose={() => setMiraOpen(false)}
       />
 
-      <AccountSheet open={account} onClose={() => setAccount(false)} />
     </div>
   );
 }
@@ -288,37 +290,5 @@ function QueueFilter({ value, onChange }: { value: Filter; onChange: (f: Filter)
         );
       })}
     </div>
-  );
-}
-
-// The nav's Profile slot: credentials, duty state, and the account actions.
-// A sheet rather than a popover, because the nav sits at a screen edge.
-function AccountSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { user, signOut } = useAuth();
-  const nav = useNavigate();
-  const [theme, setThemeState] = useState(() => getTheme());
-  return (
-    <Sheet open={open} onClose={onClose} title={user?.name || 'Dr. Sara Whitfield'} label="Profile">
-      <div style={{ ...type.footnote, color: ink.secondary }}>General Physician · GMC-483920</div>
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: space[2], margin: `${space[3]}px 0`,
-        padding: '8px 12px', background: 'var(--vd-ok-bg)', borderRadius: radius.pill,
-        ...type.caption, color: 'var(--vd-ok-fg)',
-      }}>
-        On duty · accepting reviews
-      </div>
-      <MenuRow icon="person" onClick={() => { onClose(); nav('/patient'); }}>Patient view</MenuRow>
-      <MenuRow
-        icon={theme === 'light' ? 'moon' : 'sun'}
-        onClick={() => {
-          const next = theme === 'light' ? 'dark' : 'light';
-          setTheme(next);
-          setThemeState(next);
-        }}
-      >
-        {theme === 'light' ? 'Dark mode' : 'Light mode'}
-      </MenuRow>
-      <MenuRow icon="x" onClick={() => { onClose(); signOut(); }}>Sign out</MenuRow>
-    </Sheet>
   );
 }

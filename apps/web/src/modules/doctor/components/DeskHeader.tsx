@@ -1,6 +1,6 @@
 // Review desk header: greeting title, pending pill, notification bell, account.
 import { useClinic } from '../../../store';
-import { AppHeader, NotifyButton, greeting } from '../../../lib/ui';
+import { AppHeader, NotifyButton, ThemeToggle, greeting } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 
@@ -25,6 +25,7 @@ export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotif
       actions={(
         <>
           {filter}
+          <ThemeToggle />
           <NotifyButton
             notices={clinic.notices}
             open={showNotifs}

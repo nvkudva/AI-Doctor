@@ -95,12 +95,15 @@ export function Popover({
 
 // A 44-high popover row. `danger` tints the label for destructive actions.
 export function MenuRow({
-  children, onClick, icon, danger, style,
+  children, onClick, icon, danger, detail, disabled, style,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   icon?: IconName;
   danger?: boolean;
+  /** Secondary line under the label — why a disabled row is disabled, usually. */
+  detail?: string;
+  disabled?: boolean;
   style?: React.CSSProperties;
 }) {
   return (
@@ -108,15 +111,21 @@ export function MenuRow({
       type="button"
       role="menuitem"
       onClick={onClick}
+      disabled={disabled}
       style={{
         width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', gap: 10,
         padding: '11px 10px', borderRadius: radius.sm, border: 'none', background: 'transparent',
-        cursor: 'pointer', textAlign: 'left', ...type.callout, fontWeight: 600,
-        color: danger ? 'var(--vd-bad-fg)' : ink.body, ...style,
+        cursor: disabled ? 'default' : 'pointer', textAlign: 'left', ...type.callout, fontWeight: 600,
+        color: disabled ? ink.muted : danger ? 'var(--vd-bad-fg)' : ink.body, ...style,
       }}
     >
       {icon && <Icon name={icon} size={18} />}
-      <span style={{ flex: 1 }}>{children}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        {children}
+        {detail && (
+          <span style={{ display: 'block', ...type.footnote, fontWeight: 500, color: ink.muted }}>{detail}</span>
+        )}
+      </span>
     </button>
   );
 }

@@ -1,26 +1,22 @@
 // Records: history · labs · profile, behind a segmented control.
 // Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { AppHeader, Card, EmptyState, Icon, MenuRow, MicroLabel, StatusPill, bottomBarInset } from '../../../lib/ui';
+import { AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill, ThemeToggle, bottomBarInset } from '../../../lib/ui';
 import { PatientNotify } from './PatientNotify';
-import { getTheme, gradients, ink, lines, media, radius, setTheme, surfaces, tints, type } from '../../../lib/theme';
-import { useAuth } from '../../../shell/auth';
+import { ink, lines, media, radius, surfaces, tints, type } from '../../../lib/theme';
 import { useBreakpoint } from '../../../shell/viewport';
-import type { UserConsult, UserRx } from '../../../store';
+import type { UserConsult } from '../../../store';
 
-export type RecordsTab = 'history' | 'labs' | 'profile';
+export type RecordsTab = 'history' | 'labs';
 
-const RECORD_TABS: RecordsTab[] = ['history', 'labs', 'profile'];
+const RECORD_TABS: RecordsTab[] = ['history', 'labs'];
 
-export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
+export function RecordsScreen({ consults, labs, tab, onTab }: {
   consults: UserConsult[];
-  prescriptions: UserRx[];
   labs: { name: string; date: string; result: string; ok: boolean }[];
   tab: RecordsTab;
   onTab: (t: RecordsTab) => void;
 }) {
-  const { user } = useAuth();
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
   const activeIdx = RECORD_TABS.indexOf(tab);
@@ -48,7 +44,7 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
       <AppHeader
         title="Records"
         sticky={false}
-        actions={<PatientNotify />}
+        actions={<><ThemeToggle /><PatientNotify /></>}
         style={{ marginBottom: 14 }}
       />
 
@@ -62,7 +58,7 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
           style={{
             position: 'absolute', top: 3, bottom: 3, borderRadius: radius.pill, background: surfaces.raised,
             boxShadow: 'var(--vd-elev-1)',
-            left: `calc(${activeIdx} * (100% - 6px) / 3 + 3px)`, width: 'calc((100% - 6px) / 3)',
+            left: `calc(${activeIdx} * (100% - 6px) / 2 + 3px)`, width: 'calc((100% - 6px) / 2)',
             transition: 'left var(--vd-dur-3) var(--vd-ease-spring)',
           }}
         />
@@ -130,78 +126,7 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
         </>
       )}
 
-      {tab === 'profile' && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <div style={{ width: 52, height: 52, borderRadius: radius.pill, background: gradients.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vd-ink-on-brand)', ...type.headline, flex: 'none' }}>AK</div>
-            <div>
-              <div style={{ ...(mobile ? type.title : type.titleT), color: ink.primary }}>Alex Kumar</div>
-              <div style={{ ...type.footnote, color: ink.soft }}>alex.kumar@gmail.com</div>
-            </div>
-          </div>
-          <div className="vd-records-stats" style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            {[['Age', '34'], ['Blood', 'O+'], ['Allergy', 'Penicillin']].map(([k, v]) => (
-              <Card key={k} level={1} pad={12} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ ...type.micro, color: ink.secondary }}>{k}</div>
-                <div style={{ ...type.callout, fontWeight: 700, color: k === 'Allergy' ? 'var(--vd-bad-fg)' : ink.primary }}>{v}</div>
-              </Card>
-            ))}
-          </div>
-          <SectionTitle>Prescriptions</SectionTitle>
-          {prescriptions.length === 0
-            ? <EmptyState icon="doc" title="No prescriptions on file" body="Approved prescriptions are saved here." />
-            : (
-              <div className="vd-records-list">
-                {prescriptions.map((p, i) => (
-                  <Card key={i} level={1} pad="13px 15px" style={{ marginBottom: 8 }}>
-                    <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{p.name}</div>
-                    <div style={{ ...type.footnote, color: ink.secondary }}>{p.detail} · {p.date}</div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          <SectionTitle>Coverage &amp; payment</SectionTitle>
-          <div className="vd-records-cover" style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-            <Card level={1} pad={12} style={{ flex: 1 }}>
-              <div style={{ ...type.micro, color: ink.secondary }}>Insurance</div>
-              <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>Star Health · AX-48291</div>
-              <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>Family Floater · ₹500 copay</div>
-            </Card>
-            <Card level={1} pad={12} style={{ flex: 1 }}>
-              <div style={{ ...type.micro, color: ink.secondary }}>Payment</div>
-              <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>•••• 4291</div>
-              <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>HDFC · Exp 09/28</div>
-            </Card>
-          </div>
-          <SectionTitle>Account</SectionTitle>
-          <AccountRows />
-        </>
-      )}
     </div>
-  );
-}
-
-// Theme, doctor view and sign-out — reachable only from here now that the
-// header avatar is gone and Profile leads the nav.
-function AccountRows() {
-  const { signOut } = useAuth();
-  const nav = useNavigate();
-  const [theme, setThemeState] = useState(() => getTheme());
-  return (
-    <Card level={1} pad={6}>
-      <MenuRow icon="person" onClick={() => nav('/doctor')}>Doctor view</MenuRow>
-      <MenuRow
-        icon={theme === 'light' ? 'moon' : 'sun'}
-        onClick={() => {
-          const next = theme === 'light' ? 'dark' : 'light';
-          setTheme(next);
-          setThemeState(next);
-        }}
-      >
-        {theme === 'light' ? 'Dark mode' : 'Light mode'}
-      </MenuRow>
-      <MenuRow icon="x" onClick={signOut}>Sign out</MenuRow>
-    </Card>
   );
 }
 

@@ -1,5 +1,5 @@
 // Patient home: greeting header, Mira hero, and a right rail at ≥800.
-import { AppHeader, Button, Card, MiraPresence, StatusPill, bottomBarInset, greeting } from '../../../lib/ui';
+import { AppHeader, Button, Card, MiraPresence, StatusPill, ThemeToggle, bottomBarInset, greeting } from '../../../lib/ui';
 import { PatientNotify } from './PatientNotify';
 import { gradients, ink, media, radius, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
@@ -34,7 +34,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
       <AppHeader
         title={greeting(user?.name || 'Alex Kumar')}
         sticky={false}
-        actions={<PatientNotify />}
+        actions={<><ThemeToggle /><PatientNotify /></>}
       />
 
       <div className="vd-home-grid">

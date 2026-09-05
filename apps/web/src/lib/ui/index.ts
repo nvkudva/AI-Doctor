@@ -5,6 +5,7 @@ export * from './Dismiss';
 export * from './Button';
 export * from './Chip';
 export * from './Card';
+export * from './Profile';
 export * from './Sheet';
 export * from './AppHeader';
 export * from './NavBar';

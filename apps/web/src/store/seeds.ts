@@ -76,3 +76,14 @@ export const seedLabs = [
   { name: 'Complete Blood Count', date: 'Feb 2, 2026', result: 'Normal', ok: true },
   { name: 'Lipid Profile', date: 'Feb 2, 2026', result: 'Borderline', ok: false },
 ];
+
+// Practice figures for the doctor profile — not derivable from the demo queue.
+export const seedDoctor = {
+  registration: 'GMC-483920',
+  specialty: 'General Physician',
+  patients: '1,284',
+  years: '12',
+  rating: '4.8',
+  languages: 'English · Hindi · Kannada',
+  hospital: 'Apollo Clinic · Koramangala',
+};

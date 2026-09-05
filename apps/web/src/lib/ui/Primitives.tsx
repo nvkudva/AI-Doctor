@@ -35,6 +35,8 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   send: <path d="M4 12h13M12 5l7 7-7 7" />,
   plus: <path d="M12 5v14M5 12h14" />,
   moon: <path d="M20 13.5A8.5 8.5 0 0 1 10.5 4a8.5 8.5 0 1 0 9.5 9.5z" />,
+  exit: <><path d="M14 4.5H6a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 6 19.5h8" /><path d="M13 12h7M17 8.5l3.5 3.5L17 15.5" /></>,
+  key: <><circle cx="8.5" cy="12" r="3.5" /><path d="M12 12h9M18 12v3.5M15.5 12v2.5" /></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></>,
 };
 

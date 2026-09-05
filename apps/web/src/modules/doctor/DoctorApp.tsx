@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router';
 import { useBreakpoint } from '../../shell/viewport';
-import { useAuth } from '../../shell/auth';
 import { isReviewable, sortQueue, type CaseItem } from '../../lib/core';
 import { Button, Card, EmptyState, Icon, MicroLabel, MiraPanel, NavBar, bottomBarInset, pressProps, type NavItem } from '../../lib/ui';
-import { getTheme, gradients, ink, media, radius, setTheme, space, surfaces, type } from '../../lib/theme';
+import { gradients, ink, media, radius, space, surfaces, type } from '../../lib/theme';
 import { ClinicProvider, useClinic } from '../../store';
 import { seedConsults, seedQueue, seedRx } from '../../store/seeds';
 import { useReview } from './useReview';

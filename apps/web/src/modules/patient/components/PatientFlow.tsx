@@ -121,8 +121,9 @@ export function PatientFlow() {
       return;
     }
     setMiraOpen(true);
-    // Reopening resumes: only a fresh panel starts a new conversation.
-    if (consult.messages.length > 0) return;
+    // Reopening resumes a conversation still in progress; one that already
+    // produced a plan starts over, so a follow-up is a fresh consult.
+    if (consult.messages.length > 0 && !rec) return;
     consult.reset();
     setRec(null);
     setTimeout(() => consult.start(), 0);

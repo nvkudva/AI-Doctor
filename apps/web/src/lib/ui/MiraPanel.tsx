@@ -12,8 +12,14 @@ import { Card } from './Card';
 import { Icon, pressProps } from './Primitives';
 import { type VoiceState } from './Mira';
 import { useRailOffset } from './NavBar';
-import { elevation, gradients, ink, lines, radius, space, surfaces, type, z } from '../theme';
+import { elevation, gradients, ink, lines, radius, space, surfaces, toneStyle, type, z, type Tone } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
+
+export interface Suggestion {
+  label: string;
+  /** Tints the pill — a decline reads red, a reassurance green. */
+  tone?: Tone;
+}
 
 export interface MiraTurn {
   role: 'user' | 'mira';
@@ -31,7 +37,7 @@ export interface MiraSession {
   orbTap: () => void;
   send: (text: string) => void;
   /** Context pills above the composer — they differ per role. */
-  suggestions: string[];
+  suggestions: Suggestion[];
   micDenied?: boolean;
   clearMicDenied?: () => void;
   failed?: boolean;
@@ -178,7 +184,8 @@ export function MiraPanel({
     session.status === 'listening' ? 'Listening — speak naturally…'
       : session.status === 'thinking' ? 'Thinking…'
         : session.status === 'speaking' ? 'Dr. Mira is speaking — tap the wave to interrupt'
-          : 'Tap the wave to talk, or type below';
+          // Idle needs no prompt; the waveform and composer speak for themselves.
+          : '';
 
   return (
     <>
@@ -299,15 +306,16 @@ export function MiraPanel({
               <div style={{ flex: 'none', display: 'flex', gap: space[2], marginTop: space[3], overflowX: 'auto', paddingBottom: 2 }} className="vd-scroll">
                 {session.suggestions.map(sg => (
                   <button
-                    key={sg}
+                    key={sg.label}
                     type="button"
-                    onClick={() => session.send(sg)}
+                    onClick={() => session.send(sg.label)}
                     style={{
-                      ...bubbleStyle(false), ...type.caption, flex: 'none', cursor: 'pointer',
-                      whiteSpace: 'nowrap', padding: '5px 11px', borderRadius: radius.pill, fontWeight: 600,
+                      ...type.caption, fontWeight: 700, flex: 'none', cursor: 'pointer',
+                      whiteSpace: 'nowrap', padding: '5px 11px', borderRadius: radius.pill,
+                      ...toneStyle(sg.tone ?? 'neutral'),
                     }}
                   >
-                    {sg}
+                    {sg.label}
                   </button>
                 ))}
               </div>

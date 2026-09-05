@@ -2,7 +2,7 @@
 // commands, applies edits to the on-screen draft. Approval stays UI-only.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CaseItem } from '../../lib/core';
-import type { MiraTurn } from '../../lib/ui';
+import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, type ChatMessage } from '../../lib/api';
 import { listenOnce, speak, stopAllVoice } from '../../lib/voice';
 
@@ -21,8 +21,16 @@ function parseAi(raw: string): any {
 
 // Spoken shortcuts for the actions the doctor takes most; they run through the
 // same command path as speech, so Mira confirms them the same way.
-const START_PILLS = ['Summarise this case', 'What did the patient say?'];
-const REVIEW_PILLS = ['Approve and send', 'Decline this', 'Change the dosage', 'Add a test'];
+const START_PILLS: Suggestion[] = [
+  { label: 'Summarise this case' },
+  { label: 'What did the patient say?' },
+];
+const REVIEW_PILLS: Suggestion[] = [
+  { label: 'Approve and send', tone: 'ok' },
+  { label: 'Decline this', tone: 'bad' },
+  { label: 'Change the dosage', tone: 'warn' },
+  { label: 'Add a test' },
+];
 
 export function useReview(opts: {
   getCase: () => CaseItem | undefined;

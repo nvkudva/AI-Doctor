@@ -2,15 +2,27 @@
 // Owns the live conversation only; lifecycle + persistence live in the clinic store.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Confidence, Recommendation } from '../../lib/core';
-import type { MiraTurn } from '../../lib/ui';
+import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, concludeConsult, consultTurn, hasGemini, type ChatMessage, type SymptomSlots } from '../../lib/api';
 import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '../../lib/voice';
 
 export type Turn = MiraTurn;
 
 // Openers while the conversation is young; follow-ups once it is running.
-const OPENERS = ['I have a fever', 'Bad headache', 'Stomach pain'];
-const FOLLOWUPS = ['Since yesterday', 'About a week', 'It comes and goes', 'That\u2019s all'];
+// Tone tracks how the patient is doing, not what the button does.
+const OPENERS: Suggestion[] = [
+  { label: 'I have a fever', tone: 'bad' },
+  { label: 'Bad headache', tone: 'warn' },
+  { label: 'Stomach pain', tone: 'warn' },
+  { label: 'Feeling better', tone: 'ok' },
+];
+const FOLLOWUPS: Suggestion[] = [
+  { label: 'Since yesterday' },
+  { label: 'About a week' },
+  { label: 'It comes and goes' },
+  { label: 'It\u2019s getting worse', tone: 'bad' },
+  { label: 'That\u2019s all', tone: 'ok' },
+];
 
 const SYS = `You are Dr. Mira, a warm, emotionally intelligent virtual general physician in the Virtual Doctor app. You speak, so your words are heard aloud — sound like a caring human clinician, never like a form.
 Patient on file: Alex Kumar, 34, male, blood group O+, allergic to Penicillin, history of mild asthma.

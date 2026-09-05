@@ -201,11 +201,47 @@ export const statusPill: Record<string, { bg: string; fg: string; label: string 
 
 export type Style = Record<string, string | number>;
 
+export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neutral';
+
+const TONE_BG: Record<Tone, string> = {
+  ok: 'var(--vd-ok-bg)',
+  warn: 'var(--vd-warn-bg)',
+  bad: 'var(--vd-bad-bg)',
+  info: 'var(--vd-info-bg)',
+  neutral: 'var(--vd-surface-chip)',
+};
+
+const TONE_FG: Record<Tone, string> = {
+  ok: 'var(--vd-ok-fg)',
+  warn: 'var(--vd-warn-fg)',
+  bad: 'var(--vd-bad-fg)',
+  info: 'var(--vd-info-fg)',
+  neutral: 'var(--vd-ink-2)',
+};
+
+// Liquid-glass skin for a small tinted label: the opaque token pair carries the
+// contrast (DESIGN §2.1 forbids alpha-only tints, which collapse in dark), and
+// a top-lit sheen, hairline border and inner highlight carry the material.
+export function glassTint(bg: string, fg: string): Style {
+  return {
+    backgroundColor: bg,
+    backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,0) 62%)',
+    color: fg,
+    border: '1px solid var(--vd-glass-border)',
+    boxShadow: 'var(--vd-glass-hi), var(--vd-elev-1)',
+  };
+}
+
+export function toneStyle(tone: Tone): Style {
+  return glassTint(TONE_BG[tone], TONE_FG[tone]);
+}
+
 export function pillStyle(key: string, size = 11): Style {
   const p = statusPill[key] || statusPill.pending;
   return {
     fontSize: size, fontWeight: 700, letterSpacing: '.03em', textTransform: 'uppercase',
-    padding: '3px 9px', borderRadius: radius.pill, background: p.bg, color: p.fg,
+    padding: '3px 9px', borderRadius: radius.pill,
+    ...glassTint(p.bg, p.fg),
   };
 }
 

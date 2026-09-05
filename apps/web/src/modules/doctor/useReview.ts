@@ -41,7 +41,11 @@ export function useReview(opts: {
   const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [messages, setMessages] = useState<MiraTurn[]>([]);
   const [failedCmd, setFailedCmd] = useState<string | null>(null);
-  const [muted, setMuted] = useState(false);
+  // Two separate switches: whether Mira speaks, and whether she listens.
+  const [speakerOff, setSpeakerOffState] = useState(false);
+  const [micOff, setMicOffState] = useState(false);
+  const speakerOffRef = useRef(false);
+  const micOffRef = useRef(false);
   const getCaseRef = useRef(opts.getCase);
   getCaseRef.current = opts.getCase;
   const onEditRef = useRef(opts.onEdit);
@@ -56,16 +60,36 @@ export function useReview(opts: {
   }, []);
 
   const say = useCallback((text: string, after?: () => void) => {
-    if (muted) {
+    if (speakerOffRef.current) {
       setStatus('idle');
       after && after();
       return;
     }
     setStatus('speaking');
     speak(text, { onDone: () => after && after() });
-  }, [muted]);
+  }, []);
+
+  // Silencing her cuts the current sentence off at once; the transcript keeps it.
+  const setSpeakerOff = useCallback((v: boolean) => {
+    speakerOffRef.current = v;
+    setSpeakerOffState(v);
+    if (v) {
+      stopAllVoice();
+      setStatus('idle');
+    }
+  }, []);
+
+  const setMicOff = useCallback((v: boolean) => {
+    micOffRef.current = v;
+    setMicOffState(v);
+    if (v) setStatus(s => (s === 'listening' ? 'idle' : s));
+  }, []);
 
   const listen = useCallback(() => {
+    if (micOffRef.current) {
+      setStatus('idle');
+      return;
+    }
     const h = listenOnce({
       onText: (t) => commandRef.current(t, false),
       onError: () => setStatus('idle'),
@@ -139,7 +163,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
   useEffect(() => () => stopAllVoice(), []);
 
   return {
-    active, status, messages, muted, setMuted, start, stop, orbTap, failedCmd,
+    active, status, messages, speakerOff, setSpeakerOff, micOff, setMicOff, start, stop, orbTap, failedCmd,
     command: (t: string) => commandRef.current(t, true),
     send: (t: string) => commandRef.current(t, true),
     suggestions: active ? REVIEW_PILLS : START_PILLS,

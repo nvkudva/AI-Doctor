@@ -58,7 +58,11 @@ export function useConsult(opts: {
   const [notes, setNotes] = useState<{ who: string; t: string }[]>([]);
   const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [thinking, setThinking] = useState(false);
-  const [muted, setMuted] = useState(false);
+  // Two separate switches: whether Mira speaks, and whether she listens.
+  const [speakerOff, setSpeakerOffState] = useState(false);
+  const [micOff, setMicOffState] = useState(false);
+  const speakerOffRef = useRef(false);
+  const micOffRef = useRef(false);
   const [micDenied, setMicDenied] = useState(false);
   const [failed, setFailed] = useState(false);
   const [started, setStarted] = useState(false);
@@ -70,12 +74,37 @@ export function useConsult(opts: {
   const onDoneRef = useRef(opts.onDone);
   onDoneRef.current = opts.onDone;
 
+  // Silencing her cuts the current sentence off at once; the transcript keeps it.
+  const setSpeakerOff = useCallback((v: boolean) => {
+    speakerOffRef.current = v;
+    setSpeakerOffState(v);
+    if (v) {
+      stopAllVoice();
+      setStatus('idle');
+    }
+  }, []);
+
+  const setMicOff = useCallback((v: boolean) => {
+    micOffRef.current = v;
+    setMicOffState(v);
+    if (v) {
+      listenRef.current?.abort();
+      listenRef.current = null;
+      setStatus(s => (s === 'listening' ? 'idle' : s));
+    }
+  }, []);
+
   const stopListening = useCallback(() => {
     listenRef.current?.abort();
     listenRef.current = null;
   }, []);
 
   const say = useCallback((text: string, after?: () => void) => {
+    if (speakerOffRef.current) {
+      setStatus('idle');
+      after && after();
+      return;
+    }
     setStatus('speaking');
     speakRef.current = speak(text, {
       onDone: () => {
@@ -85,7 +114,7 @@ export function useConsult(opts: {
   }, []);
 
   const listen = useCallback(() => {
-    if (muted) {
+    if (micOffRef.current) {
       setStatus('idle');
       return;
     }
@@ -103,7 +132,7 @@ export function useConsult(opts: {
     }
     listenRef.current = h;
     setStatus('listening');
-  }, [muted]);
+  }, []);
 
   const handleUser = useCallback(async (text: string) => {
     text = (text || '').trim();
@@ -169,7 +198,7 @@ export function useConsult(opts: {
       say(err, () => listenRef2.current());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [muted]);
+  }, []);
 
   const messagesRef = useRef<Turn[]>([]);
   const slotsRef = useRef<SymptomSlots>({});
@@ -235,9 +264,9 @@ export function useConsult(opts: {
 
   return {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
-    thinking, muted, micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
+    thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
+    micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
     confidence, flags, start, reset, orbTap, send: (t: string) => handleUserRef.current(t),
-    setMuted,
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

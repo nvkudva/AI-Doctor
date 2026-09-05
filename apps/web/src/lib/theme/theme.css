@@ -193,6 +193,8 @@
      source: 1.4s / 2.8s rings, 1.2s listen, 0.9s speak, 4s breathe. */
   --vd-dur-ring: calc(var(--vd-dur-5) * 10 / 3);
   --vd-dur-ring-slow: calc(var(--vd-dur-5) * 20 / 3);
+  /* The nav orb's resting pulse — always on, slow enough to read as alive. */
+  --vd-dur-ring-rest: calc(var(--vd-dur-5) * 40 / 3);
   --vd-dur-orb-listen: calc(var(--vd-dur-3) * 5);
   --vd-dur-orb-speak: calc(var(--vd-dur-3) * 3.75);
   --vd-dur-orb-think: calc(var(--vd-dur-3) * 25);

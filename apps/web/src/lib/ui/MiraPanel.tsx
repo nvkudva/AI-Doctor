@@ -31,8 +31,12 @@ export interface MiraTurn {
 export interface MiraSession {
   messages: MiraTurn[];
   status: VoiceState;
-  muted: boolean;
-  setMuted: (m: boolean) => void;
+  /** Mira's voice. Off means she replies in text only. */
+  speakerOff: boolean;
+  setSpeakerOff: (v: boolean) => void;
+  /** Whether she is listening. Off means you type instead. */
+  micOff: boolean;
+  setMicOff: (v: boolean) => void;
   /** Tap the orb: interrupt, listen, or open the conversation. */
   orbTap: () => void;
   send: (text: string) => void;
@@ -108,6 +112,28 @@ function bubbleStyle(mine: boolean): React.CSSProperties {
     boxShadow: elevation[1],
     textAlign: 'left',
   };
+}
+
+// A dock switch. `off` tints it red, the way a call UI marks a disabled input.
+function DockBtn({ off, label, onClick, children }: {
+  off: boolean; label: string; onClick: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div
+      {...pressProps(onClick, label)}
+      title={label}
+      style={{
+        width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: elevation[1],
+        background: off ? 'var(--vd-bad-bg)' : surfaces.card,
+        color: off ? 'var(--vd-bad-fg)' : ink.onGlass,
+      }}
+    >
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </div>
+  );
 }
 
 function relTime(at: number): string {
@@ -234,12 +260,16 @@ export function MiraPanel({
           </div>
 
           <div
-            style={{ flex: 'none', padding: `${space[2]}px ${space[4]}px 0`, ['--vd-wave-dur' as string]: WAVE_TEMPO[session.status] }}
+            style={{ flex: 'none', padding: `0 ${space[4]}px`, ['--vd-wave-dur' as string]: WAVE_TEMPO[session.status] }}
           >
             <Waveform state={session.status} onTap={session.orbTap} />
-            <div aria-live="polite" style={{ ...type.footnote, fontWeight: 600, color: ink.secondary, minHeight: 17, textAlign: 'center' }}>
-              {statusLine}
-            </div>
+            {/* Only rendered when there is something to say, so the wave sits
+                straight on top of the notes. */}
+            {statusLine && (
+              <div aria-live="polite" style={{ ...type.footnote, fontWeight: 600, color: ink.secondary, textAlign: 'center', paddingBottom: space[2] }}>
+                {statusLine}
+              </div>
+            )}
           </div>
 
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `0 ${space[4]}px ${space[4]}px` }}>
@@ -336,37 +366,36 @@ export function MiraPanel({
             </div>
 
             <div style={{ flex: 'none', display: 'flex', justifyContent: 'center', marginTop: space[3] }}>
-              <div className="vd-glass" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 62, padding: '0 18px', borderRadius: radius.pill }}>
-                <div
-                  {...pressProps(() => session.setMuted(!session.muted), session.muted ? 'Unmute' : 'Mute')}
-                  style={{
-                    width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: elevation[1],
-                    background: session.muted ? 'var(--vd-bad-bg)' : surfaces.card,
-                    color: session.muted ? 'var(--vd-bad-fg)' : ink.onGlass,
-                  }}
+              <div className="vd-glass" style={{ display: 'flex', alignItems: 'center', gap: 10, height: 62, padding: '0 14px', borderRadius: radius.pill }}>
+                <DockBtn
+                  off={session.speakerOff}
+                  label={session.speakerOff ? 'Let Dr. Mira speak' : 'Silence Dr. Mira'}
+                  onClick={() => session.setSpeakerOff(!session.speakerOff)}
                 >
-                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="9" y="2.5" width="6" height="12" rx="3" fill="currentColor" stroke="none" />
-                    <path d="M5 11v1a7 7 0 0 0 14 0v-1" /><line x1="12" y1="19" x2="12" y2="22" />
-                    {session.muted && <line x1="3" y1="3" x2="21" y2="21" />}
-                  </svg>
-                </div>
-                <div
-                  {...pressProps(() => setCamera(c => !c), camera ? 'Turn camera off' : 'Turn camera on')}
-                  style={{
-                    width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: elevation[1],
-                    background: camera ? gradients.primary : surfaces.card,
-                    color: camera ? 'var(--vd-ink-on-brand)' : ink.onGlass,
-                  }}
+                  <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none" />
+                  {session.speakerOff
+                    ? <line x1="16" y1="9" x2="21" y2="15" />
+                    : <path d="M16.5 8.5a5 5 0 0 1 0 7" />}
+                  {session.speakerOff && <line x1="21" y1="9" x2="16" y2="15" />}
+                </DockBtn>
+                <DockBtn
+                  off={session.micOff}
+                  label={session.micOff ? 'Turn microphone on' : 'Turn microphone off'}
+                  onClick={() => session.setMicOff(!session.micOff)}
                 >
-                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2.5" y="6.5" width="13" height="11" rx="2.5" />
-                    <path d="M15.5 10.5l6-3v9l-6-3z" />
-                    {!camera && <line x1="3" y1="3" x2="21" y2="21" />}
-                  </svg>
-                </div>
+                  <rect x="9" y="2.5" width="6" height="12" rx="3" fill="currentColor" stroke="none" />
+                  <path d="M5 11v1a7 7 0 0 0 14 0v-1" /><line x1="12" y1="19" x2="12" y2="22" />
+                  {session.micOff && <line x1="3" y1="3" x2="21" y2="21" />}
+                </DockBtn>
+                <DockBtn
+                  off={!camera}
+                  label={camera ? 'Turn camera off' : 'Turn camera on'}
+                  onClick={() => setCamera(c => !c)}
+                >
+                  <rect x="2.5" y="6.5" width="13" height="11" rx="2.5" />
+                  <path d="M15.5 10.5l6-3v9l-6-3z" />
+                  {!camera && <line x1="3" y1="3" x2="21" y2="21" />}
+                </DockBtn>
                 <div
                   {...pressProps(onClose, 'Hide Dr. Mira')}
                   style={{ width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: gradients.danger, boxShadow: elevation[2], color: 'var(--vd-ink-on-brand)' }}

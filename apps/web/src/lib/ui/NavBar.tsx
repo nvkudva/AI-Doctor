@@ -196,19 +196,23 @@ function BottomBar({ items, active, onSelect, orb }: {
 }
 
 // Expanding rings behind the nav orb, so a live session reads from the bar
-// itself — the panel no longer carries an orb of its own.
+// itself — the panel no longer carries an orb of its own. It never stops: at
+// rest it is one slow ring, so the orb always reads as alive.
 function VoiceAura({ state }: { state: VoiceState }) {
-  if (state === 'idle') return null;
-  const dur = state === 'listening' ? 'var(--vd-dur-ring)' : 'var(--vd-dur-ring-slow)';
+  const idle = state === 'idle';
+  const dur = idle ? 'var(--vd-dur-ring-rest)'
+    : state === 'listening' ? 'var(--vd-dur-ring)'
+      : 'var(--vd-dur-ring-slow)';
   return (
     <>
-      {[0, 1].map(i => (
+      {(idle ? [0] : [0, 1]).map(i => (
         <span
           key={i}
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0, borderRadius: radius.pill, pointerEvents: 'none',
-            border: `2px solid ${STATE_RING[state]}`,
+            border: `${idle ? 1 : 2}px solid ${STATE_RING[state]}`,
+            opacity: idle ? 0.6 : 1,
             animation: `vd-ring ${dur} var(--vd-ease-out) infinite`,
             animationDelay: i ? `calc(${dur} / 2)` : '0s',
           }}

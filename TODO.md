@@ -1,3 +1,30 @@
 - [ ] Connect Supabase auth, tables, and realtime queue
 - [ ] Verify Google voice end-to-end in browser with a real key
 - [ ] Clinician-review Gemini conclusions on real transcripts
+- [ ] Wave 1: CSS expert refactors styling app-wide, rewrites DESIGN.md styling scope
+- [x] Wave 1: Architect writes docs/AGENT-EXPERIENCE.md (voice-first Mira, questionnaire, safety, migration)
+- [x] Wave 1: UX expert writes docs/UX-FINDINGS.md (flows, both apps, 3 breakpoints)
+- [ ] Wave 2: QA agent writes docs/QA-FINDINGS.md (functional + UI + UX, every page)
+- [x] Wave 2: Data architect writes docs/DATA-MODEL.md (JSON models, API spec, bucket plan) for review
+- [ ] Wave 3: Developer works the combined UX + QA finding queue in severity order
+- [ ] Wave 3: Commit everything once all agents are done
+- [ ] P1 SAFETY: model self-approves prescriptions via its own JSON (useReview.ts:124) — a mistranscribed "looks good" signs a script
+- [ ] P1 SAFETY: hardcoded flags:['Penicillin allergy respected'] (ai.ts:146) shows doctors an attestation nobody computed
+- [ ] P1 SAFETY: Gemini error silently falls back to demo engine, so hardcoded real drugs reach the doctor queue as AI drafts (useConsult.ts:161)
+- [ ] P1 SECURITY: Anthropic/Gemini/Google keys live in localStorage and ship from the browser, two as ?key= params
+- [ ] P1: patient identity + Penicillin allergy hardcoded (useConsult.ts:28) — every patient inherits Alex Kumar's profile
+- [ ] P2: allergy rule is prompt-text only; no allergy-class map, so amoxicillin/co-amoxiclav are unchecked
+- [ ] P2: barge-in impossible — mic only opens in the TTS onDone callback (useConsult.ts:178)
+- [ ] P2: doctor turn sends one message with no history (useReview.ts:119), so conversational edits cannot work
+- [ ] P2: speakerOff makes say() return immediately, so an emergency instruction can be "delivered" silently
+- [ ] DECISION NEEDED: architect recommends Claude + separate STT/TTS; PRD A-2/A-6 mandates Gemini Live speech-to-speech
+- [ ] DECISION NEEDED: PRD T-4 vs §3A.1 — if hospital data never crosses, Mira cannot see hospital A history at hospital B
+- [ ] DECISION NEEDED: medical-record retention period — no number exists in any doc, architect refused to invent one
+- [ ] DECISION NEEDED: is consult audio ever retained? PRD §7 says no; bucket provisioned default-off
+- [ ] DECISION NEEDED: who owns the allergy-class map content — the safety check has nothing signed off to check against
+- [ ] RECONCILE: consult slots as table (DATA-MODEL) vs JSONB (AGENT-EXPERIENCE §4.4)
+- [ ] RECONCILE: ai_confidence/ai_flags on draft not consult, and Rx items as rows not jsonb — both diverge from PRD §6.4
+- [ ] P1 SECURITY: no role gate — a patient-role session opens /doctor and can approve any patient's prescription (UX-13)
+- [ ] P1: one completed consult creates two identical pending_review cases (UX-01)
+- [ ] P1: doctor approve/decline does not survive reload; ClinicProvider persists only `mine` cases (UX-02)
+- [ ] P1: patient can never re-read their own prescription — /patient/recommendation is empty on reload, History drops items/dosage (UX-03, UX-04)

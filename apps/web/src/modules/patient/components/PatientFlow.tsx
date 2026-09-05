@@ -1,14 +1,15 @@
 // Patient flow: screen routing, consult session, timers, review reactions.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
 import { isOpenConsult } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
+import { persistLocal, restoreLocal } from '../../../lib/api';
 import { MiraPanel, NavBar, type NavItem } from '../../../lib/ui';
-import { useIsMobile } from '../../../shell/viewport';
 import { seedLabs } from '../../../store/seeds';
-import { useConsult } from '../useConsult';
+import { useAuth } from '../../../shell/auth';
+import { useConsult, type PatientProfile } from '../useConsult';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { ProfileScreen } from './ProfileScreen';
@@ -17,6 +18,15 @@ import { EmptyRecommendation } from './EmptyRecommendation';
 import s from './PatientFlow.module.css';
 
 type Screen = 'home' | 'recommendation' | 'records' | 'profile';
+
+// Shown when the orb is tapped while a plan is already with the doctor: the
+// panel always opens, and it says what can be done from here (UX-11, UX-12).
+const PENDING_NOTE =
+  "Your plan is with Dr. Whitfield for review — I'll let you know the moment it's back. If anything has changed since we spoke, tell me here and I'll add it to the consult.";
+
+function statusToReview(s: string): string {
+  return s === 'approved' ? 'approved' : s === 'rejected' ? 'rejected' : s === 'changes' ? 'changes' : 'pending';
+}
 
 const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile'];
 const TABS: RecordsTab[] = ['history', 'labs'];
@@ -32,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function PatientFlow() {
   const clinic = useClinic();
-  const mobile = useIsMobile();
+  const { user } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -51,19 +61,48 @@ export function PatientFlow() {
     }, { replace: true });
   };
 
+  useEffect(() => {
+    if (screen !== 'records' || !tabParam || TABS.includes(tabParam as RecordsTab)) return;
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', 'history');
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, tabParam]);
+
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [miraOpen, setMiraOpen] = useState(false);
 
+  // Mira is told exactly what the patient has on file — nothing more (UX-25).
+  const hp = clinic.profile;
+  const facts = useMemo(() => {
+    const bits = [
+      hp.age && `age ${hp.age}`,
+      hp.blood && `blood group ${hp.blood}`,
+      hp.allergies ? `allergic to ${hp.allergies}` : 'no allergies recorded',
+    ].filter(Boolean);
+    return bits.length > 1
+      ? `On file: ${bits.join(', ')}. That is the whole record — do not assume anything beyond it.`
+      : undefined;
+  }, [hp.age, hp.blood, hp.allergies]);
+  const patient: PatientProfile = { name: user?.name || 'there', facts };
+  const demoLine = [hp.age, hp.blood].filter(Boolean).join(' · ');
+
   const consult = useConsult({
+    patient,
     onDone: (r, ctx) => {
       const users = ctx.users.slice(0, 3).map(t => (t.length > 26 ? t.slice(0, 24) + '…' : t));
       const live: CaseItem = {
         id: `live-${Date.now()}`, mine: true, submittedAt: Date.now(),
-        patient: 'Alex Kumar', demo: '34 · Male · O+', title: r.title, meta: 'Just now · live', status: 'pending_review',
+        patient: patient.name, demo: demoLine || 'No demographics on file',
+        title: r.title, status: 'pending_review',
+        meta: navigator.onLine === false ? 'Queued — sends when you are back online' : 'Just now · live',
         summary: 'Live consult with Dr. Mira (AI). ' + (r.summary || ''),
-        symptoms: users, history: 'Mild asthma. Allergic to Penicillin. Blood group O+.',
+        symptoms: users,
+        history: hp.allergies ? `Allergic to ${hp.allergies}.` : 'No allergies or history on file for this patient.',
         confidence: ctx.confidence as Confidence,
-        flags: ctx.flags.length ? ctx.flags : ['Penicillin allergy respected'],
+        flags: ctx.flags,
         stated: ctx.notes.length ? ctx.notes : users,
         inferred: [r.title],
         observation: 'No acute distress noted during the call.',
@@ -76,13 +115,48 @@ export function PatientFlow() {
       clinic.addLiveCase(live);
       setMiraOpen(false);
       nav('/patient/recommendation');
-      const kind = r.type === 'prescription' ? 'prescription' : 'plan';
-      setTimeout(() => speak(`Thanks, Alex. I've prepared your ${kind} and sent it to Dr. Whitfield for a quick review.`), 400);
     },
   });
 
-  // Approval / rejection spoken lines when the doctor decides while rec is open.
+  // A consult left unfinished when the tab went away is closed out and shown in
+  // History, instead of vanishing without trace (UX-15).
+  const swept = useRef(false);
   useEffect(() => {
+    if (swept.current) return;
+    swept.current = true;
+    const draft = restoreLocal()?.draftConsult;
+    if (!draft || !draft.messages?.length) return;
+    persistLocal({ draftConsult: null });
+    clinic.addConsultRecord({
+      id: `ab-${draft.at}`, title: 'Visit ended early', date: 'Today', status: 'Unfinished',
+      note: 'This visit was interrupted before Dr. Mira could finish, so no plan was sent. You can start a fresh consult anytime.',
+      user: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // UX-03: the plan itself is persisted, only the in-memory copy was not — so
+  // a reload (or a later visit) rehydrates it instead of showing "no plan yet".
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || rec) return;
+    const mine = clinic.queue.find(c => c.mine);
+    if (!mine) return;
+    restored.current = true;
+    setRec(mine.rec);
+    clinic.setLiveCaseId(mine.id);
+    clinic.setReview(statusToReview(mine.status), mine.rejectReason || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinic.queue, rec]);
+
+  // Approval / rejection spoken lines when the doctor decides while rec is open.
+  const prevReview = useRef(clinic.reviewStatus);
+  useEffect(() => {
+    const was = prevReview.current;
+    prevReview.current = clinic.reviewStatus;
+    // Only a decision the patient is here to witness is spoken; a restored
+    // status on load is not an announcement.
+    if (was !== 'pending') return;
     if (screen !== 'recommendation' || !rec) return;
     if (clinic.reviewStatus === 'approved') {
       const kind = rec.type === 'prescription' ? 'prescription' : 'plan';
@@ -111,17 +185,17 @@ export function PatientFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [miraOpen, consult.lastTurn]);
 
-  const startConsult = () => {
-    // One open consult per patient: resume the one awaiting review.
+  // The orb (and "Ask a follow-up") always open the panel — never a silent
+  // navigation and never nothing at all (UX-11, UX-12).
+  const openMira = () => {
+    setMiraOpen(true);
     const open = clinic.queue.find(c => c.mine && isOpenConsult(c.status));
     if (open) {
-      setRec(open.rec);
-      clinic.setLiveCaseId(open.id);
-      clinic.setReview('pending');
-      nav('/patient/recommendation');
+      // A plan is already with the doctor: explain the state rather than
+      // starting a second consult behind the first.
+      if (consult.messages.length === 0) setTimeout(() => consult.note(PENDING_NOTE), 0);
       return;
     }
-    setMiraOpen(true);
     // Reopening resumes a conversation still in progress; one that already
     // produced a plan starts over, so a follow-up is a fresh consult.
     if (consult.messages.length > 0 && !rec) return;
@@ -130,11 +204,23 @@ export function PatientFlow() {
     setTimeout(() => consult.start(), 0);
   };
 
+  const startConsult = () => {
+    const open = clinic.queue.find(c => c.mine && isOpenConsult(c.status));
+    if (open) {
+      setRec(open.rec);
+      clinic.setLiveCaseId(open.id);
+      clinic.setReview(statusToReview(open.status), open.rejectReason || '');
+      nav('/patient/recommendation');
+      return;
+    }
+    openMira();
+  };
+
   // The nav orb is also the panel's only dismiss control now.
-  const toggleMira = () => (miraOpen ? setMiraOpen(false) : startConsult());
+  const toggleMira = () => (miraOpen ? setMiraOpen(false) : openMira());
 
   if (seg && !SCREENS.includes(seg as Screen)) {
-    return <Navigate to="/patient" replace />;
+    return <Navigate to="/patient" replace state={{ notFound: loc.pathname }} />;
   }
 
   const goTab = (t: NavTab) => {
@@ -145,15 +231,15 @@ export function PatientFlow() {
 
   return (
     <>
-      {(!mobile || screen !== 'recommendation') && (
-        <NavBar
-          items={NAV_ITEMS}
-          active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
-          onSelect={k => goTab(k as NavTab)}
-          orb={{ label: 'Dr. Mira', voiceState: consult.status, onClick: toggleMira }}
-          railTop="profile"
-        />
-      )}
+      {/* The plan screen is a normal screen: it keeps the nav and the orb, so
+          History, Labs, Profile and Mira stay reachable while waiting (UX-20). */}
+      <NavBar
+        items={NAV_ITEMS}
+        active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
+        onSelect={k => goTab(k as NavTab)}
+        orb={{ label: 'Dr. Mira', voiceState: consult.status, onClick: toggleMira }}
+        railTop="profile"
+      />
 
       <MiraPanel
         open={miraOpen}
@@ -170,7 +256,8 @@ export function PatientFlow() {
             rec={rec}
             reviewStatus={clinic.reviewStatus}
             rejectReason={clinic.rejectReason}
-            onFollowUp={startConsult}
+            allergies={hp.allergies}
+            onFollowUp={openMira}
             onBack={() => nav('/patient')}
             onViewRecords={() => { setRecordsTab('history'); nav('/patient/records'); }}
           />

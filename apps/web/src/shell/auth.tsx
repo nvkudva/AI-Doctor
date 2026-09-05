@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { clearLocal } from '../lib/api';
 
 export type Role = 'patient' | 'doctor';
 
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     setAuthErr('');
+    clearLocal();
     persist(null);
     supabase()?.auth.signOut();
   };

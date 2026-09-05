@@ -143,10 +143,12 @@ function demoPatient(messages: ChatMessage[]): any {
   const all = users.join(' ');
   const topic = TOPICS.find(t => t.re.test(all)) || GENERAL_TOPIC;
   const note = trunc7(users[n - 1] || '');
-  const base = { note, confidence: 'high', flags: ['Penicillin allergy respected'], done: false, recommendation: null };
+  // No safety attestation is emitted here: nothing in this engine checks an
+  // allergy list, and a doctor must never be shown a check nobody computed.
+  const base = { note, confidence: 'high', flags: [] as string[], done: false, recommendation: null };
 
   if (EMERGENCY_RE.test(all)) {
-    return { ...base, confidence: 'low', flags: ['Possible emergency — advised in-person care', 'Penicillin allergy respected'], done: true,
+    return { ...base, confidence: 'low', flags: ['Possible emergency — advised in-person care'], done: true,
       reply: "What you're describing could be serious, and I don't want to take chances with you. Please get to urgent in-person care or call emergency services now.",
       recommendation: { type: 'investigation', title: 'Urgent in-person assessment', summary: 'Symptoms may indicate an emergency; immediate in-person evaluation advised.',
         items: [{ name: 'Emergency department visit', dosage: '', timing: 'Immediately', notes: 'Do not drive yourself if unwell.', why: 'These symptoms need hands-on assessment right away.', detail: 'Immediate in-person evaluation.' }],
@@ -180,7 +182,7 @@ function demoDoctor(system: string, messages: ChatMessage[]): any {
   } catch { /* fall through */ }
 
   if (/\b(approve|looks good|send it|go ahead|perfect|confirm|ship it|all good)\b/i.test(text)) {
-    return { reply: "Thank you, I'll notify the patient right away.", action: 'approve', recommendation: null };
+    return { reply: '', action: 'approve', recommendation: null };
   }
   if (rec && /\badd\b.*\b(test|lab|cbc|x-?ray|blood)\b/i.test(text)) {
     const name = /cbc|blood count/i.test(text) ? 'Complete Blood Count' : 'Chest X-ray (PA view)';

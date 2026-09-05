@@ -34,8 +34,11 @@ export interface CaseItem {
 
 export interface AuditEvent { at: number; consultId: string; actor: string; kind: string; detail: string }
 
-const OPEN: ConsultStatus[] = ['active', 'pending', 'pending_review'];
-const REVIEWABLE: ConsultStatus[] = ['pending', 'pending_review'];
+// 'changes' is still the doctor's to finish: it stays in the review queue and
+// keeps its decision controls, instead of vanishing into a state nothing in the
+// UI can move forward (UX-10).
+const OPEN: ConsultStatus[] = ['active', 'pending', 'pending_review', 'changes'];
+const REVIEWABLE: ConsultStatus[] = ['pending', 'pending_review', 'changes'];
 
 export function isOpenConsult(s: ConsultStatus): boolean {
   return OPEN.includes(s);

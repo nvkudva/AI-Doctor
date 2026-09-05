@@ -82,7 +82,9 @@
   left: var(--vd-space-5);
   right: var(--vd-space-5);
   z-index: 6;
-  bottom: calc(78px + env(safe-area-inset-bottom));
+  /* Clears the nav bar (62px) plus the Mira FAB, which overhangs it by 30px —
+     78px let the orb sit on top of "Approve & send" and swallow taps (QA-03). */
+  bottom: calc(116px + env(safe-area-inset-bottom));
   height: 60px;
   border-radius: var(--vd-radius-2xl);
   padding: 0 var(--vd-space-4);
@@ -135,4 +137,11 @@
   padding: 4px 10px;
   border-radius: var(--vd-radius-pill);
   flex: none;
+}
+
+/* Mira has proposed an approval: point at the control that actually signs it. */
+.decideStaged {
+  outline: 2px solid var(--vd-focus);
+  outline-offset: 3px;
+  border-radius: var(--vd-radius-2xl);
 }

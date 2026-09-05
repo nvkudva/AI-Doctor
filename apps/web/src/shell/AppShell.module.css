@@ -33,3 +33,22 @@
   box-shadow: var(--vd-elev-5);
 }
 @media (min-width: 800px) { .toast { bottom: 24px; } }
+
+/* Skip link: off-screen until focused, then the first thing on the page. */
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  transform: translateY(-200%);
+  padding: 10px 16px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-raised);
+  color: var(--vd-ink-1);
+  box-shadow: var(--vd-elev-3);
+  text-decoration: none;
+}
+.skip:focus-visible { transform: none; }

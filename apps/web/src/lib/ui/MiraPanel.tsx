@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Icon, pressProps } from './Primitives';
+import { useFocusEntry } from './Dismiss';
 import { type VoiceState } from './Mira';
 import { useRailOffset } from './NavBar';
 import { toneStyle, type Tone } from '../theme';
@@ -131,7 +132,6 @@ export function MiraPanel({
     try { return localStorage.getItem(draftKey) || ''; } catch { return ''; }
   });
   // Prototype only — nothing is captured yet.
-  const [camera, setCamera] = useState(false);
   const notesRef = useRef<HTMLDivElement>(null);
   const [, tick] = useState(0);
 
@@ -154,12 +154,19 @@ export function MiraPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, [session.messages.length, open]);
 
+  const frame = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // The panel floats over an app that stays interactive by design (PRD MC-5),
+  // so it is a non-modal dialog: focus moves into it on open and back to the
+  // orb on close, but Tab is deliberately not trapped (see UX-26 / QA-07).
+  useFocusEntry(frame, open);
 
   if (!open) return null;
 
@@ -185,7 +192,7 @@ export function MiraPanel({
         className={s.positioner}
         style={{ '--mira-left': mobile ? undefined : `${railOffset + 10}px` } as React.CSSProperties}
       >
-      <div role="dialog" aria-label="Dr. Mira" className={s.frame}>
+      <div ref={frame} tabIndex={-1} role="dialog" aria-label="Dr. Mira" className={s.frame}>
         <Card className={s.surface}>
           <div className={s.title}>
             <span className={s.titleName}>Dr. Mira · </span>
@@ -310,20 +317,15 @@ export function MiraPanel({
                   <path d="M5 11v1a7 7 0 0 0 14 0v-1" /><line x1="12" y1="19" x2="12" y2="22" />
                   {session.micOff && <line x1="3" y1="3" x2="21" y2="21" />}
                 </DockBtn>
-                <DockBtn
-                  off={!camera}
-                  label={camera ? 'Turn camera off' : 'Turn camera on'}
-                  onClick={() => setCamera(c => !c)}
-                >
-                  <rect x="2.5" y="6.5" width="13" height="11" rx="2.5" />
-                  <path d="M15.5 10.5l6-3v9l-6-3z" />
-                  {!camera && <line x1="3" y1="3" x2="21" y2="21" />}
-                </DockBtn>
+                {/* The camera control was removed: nothing was ever captured,
+                    and a patient with a rash would tap it and wait (UX-22). */}
                 <div
                   {...pressProps(onClose, 'Hide Dr. Mira')}
-                  className={s.hangUp}
+                  title="Hide Dr. Mira"
+                  className={s.dockBtn}
                 >
-                  <Icon name="x" size={20} />
+                  {/* A minimize, not a hang-up: the session keeps running (UX-21). */}
+                  <Icon name="chevD" size={20} />
                 </div>
               </div>
             </div>

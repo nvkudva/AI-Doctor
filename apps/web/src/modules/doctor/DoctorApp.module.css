@@ -84,3 +84,27 @@
   color: var(--vd-ink-1);
   box-shadow: var(--vd-elev-1);
 }
+
+/* "Approved and sent to …" confirmation, with the way on to the next case. */
+.sent {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(180px + env(safe-area-inset-bottom));
+  z-index: 45;
+  max-width: min(560px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-3) var(--vd-space-4);
+  border-radius: var(--vd-radius-2xl);
+}
+.sentText { composes: vd-t-footnote vd-w6 from global; color: var(--vd-ink-1); }
+@media (min-width: 800px) { .sent { bottom: var(--vd-space-6); } }
+
+/* Below the header at mobile/tablet: filtering exists at every breakpoint,
+   and the targets stay full size there (UX-19). */
+@media (max-width: 1159px) {
+  .filter { align-self: stretch; }
+  .filterTab { flex: 1; min-height: 44px; padding: 0 var(--vd-space-3); }
+}

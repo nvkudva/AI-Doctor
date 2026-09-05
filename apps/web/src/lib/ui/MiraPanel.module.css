@@ -172,12 +172,13 @@
 .failedText { composes: vd-t-footnote vd-w7 from global; flex: 1; color: var(--vd-bad-fg); }
 
 .pills {
-  composes: vd-scroll from global;
   flex: none;
   display: flex;
+  /* Wrapping instead of a hidden-scrollbar overflow: the last chip used to sit
+     two-thirds off a 390px viewport with nothing to say it scrolled (QA-10). */
+  flex-wrap: wrap;
   gap: var(--vd-space-2);
   margin-top: var(--vd-space-3);
-  overflow-x: auto;
   padding-bottom: 2px;
 }
 .pill {
@@ -185,9 +186,13 @@
   flex: none;
   cursor: pointer;
   white-space: nowrap;
-  padding: 5px 11px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
   border-radius: var(--vd-radius-pill);
 }
+@media (min-width: 800px) { .pill { min-height: 36px; padding: 0 12px; } }
 
 .composer {
   flex: none;
@@ -245,15 +250,7 @@
   color: var(--vd-ink-on-glass);
 }
 .dockBtnOff { background: var(--vd-bad-bg); color: var(--vd-bad-fg); }
-.hangUp {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--vd-radius-pill);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--vd-grad-danger);
-  box-shadow: var(--vd-elev-2);
-  color: var(--vd-ink-on-brand);
+
+@media (hover: hover) {
+  .pill:hover { filter: brightness(1.08); }
 }

@@ -34,6 +34,11 @@
   margin-bottom: 28px;
 }
 @media (min-width: 800px) { .brand { align-items: flex-start; text-align: left; } }
+/* At tablet the free column is only ~330px, so the presence glow overflowed
+   the window and rendered as a flat-sliced orb (QA-14). */
+@media (min-width: 800px) and (max-width: 1159px) {
+  .brand { padding-left: 44px; }
+}
 
 .name { composes: vd-t-display from global; color: var(--vd-ink-1); }
 @media (min-width: 800px)  { .name { font-size: 34px; } }

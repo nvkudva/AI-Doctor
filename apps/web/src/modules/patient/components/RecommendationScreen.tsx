@@ -13,13 +13,15 @@ const DOT: Record<'done' | 'active' | 'todo', string> = {
   todo: 'var(--vd-ink-4)',
 };
 
-export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollowUp, onBack, onViewRecords }: {
-  rec: Recommendation; reviewStatus: string; rejectReason: string; onFollowUp: () => void; onBack: () => void; onViewRecords?: () => void;
+export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergies, onFollowUp, onBack, onViewRecords }: {
+  rec: Recommendation; reviewStatus: string; rejectReason: string;
+  /** What the patient's record actually lists, so the plan asserts nothing more. */
+  allergies?: string;
+  onFollowUp: () => void; onBack: () => void; onViewRecords?: () => void;
 }) {
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
   const [ordered, setOrdered] = useState(false);
-  const [shared, setShared] = useState(false);
   const [showCare, setShowCare] = useState(false);
   const approved = reviewStatus === 'approved';
   const pending = reviewStatus === 'pending' || reviewStatus === 'idle';
@@ -125,7 +127,9 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
                 <path d="M9 11.5l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div className={s.safetyText}>
-                Safety checks done — your Penicillin allergy was respected and drug interactions were reviewed.
+                Prepared against your health profile
+                {allergies ? ` (allergies on file: ${allergies})` : ' (no allergies on file)'}
+                . A licensed doctor reviews it before it becomes final.
               </div>
             </div>
           </Card>
@@ -141,9 +145,10 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
                 <Button variant="tertiary" fullWidth onClick={onFollowUp}>Ask a follow-up</Button>
               )}
               {ordered && <Button variant="tertiary" fullWidth disabled onClick={() => {}} icon="check">Order placed</Button>}
-              <Button variant="tertiary" fullWidth onClick={() => setShared(true)} icon={shared ? 'check' : undefined}>{shared ? 'Shared' : 'Share with a caregiver'}</Button>
+              {/* "Share with a caregiver" was removed: it only flipped its own
+                  label to "Shared" and sent nothing (UX-22). */}
               {onViewRecords && (
-                <Button variant="tertiary" fullWidth onClick={onViewRecords}>Saved to History</Button>
+                <Button variant="tertiary" fullWidth onClick={onViewRecords}>View in History</Button>
               )}
             </div>
           </div>

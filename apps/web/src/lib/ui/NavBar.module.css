@@ -23,8 +23,13 @@
 
 .collapse {
   align-self: center;
-  width: 32px;
-  height: 32px;
+  /* 32px was the smallest target in the app; the disc is drawn inside a
+     44px hit area instead of being one (QA-15). */
+  width: 44px;
+  height: 44px;
+  padding: 6px;
+  box-sizing: border-box;
+  background-clip: content-box;
   border-radius: var(--vd-radius-pill);
   display: flex;
   align-items: center;
@@ -151,6 +156,13 @@
   inset: 0;
   border-radius: var(--vd-radius-pill);
   pointer-events: none;
+  /* Longhands only: the shorthand and animation-delay may not be mixed in one
+     inline style object, which is React's only console error (QA-04). */
+  animation-name: vd-ring;
+  animation-duration: var(--aura-dur, var(--vd-dur-ring-rest));
+  animation-timing-function: var(--vd-ease-out);
+  animation-iteration-count: infinite;
+  animation-delay: var(--aura-delay, 0s);
 }
 
 .tab {
@@ -177,3 +189,12 @@
   transition: color var(--vd-dur-2) var(--vd-ease-spring);
 }
 .tabLabelActive { font-weight: 700; }
+
+/* Pointer affordance. Behind `hover: hover` so it never sticks on touch. */
+@media (hover: hover) {
+  .item:hover { background: var(--vd-selected-ring); color: var(--vd-nav-active); }
+  .tab:hover { color: var(--vd-nav-active); }
+  .collapse:hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); }
+  .orbRow:hover .orbLabel { color: var(--vd-nav-active); }
+  .fab:hover { filter: brightness(1.06); box-shadow: var(--vd-shadow-cta), var(--vd-elev-4); }
+}

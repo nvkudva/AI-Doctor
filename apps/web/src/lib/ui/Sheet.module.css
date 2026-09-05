@@ -96,3 +96,8 @@
 }
 
 .catcher { position: fixed; inset: 0; z-index: 55; cursor: default; }
+
+@media (hover: hover) {
+  .row:not(.rowDisabled):hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); }
+  .rowDanger:not(.rowDisabled):hover { color: var(--vd-bad-fg); }
+}

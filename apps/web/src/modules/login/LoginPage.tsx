@@ -73,6 +73,8 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdultOk(a => !a); setErr(''); } }}
             aria-label="Confirm you are 18 or older"
+            aria-invalid={!!err || undefined}
+            aria-describedby={err || authErr ? 'vd-login-error' : undefined}
             className={`${s.gate}${adultOk ? ' ' + s.gateOn : ''}`}
           >
             <span className={`${s.track}${adultOk ? ' ' + s.trackOn : ''}`}>
@@ -81,7 +83,9 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
             <span>I confirm I am 18 or older</span>
           </div>
 
-          {(err || authErr) && <div className={s.error}>{err || authErr}</div>}
+          {(err || authErr) && (
+            <div id="vd-login-error" role="alert" className={s.error}>{err || authErr}</div>
+          )}
 
           <Button
             variant="secondary"

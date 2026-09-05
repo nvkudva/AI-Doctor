@@ -27,3 +27,7 @@
 
 .pressable { cursor: pointer; }
 .disabled { cursor: default; opacity: 0.5; }
+
+@media (hover: hover) {
+  .chip:hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); border-color: var(--vd-ink-4); }
+}

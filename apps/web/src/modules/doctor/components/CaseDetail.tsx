@@ -6,10 +6,18 @@ import { useBreakpoint } from '../../../shell/viewport';
 import { tints } from '../../../lib/theme';
 import s from './CaseDetail.module.css';
 
-export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline, onEdit }: {
+const DECISION_LABEL: Record<string, string> = {
+  approved: 'Approved',
+  rejected: 'Declined',
+  changes: 'Sent back for changes',
+};
+
+export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, onDecline, onEdit }: {
   ac: CaseItem; actionable: boolean;
   /** Desktop: history + test history live in the third pane instead (D-3). */
   asideInPanel?: boolean;
+  /** Mira has proposed an approval; the doctor still has to press it (UX-07). */
+  staged?: boolean;
   onApprove: () => void; onDecline: () => void; onEdit: () => void;
 }) {
   const mobile = useBreakpoint() === 'mobile';
@@ -33,7 +41,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline,
         </div>
         <StatusPill status={ac.status} />
         {actionable && !mobile && (
-          <div className={s.decide}>
+          <div className={`${s.decide}${staged ? ' ' + s.decideStaged : ''}`}>
             <Button variant="approve" half="left" onClick={onApprove}>Approve &amp; send</Button>
             <Button
               variant="approve"
@@ -88,7 +96,8 @@ export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline,
         )}
         {ac.reviewedBy && (
           <div className={s.audit}>
-            {ac.decision === 'approved' ? 'Approved' : ac.decision} by {ac.reviewedBy}
+            {DECISION_LABEL[ac.decision || ''] || 'Reviewed'} by {ac.reviewedBy}
+            {ac.reviewedAt ? ` · ${new Date(ac.reviewedAt).toLocaleString()}` : ''}
             {ac.editedBy ? ` · draft edited ${new Date(ac.editedAt || 0).toLocaleTimeString()}` : ''}
           </div>
         )}
@@ -100,7 +109,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, onApprove, onDecline,
       {!asideInPanel && <PatientPanel ac={ac} />}
 
       {actionable && mobile && (
-        <div className={`vd-glass ${s.dock}`}>
+        <div className={`vd-glass ${s.dock}${staged ? ' ' + s.decideStaged : ''}`}>
           <Button variant="approve" onClick={onApprove}>Approve &amp; send</Button>
           <div className={s.dockMenu}>
             <button

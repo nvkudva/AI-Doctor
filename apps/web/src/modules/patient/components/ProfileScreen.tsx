@@ -1,17 +1,22 @@
 // Patient profile: identity in the header, vitals, prescriptions, coverage,
 // then settings. The doctor profile mirrors this layout (DESIGN §11.7).
-import { useNavigate } from 'react-router';
+import { useState } from 'react';
 import {
-  AppHeader, Card, EmptyState, MenuRow, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
+  AppHeader, Button, Card, EmptyState, MenuRow, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
-import type { UserRx } from '../../../store';
+import { useClinic } from '../../../store';
+import type { HealthProfile, UserRx } from '../../../store';
 import { PatientNotify } from './PatientNotify';
 import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
   const { user, signOut } = useAuth();
-  const nav = useNavigate();
+  const clinic = useClinic();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<HealthProfile>(clinic.profile);
+  const p = clinic.profile;
+  const open = () => { setDraft(clinic.profile); setEditing(true); };
   return (
     <div className={profile.screen}>
       <AppHeader
@@ -22,10 +27,41 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       />
 
       <StatRow items={[
-        { label: 'Age', value: '34' },
-        { label: 'Blood', value: 'O+' },
-        { label: 'Allergy', value: 'Penicillin', tone: 'var(--vd-bad-fg)' },
+        { label: 'Age', value: p.age || 'Not set' },
+        { label: 'Blood', value: p.blood || 'Not set' },
+        { label: 'Allergy', value: p.allergies || 'None on file', tone: p.allergies ? 'var(--vd-bad-fg)' : undefined },
       ]} />
+      <div className={s.editRow}>
+        <Button variant="tertiary" onClick={open}>Edit health profile</Button>
+      </div>
+
+      <Sheet
+        open={editing}
+        onClose={() => setEditing(false)}
+        title="Your health profile"
+        label="Edit your health profile"
+        footer={(
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => { clinic.setProfile(draft); setEditing(false); }}
+          >
+            Save
+          </Button>
+        )}
+      >
+        <div className={s.form}>
+          <div className={s.formNote}>Dr. Mira uses these in every consult. Changes apply to future consults.</div>
+          <Field label="Age" value={draft.age} onChange={v => setDraft(d => ({ ...d, age: v }))} placeholder="e.g. 34" />
+          <Field label="Blood group" value={draft.blood} onChange={v => setDraft(d => ({ ...d, blood: v }))} placeholder="e.g. O+" />
+          <Field
+            label="Allergies"
+            value={draft.allergies}
+            onChange={v => setDraft(d => ({ ...d, allergies: v }))}
+            placeholder="Comma separated, or leave blank"
+          />
+        </div>
+      </Sheet>
 
       <ProfileSection>Prescriptions</ProfileSection>
       {prescriptions.length === 0
@@ -57,9 +93,24 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
 
       <ProfileSection>Settings</ProfileSection>
       <Card level={1} pad={6} className={profile.list}>
-        <MenuRow icon="person" onClick={() => nav('/doctor')}>Doctor view</MenuRow>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>
     </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  return (
+    <label className={s.field}>
+      <span className={s.fieldLabel}>{label}</span>
+      <input
+        className={s.fieldInput}
+        value={value}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+      />
+    </label>
   );
 }

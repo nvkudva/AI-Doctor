@@ -43,6 +43,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
                 title={p.name}
                 detail={p.detail}
                 meta={p.nextDose}
+                label={`Open prescription: ${p.name}`}
                 onClick={() => nav('/patient/profile')}
               />
             ))}
@@ -67,6 +68,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
                 detail={`${l.result} · ${l.date}`}
                 meta="Needs review"
                 tone="var(--vd-warn-fg)"
+                label={`Open lab result: ${l.name}`}
                 onClick={() => nav('/patient/records?tab=labs')}
               />
             ))}
@@ -82,6 +84,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
                 title={n.t}
                 detail={n.d}
                 meta={n.at ? relAge(n.at) : undefined}
+                label={n.caseId ? `Open your plan — ${n.t}` : undefined}
                 onClick={n.caseId ? () => nav('/patient/recommendation') : undefined}
               />
             ))}
@@ -89,7 +92,12 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
 
         {latest && (
           <Section title="Your latest plan">
-            <Card level={1} pad="13px 15px">
+            <Card
+              level={1}
+              pad="13px 15px"
+              onClick={() => nav('/patient/recommendation')}
+              aria-label={`Open your plan: ${latest.title}`}
+            >
               <div className={s.planRow}>
                 <StatusPill status={latest.status} />
                 <div className={s.planMeta}>{latest.meta}</div>
@@ -100,7 +108,7 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
         )}
 
         <Section title="Feeling unwell?">
-          <Card level={1} pad="13px 15px" onClick={onStart}>
+          <Card level={1} pad="13px 15px" onClick={onStart} aria-label="Start a consultation with Dr. Mira">
             <div className={s.ctaTitle}>Start a consultation</div>
             <div className={s.ctaBody}>
               Talk to Dr. Mira — no forms. A licensed doctor reviews every plan.
@@ -121,11 +129,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Row({ icon, title, detail, meta, tone, onClick }: {
-  icon: IconName; title: string; detail?: string; meta?: string; tone?: string; onClick?: () => void;
+function Row({ icon, title, detail, meta, tone, onClick, label }: {
+  icon: IconName; title: string; detail?: string; meta?: string; tone?: string;
+  onClick?: () => void;
+  /** What activating the row does — a card that is a button needs one (QA-12). */
+  label?: string;
 }) {
   return (
-    <Card level={1} pad="12px 14px" onClick={onClick} className={s.row}>
+    <Card level={1} pad="12px 14px" onClick={onClick} aria-label={label} className={s.row}>
       <div className={s.rowInner}>
         <span className={s.rowIcon} style={tone ? { color: tone } : undefined}>
           <Icon name={icon} size={18} />

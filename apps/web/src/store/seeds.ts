@@ -91,3 +91,17 @@ export const seedDoctor = {
   languages: 'English · Hindi · Kannada',
   hospital: 'Apollo Clinic · Koramangala',
 };
+
+// The one patient record this demo actually holds. Anything not listed here is
+// unknown to the app and must not be asserted about a signed-in patient.
+export const demoPatientProfile = {
+  authId: 'demo-patient',
+  name: 'Alex Kumar',
+  age: '34',
+  sex: 'Male',
+  blood: 'O+',
+  allergies: ['Penicillin'],
+  history: 'Mild asthma. Allergic to Penicillin. Blood group O+.',
+  demo: '34 · Male · O+',
+  facts: 'Age 34, male, blood group O+, allergic to Penicillin, history of mild asthma. This is the whole record — do not assume anything beyond it.',
+};

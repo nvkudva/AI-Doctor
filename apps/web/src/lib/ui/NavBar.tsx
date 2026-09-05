@@ -156,9 +156,9 @@ function VoiceAura({ state }: { state: VoiceState }) {
           style={{
             border: `${idle ? 1 : 2}px solid ${STATE_RING[state]}`,
             opacity: idle ? 0.6 : 1,
-            animation: `vd-ring ${dur} var(--vd-ease-out) infinite`,
-            animationDelay: i ? `calc(${dur} / 2)` : '0s',
-          }}
+            '--aura-dur': dur,
+            '--aura-delay': i ? `calc(${dur} / 2)` : '0s',
+          } as React.CSSProperties}
         />
       ))}
     </>

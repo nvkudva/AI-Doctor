@@ -52,7 +52,10 @@ function Desk({ tenantName }: { tenantName: string }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [miraOpen, setMiraOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
-  const [tab, setTab] = useState<DeskTab>('home');
+  // Each list is a route, so reload, Back and deep links all behave (UX-16).
+  const tab: DeskTab = /\/doctor\/reviews/.test(pathname) ? 'reviews'
+    : /\/doctor\/appointments/.test(pathname) ? 'appointments' : 'home';
+  const tabPath = (t: DeskTab) => (t === 'home' ? '/doctor' : `/doctor/${t}`);
   // Refresh wait-time labels every minute.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -64,26 +67,38 @@ function Desk({ tenantName }: { tenantName: string }) {
     'Needs an in-person examination — please show this consult at the hospital front desk.',
   );
   const [declineFor, setDeclineFor] = useState<string | null>(null);
+  // What was just sent, to whom — the most repeated moment in the desk (UX-24).
+  const [sent, setSent] = useState<{ text: string; nextId?: string } | null>(null);
+  useEffect(() => {
+    if (!sent) return;
+    const t = setTimeout(() => setSent(null), 8000);
+    return () => clearTimeout(t);
+  }, [sent]);
 
   const queue = useMemo(() => sortQueue(clinic.queue), [clinic.queue]);
   // The nav tab picks the list; the desktop filter narrows it further.
   const visible = useMemo(() => queue.filter(c => {
-    if (tab === 'reviews') return isReviewable(c.status);
+    if (tab === 'reviews' && !isReviewable(c.status)) return false;
     if (filter === 'pending') return isReviewable(c.status);
     if (filter === 'urgent') return c.rec.urgency === 'urgent';
     return true;
   }), [queue, tab, filter]);
   const activeId = caseId && queue.some(c => c.id === caseId) ? caseId : null;
+  // A stale or mistyped id must say so, not quietly show a different patient (UX-17).
+  const missingCase = !!caseId && !activeId;
   const ac = activeId ? queue.find(c => c.id === activeId) : undefined;
-  const paneCase = ac || (mobile ? undefined : visible[0]);
-  const reviewCase = ac || queue[0];
+  // Mira is bound to exactly the case drawn in the case pane — never to a
+  // different first-in-queue case the doctor cannot see (UX-09).
+  const paneCase = missingCase ? undefined : ac || (mobile ? undefined : visible[0]);
   const pendingCount = queue.filter(c => isReviewable(c.status)).length;
-  const queueLabel = tab === 'appointments' ? `Appointments · ${queue.length}` : `Review queue · ${pendingCount} pending`;
+  const filtered = visible.length !== queue.length;
+  const queueLabel = tab === 'appointments'
+    ? `Appointments · ${visible.length}${filtered ? ` of ${queue.length}` : ''}`
+    : `Review queue · ${pendingCount} pending`;
 
   const review = useReview({
-    getCase: () => reviewCase,
-    onEdit: (rec) => ac && clinic.updateRec(ac.id, rec),
-    onApprove: () => ac && clinic.decide(ac.id, 'approved'),
+    getCase: () => paneCase,
+    onEdit: (rec) => paneCase && clinic.updateRec(paneCase.id, rec),
   });
 
   const toggleMira = () => {
@@ -97,17 +112,25 @@ function Desk({ tenantName }: { tenantName: string }) {
   };
   const backToQueue = () => {
     review.stop();
-    nav('/doctor');
+    nav(tabPath(tab));
   };
   const isActionable = (c?: CaseItem) => !!c && isReviewable(c.status);
+  const announce = (id: string, text: string) => {
+    const rest = queue.filter(c => c.id !== id && isReviewable(c.status));
+    setSent({ text, nextId: rest[0]?.id });
+  };
   const approveId = (id: string) => {
+    const c = queue.find(x => x.id === id);
     review.stop();
     clinic.decide(id, 'approved');
+    announce(id, `Approved and sent to ${c?.patient || 'the patient'}.`);
   };
   const confirmDecline = () => {
     if (!declineFor) return;
     review.stop();
+    const c = queue.find(x => x.id === declineFor);
     clinic.decide(declineFor, 'rejected', { reason: declineReason });
+    announce(declineFor, `Sent to ${c?.patient || 'the patient'}: not approved, with your reason.`);
     setDeclining(false);
     setDeclineFor(null);
   };
@@ -119,7 +142,21 @@ function Desk({ tenantName }: { tenantName: string }) {
   const homeTab = tab === 'home';
   const showQueue = !mobile || !ac;
   const showCase = !mobile || !!ac;
-  const emptyQueue = (
+  const emptyQueue = missingCase ? (
+    <EmptyState
+      icon="doc"
+      title="This case is no longer available"
+      body="The link may be out of date, or the case belongs to another clinic."
+      action={<Button variant="tertiary" onClick={backToQueue}>Back to the queue</Button>}
+    />
+  ) : filtered && queue.length > 0 ? (
+    <EmptyState
+      icon="doc"
+      title={filter === 'urgent' ? 'No urgent cases right now' : 'Nothing matches this filter'}
+      body={`${queue.length} case${queue.length === 1 ? ' is' : 's are'} waiting under other filters.`}
+      action={<Button variant="tertiary" onClick={() => setFilter('all')}>Show all</Button>}
+    />
+  ) : (
     <EmptyState
       icon="doc"
       title={tab === 'reviews' ? 'Nothing to review' : 'No cases in the queue'}
@@ -132,11 +169,10 @@ function Desk({ tenantName }: { tenantName: string }) {
     <div className={s.shell}>
       <NavBar
         items={NAV_ITEMS}
-        active={onProfile ? 'profile' : ac ? '' : tab}
+        active={onProfile ? 'profile' : tab}
         onSelect={(k: string) => {
-          if (k === 'profile') { review.stop(); nav('/doctor/profile'); return; }
-          setTab(k as DeskTab);
-          backToQueue();
+          review.stop();
+          nav(k === 'profile' ? '/doctor/profile' : tabPath(k as DeskTab));
         }}
         orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: toggleMira }}
         railTop="profile"
@@ -150,7 +186,7 @@ function Desk({ tenantName }: { tenantName: string }) {
         onToggleNotifs={() => setShowNotifs(s => !s)}
         onCloseNotifs={() => setShowNotifs(false)}
         onSelectCase={selectCase}
-        filter={bp === 'desktop' && tab === 'appointments' ? <QueueFilter value={filter} onChange={setFilter} /> : undefined}
+        filter={bp === 'desktop' && tab !== 'home' ? <QueueFilter value={filter} onChange={setFilter} /> : undefined}
       />
 
       <div className={s.desk}>
@@ -158,9 +194,10 @@ function Desk({ tenantName }: { tenantName: string }) {
           {showQueue && (
             <section className={s.pane} aria-label="Review queue">
               {homeTab ? (
-                <DoctorHome queue={queue} onSelect={selectCase} onSeeAll={() => setTab('appointments')} />
+                <DoctorHome queue={queue} onSelect={selectCase} onSeeAll={() => nav('/doctor/appointments')} />
               ) : mobile ? (
                 <>
+                  <QueueFilter value={filter} onChange={setFilter} />
                   <MicroLabel>{queueLabel}</MicroLabel>
                   {visible.map(c => (
                     <QueueCard key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
@@ -169,12 +206,15 @@ function Desk({ tenantName }: { tenantName: string }) {
                 </>
               ) : (
                 <Card tone="panel" level={1} className={s.queueCard}>
+                  {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} />}
                   <MicroLabel>{queueLabel}</MicroLabel>
                   {visible.map(c => (
                     <QueueCard key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
                   ))}
                   {visible.length === 0 && (
-                    <div className={s.queueEmpty}>Nothing in this list.</div>
+                    <div className={s.queueEmpty}>
+                      {filtered && queue.length > 0 ? 'No cases match this filter.' : 'Nothing in this list.'}
+                    </div>
                   )}
                 </Card>
               )}
@@ -196,6 +236,7 @@ function Desk({ tenantName }: { tenantName: string }) {
                   ac={paneCase}
                   actionable={isActionable(paneCase)}
                   asideInPanel={bp === 'desktop'}
+                  staged={review.approvalStaged}
                   onApprove={() => approveId(paneCase.id)}
                   onDecline={() => askDecline(paneCase.id)}
                   onEdit={() => clinic.decide(paneCase.id, 'changes')}
@@ -220,6 +261,18 @@ function Desk({ tenantName }: { tenantName: string }) {
           onCancel={() => setDeclining(false)}
           onConfirm={confirmDecline}
         />
+      )}
+
+      {sent && (
+        <div role="status" aria-live="polite" className={`vd-glass ${s.sent}`}>
+          <span className={s.sentText}>{sent.text}</span>
+          {sent.nextId && (
+            <Button variant="tertiary" onClick={() => { setSent(null); selectCase(sent.nextId as string); }}>
+              Next case
+            </Button>
+          )}
+          <Button variant="tertiary" onClick={() => setSent(null)}>Dismiss</Button>
+        </div>
       )}
 
       <MiraPanel

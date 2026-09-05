@@ -7,6 +7,7 @@ const TONE = { card: s.toneCard, panel: s.tonePanel, raised: s.toneRaised };
 
 export function Card({
   children, tone = 'card', level, pad, bordered = true, onClick, selected, className, style,
+  'aria-label': ariaLabel,
 }: {
   children: React.ReactNode;
   tone?: 'card' | 'panel' | 'raised';
@@ -19,13 +20,16 @@ export function Card({
   selected?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  /** Required whenever onClick is set: a clickable card is a button, and its
+   *  accessible name must say what activating it does (QA-12). */
+  'aria-label'?: string;
 }) {
   const edge = selected ? s.selected : bordered ? s.bordered : s.plain;
   return (
     <div
       className={[s.card, TONE[tone], edge, onClick && s.clickable, className].filter(Boolean).join(' ')}
       onClick={onClick}
-      {...(onClick ? { role: 'button', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => {
+      {...(onClick ? { role: 'button', tabIndex: 0, 'aria-label': ariaLabel, onKeyDown: (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
       } } : {})}
       style={{

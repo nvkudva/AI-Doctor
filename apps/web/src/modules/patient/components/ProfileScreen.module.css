@@ -7,3 +7,20 @@
 .tileLabel { composes: vd-t-micro from global; color: var(--vd-ink-3); }
 .tileValue { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); margin-top: 4px; }
 .tileMeta { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }
+
+/* Editable health profile (UX-25). */
+.editRow { display: flex; justify-content: flex-start; margin-top: var(--vd-space-3); }
+.form { display: flex; flex-direction: column; gap: var(--vd-space-4); padding: var(--vd-space-2) 0; }
+.formNote { composes: vd-t-footnote from global; color: var(--vd-ink-soft); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.fieldLabel { composes: vd-t-caption vd-w7 from global; color: var(--vd-ink-3); }
+.fieldInput {
+  min-height: 44px;
+  padding: 0 var(--vd-space-4);
+  border-radius: var(--vd-radius-lg);
+  border: 1px solid var(--vd-border-strong);
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-1);
+  font: inherit;
+}
+.fieldInput:focus-visible { outline: 2px solid var(--vd-focus); outline-offset: 2px; }

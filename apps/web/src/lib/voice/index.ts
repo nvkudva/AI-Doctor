@@ -50,8 +50,13 @@ function recognitionCtor(): (new () => SpeechRecognition) | null {
 }
 
 export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {
-  if (googleKey()) return googleSpeak(text, opts);
-  return browserSpeak(text, opts);
+  // onDone submits the consult, so it must fire at most once per utterance:
+  // Chromium fires both `end` and `error` when speechSynthesis.cancel()
+  // interrupts, which used to file the same consult twice (UX-01).
+  let fired = false;
+  const once = { onDone: () => { if (fired) return; fired = true; opts.onDone && opts.onDone(); } };
+  if (googleKey()) return googleSpeak(text, once);
+  return browserSpeak(text, once);
 }
 
 function browserSpeak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {

@@ -22,6 +22,13 @@ export interface Appointment {
   id: string; title: string; kind: string; when: string; where: string;
 }
 
+/** What the patient can edit about themselves. Blank means "not on file". */
+export interface HealthProfile {
+  age: string;
+  blood: string;
+  allergies: string;
+}
+
 export interface Notice {
   t: string; d: string; kind: string; at?: number; caseId?: string;
 }
@@ -31,6 +38,7 @@ export interface Clinic {
   consults: UserConsult[];
   prescriptions: UserRx[];
   notices: Notice[];
+  profile: HealthProfile;
   liveCaseId: string | null;
   reviewStatus: string;
   rejectReason: string;
@@ -42,6 +50,7 @@ export interface Clinic {
   pushNotice: (n: Notice) => void;
   dismissNotice: (index: number) => void;
   addConsultRecord: (c: UserConsult) => void;
+  setProfile: (p: HealthProfile) => void;
   slaTick: () => void;
 }
 

@@ -30,7 +30,7 @@
 .sizeApprove { composes: vd-t-caption vd-w7 from global; height: 36px; padding: 0 14px; }
 
 /* Declared after the size classes so it wins the padding. */
-.iconOnly { min-width: 48px; padding: 0; }
+.iconOnly { min-width: 48px; min-height: 44px; padding: 0; }
 
 .skinPrimary {
   background: var(--vd-grad-primary);
@@ -89,4 +89,19 @@
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
+}
+
+/* Hover affordance for every skin (QA-08). */
+@media (hover: hover) {
+  .btn:not(:disabled):hover { filter: brightness(1.05); }
+  .skinSecondary:not(:disabled):hover { background: var(--vd-surface-card); border-color: var(--vd-border-strong); }
+  .skinTertiary:not(:disabled):hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); }
+  .skinPrimary:not(:disabled):hover,
+  .skinDanger:not(:disabled):hover { box-shadow: var(--vd-shadow-cta), var(--vd-elev-3); }
+  .skinApprove:not(:disabled):hover { box-shadow: var(--vd-glass-hi), var(--vd-elev-3); }
+}
+
+/* A 36px primary clinical action is below the touch-target rule (QA-09). */
+@media (max-width: 799px) {
+  .sizeApprove { height: 44px; padding: 0 18px; }
 }

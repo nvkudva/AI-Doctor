@@ -60,3 +60,7 @@
 @media (min-width: 800px) { .emptyBody { font-size: 15px; } }
 
 .action { margin-top: 4px; }
+
+@media (hover: hover) {
+  .clickable:hover { border-color: var(--vd-border-strong); box-shadow: var(--card-elev, var(--vd-elev-2)), var(--vd-glass-hi); }
+}

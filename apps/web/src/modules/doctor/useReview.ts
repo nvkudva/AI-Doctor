@@ -1,5 +1,7 @@
 // Doctor-desk review conversation: Mira presents the case, takes voice/text
-// commands, applies edits to the on-screen draft. Approval stays UI-only.
+// commands, applies edits to the on-screen draft. Approval stays UI-only: Mira
+// may *propose* an approval, but only the doctor's own press of "Approve & send"
+// ever signs one (PRD UC-2.6 / D-9).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
@@ -26,16 +28,22 @@ const START_PILLS: Suggestion[] = [
   { label: 'What did the patient say?' },
 ];
 const REVIEW_PILLS: Suggestion[] = [
-  { label: 'Approve and send', tone: 'ok' },
+  { label: 'Draft an approval', tone: 'ok' },
   { label: 'Decline this', tone: 'bad' },
   { label: 'Change the dosage', tone: 'warn' },
   { label: 'Add a test' },
 ];
 
+// Spoken by Mira, never by the model, whenever the doctor signals approval.
+// It is deliberately fixed text: no model output may ever assert that a
+// prescription was signed (UX-07/UX-08).
+const APPROVAL_HANDOFF =
+  "I can't sign a prescription — that's yours to do. When you're happy with the draft, press \u201cApprove & send\u201d on the case and it goes to the patient.";
+const NO_CASE = 'Open a case from the queue and I\u2019ll take you through it.';
+
 export function useReview(opts: {
   getCase: () => CaseItem | undefined;
   onEdit: (rec: any) => void;
-  onApprove: () => void;
 }) {
   const [active, setActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
@@ -50,8 +58,9 @@ export function useReview(opts: {
   getCaseRef.current = opts.getCase;
   const onEditRef = useRef(opts.onEdit);
   onEditRef.current = opts.onEdit;
-  const onApproveRef = useRef(opts.onApprove);
-  onApproveRef.current = opts.onApprove;
+  // True once the doctor has asked Mira to approve: the decision is staged for
+  // them, never performed. Cleared as soon as the draft changes again.
+  const [approvalStaged, setApprovalStaged] = useState(false);
 
   const stop = useCallback(() => {
     stopAllVoice();
@@ -103,30 +112,45 @@ export function useReview(opts: {
     text = (text || '').trim();
     if (!text) return;
     const ac = getCaseRef.current();
-    if (!ac) return;
-    setStatus('thinking');
     setMessages(m => [...m, { role: 'user', text, at: Date.now() }]);
+    if (!ac) {
+      setMessages(m => [...m, { role: 'mira', text: NO_CASE, at: Date.now() }]);
+      say(NO_CASE);
+      return;
+    }
+    setStatus('thinking');
     const sys = `You are Dr. Mira, an AI clinician speaking ALOUD with a licensed human doctor who is reviewing your recommendation for patient ${ac.patient}. Speak warmly and concisely, like a trusted colleague.
 Current recommendation JSON: ${JSON.stringify(ac.rec)}.
 The doctor just spoke. Decide:
-- If they approve/confirm/say it looks good → action "approve". reply MUST be exactly: "Thank you, I'll notify the patient right away."
+- If they approve/confirm/say it looks good → action "approve". You are NOT able to approve or send anything: set reply to "" and let the app answer. Never claim a prescription was signed, sent or that the patient was notified.
 - If they ask for a change (add/remove/replace a test, drug, dosage, timing, or advice) → action "edit". Apply it and return the FULL updated recommendation (same JSON shape, keep untouched fields), then briefly confirm what you changed and ask if there's anything else.
 - Otherwise → action "none". Answer briefly, then ask if they'd like any changes.
 Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JSON, no prose, no code fences:
 {"reply": string, "action": "approve"|"edit"|"none", "recommendation": <recommendation JSON> | null}`;
     try {
       setFailedCmd(null);
-      const raw = await aiComplete({ system: sys, messages: [{ role: 'user', content: text } as ChatMessage], max_tokens: 800 });
+      // The whole exchange, not just the latest line: without it a follow-up
+      // like "make that 5 mg instead" has nothing to refer back to.
+      const history: ChatMessage[] = messagesRef.current.map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant', content: m.text,
+      } as ChatMessage));
+      const raw = await aiComplete({ system: sys, messages: [...history, { role: 'user', content: text } as ChatMessage], max_tokens: 800 });
       const data = parseAi(raw);
-      const reply = data.reply || 'Done. Anything else?';
-      setMessages(m => [...m, { role: 'mira', text: reply, at: Date.now() }]);
       setStatus('idle');
+      // The model may propose an approval; it may never perform one, and the
+      // confirmation it wants to speak is replaced with the handoff line.
       if (data.action === 'approve') {
-        onApproveRef.current();
-        say(reply);
+        setApprovalStaged(true);
+        setMessages(m => [...m, { role: 'mira', text: APPROVAL_HANDOFF, at: Date.now() }]);
+        say(APPROVAL_HANDOFF, typed ? undefined : () => listenRef.current());
         return;
       }
-      if (data.action === 'edit' && data.recommendation) onEditRef.current(data.recommendation);
+      const reply = data.reply || 'Done. Anything else?';
+      setMessages(m => [...m, { role: 'mira', text: reply, at: Date.now() }]);
+      if (data.action === 'edit' && data.recommendation) {
+        setApprovalStaged(false);
+        onEditRef.current(data.recommendation);
+      }
       say(reply, typed ? undefined : () => listenRef.current());
     } catch {
       setFailedCmd(text);
@@ -135,6 +159,9 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const messagesRef = useRef<MiraTurn[]>([]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   const commandRef = useRef(command);
   commandRef.current = command;
   const listenRef = useRef(listen);
@@ -142,9 +169,15 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   const start = useCallback(() => {
     const ac = getCaseRef.current();
-    if (!ac) return;
+    if (!ac) {
+      setMessages([{ role: 'mira', text: NO_CASE, at: Date.now() }]);
+      setActive(true);
+      say(NO_CASE);
+      return;
+    }
+    setApprovalStaged(false);
     const parts = (ac.rec.items || []).map(i => i.name + (i.dosage ? ' ' + i.dosage : '')).join(', ');
-    const summary = `Hi doctor. Quick summary for ${ac.patient.split(' ')[0]}: ${ac.summary} My assessment is ${(ac.inferred && ac.inferred[0]) || ac.rec.title}, and I'm recommending ${parts}. Would you like to change anything — the tests, the prescription, or the advice — or shall I send it to the patient?`;
+    const summary = `Hi doctor. Quick summary for ${ac.patient.split(' ')[0]}: ${ac.summary} My assessment is ${(ac.inferred && ac.inferred[0]) || ac.rec.title}, and I'm recommending ${parts}. Would you like to change anything — the tests, the prescription, or the advice — before you sign it off?`;
     setMessages([{ role: 'mira', text: summary, at: Date.now() }]);
     setActive(true);
     say(summary, () => listenRef.current());
@@ -164,6 +197,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   return {
     active, status, messages, speakerOff, setSpeakerOff, micOff, setMicOff, start, stop, orbTap, failedCmd,
+    approvalStaged,
     command: (t: string) => commandRef.current(t, true),
     send: (t: string) => commandRef.current(t, true),
     suggestions: active ? REVIEW_PILLS : START_PILLS,

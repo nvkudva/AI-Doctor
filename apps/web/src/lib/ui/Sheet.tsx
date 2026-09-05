@@ -1,7 +1,8 @@
 // Modal surfaces: bottom sheet (centred ≥800) and anchored popover/menu.
 // Both dismiss on Escape and outside tap, and sit above the bottom nav on
 // the shared z-scale (DESIGN §11.7 / §11.8).
-import { DismissCatcher, useDismiss } from './Dismiss';
+import { useRef } from 'react';
+import { DismissCatcher, useDismiss, useFocusEntry, useFocusTrap } from './Dismiss';
 import { Icon, type IconName } from './Primitives';
 import s from './Sheet.module.css';
 
@@ -16,11 +17,18 @@ export function Sheet({
   width?: number;
   label?: string;
 }) {
+  const dialog = useRef<HTMLDivElement | null>(null);
   useDismiss(onClose, open);
+  // It declares aria-modal over a scrim, so it must also behave modally:
+  // take focus on open, cycle Tab inside, hand focus back on close (QA-06).
+  useFocusEntry(dialog, open);
+  useFocusTrap(dialog, open);
   if (!open) return null;
   return (
     <div className={`vd-glass-thick ${s.scrim}`} onClick={onClose}>
       <div
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={label || (typeof title === 'string' ? title : 'Dialog')}

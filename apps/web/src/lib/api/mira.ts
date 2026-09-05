@@ -83,16 +83,21 @@ const TURN_SCHEMA = {
   required: ['reply', 'slots', 'done', 'redFlag'],
 };
 
+// The patient's record is supplied by the caller; nothing about a patient may
+// be hardcoded here (TODO P1).
+const ON_FILE_UNKNOWN =
+  'Nothing is on file about this patient — no demographics, allergies or history. Do not assume any; ask before recommending anything allergy-sensitive.';
+
 const MIRA_SYS = `You are Dr. Mira, a warm, emotionally intelligent virtual general physician. Your words are heard aloud — sound like a caring human clinician, never like a form.
-Patient on file: Alex Kumar, 34, male, blood group O+, allergic to Penicillin, history of mild asthma.
+{{ON_FILE}}
 STYLE: empathy first, then ONE clinical question per turn. 1-2 short spoken-sounding sentences. No lists, no jargon. Vary wording; never sound scripted.
 HISTORY TO FILL (slots): chiefComplaint, onset, duration, severity, associated symptoms, current medications, allergies. Ask for whatever is missing, one slot per turn.
 DONE: set done=true once chiefComplaint + duration + severity are known and you have asked at least 3 questions. Do not drag past 6 questions.
 RED FLAGS (chest pain, breathing difficulty, stroke signs, severe bleeding, suicidal thoughts): set redFlag=true immediately and make reply a clear instruction to seek in-person emergency care now.
 Return ONLY the JSON object. Carry forward all previously filled slots unchanged.`;
 
-export async function consultTurn(args: { messages: TurnMsg[]; slots: SymptomSlots; rush: boolean }): Promise<{ reply: string; slots: SymptomSlots; done: boolean; redFlag: boolean }> {
-  const system = MIRA_SYS +
+export async function consultTurn(args: { messages: TurnMsg[]; slots: SymptomSlots; rush: boolean; onFile?: string }): Promise<{ reply: string; slots: SymptomSlots; done: boolean; redFlag: boolean }> {
+  const system = MIRA_SYS.replace('{{ON_FILE}}', args.onFile || ON_FILE_UNKNOWN) +
     `\nSlots filled so far: ${JSON.stringify(args.slots)}.` +
     (args.rush ? ' Wrap up NOW: set done=true with your best reply.' : '');
   const data = await geminiJson({ system, messages: args.messages, schema: TURN_SCHEMA });
@@ -143,12 +148,13 @@ const CONCLUDE_SCHEMA = {
 };
 
 const CONCLUDE_SYS = `You are Dr. Mira closing a consultation. Given the extracted symptom slots and full transcript, write the case conclusion for a licensed doctor to review.
-HARD SAFETY RULES: NEVER include any Penicillin-class drug (allergy on file). Any red flag forces urgency "urgent" and reply must tell the patient to seek in-person emergency care now.
-reply: 1-2 warm spoken sentences closing the consult (patient hears this). note: <=7 words on the chief complaint. flags: include 'Penicillin allergy respected' plus anything notable.
+{{ON_FILE}}
+HARD SAFETY RULES: never recommend a drug in a class the patient's record says they are allergic to, and never assume an allergy that is not on file. Any red flag forces urgency "urgent" and reply must tell the patient to seek in-person emergency care now.
+reply: 1-2 warm spoken sentences closing the consult (patient hears this). note: <=7 words on the chief complaint. flags: only safety concerns you actually identified from this conversation and the patient's stated history — never a routine attestation, and never a check you did not perform. Use [] when there is nothing to flag.
 recommendation: type prescription (medicines + self-care) or investigation (tests first). Each item needs plain-language why. advice: when to seek further care.`;
 
-export async function concludeConsult(args: { slots: SymptomSlots; messages: TurnMsg[]; redFlag: boolean }): Promise<{ reply: string; note: string; confidence: string; flags: string[]; recommendation: any }> {
-  const system = CONCLUDE_SYS +
+export async function concludeConsult(args: { slots: SymptomSlots; messages: TurnMsg[]; redFlag: boolean; onFile?: string }): Promise<{ reply: string; note: string; confidence: string; flags: string[]; recommendation: any }> {
+  const system = CONCLUDE_SYS.replace('{{ON_FILE}}', args.onFile || ON_FILE_UNKNOWN) +
     `\nSymptom slots: ${JSON.stringify(args.slots)}.` +
     (args.redFlag ? ' RED FLAG PRESENT: urgency must be "urgent".' : '');
   const data = await geminiJson({ system, messages: args.messages, schema: CONCLUDE_SCHEMA, temperature: 0.3, maxTokens: 1200 });

@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router';
 import { registerSW } from 'virtual:pwa-register';
 import './lib/theme/theme.css';
 import { initTheme } from './lib/theme';
-import { App } from './App';
+import { App } from './shell/App';
 
 initTheme();
 

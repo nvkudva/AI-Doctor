@@ -1,0 +1,58 @@
+/* Header bell + notice list, shared by both modules. */
+.wrap { position: relative; flex: none; }
+
+.badge {
+  composes: vd-t-micro from global;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-bad-bg);
+  color: var(--vd-bad-fg);
+  border: 1px solid var(--vd-border);
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  pointer-events: none;
+}
+
+.empty { composes: vd-t-footnote from global; padding: var(--vd-space-4); color: var(--vd-ink-3); }
+
+.notice {
+  display: flex;
+  gap: var(--vd-space-3);
+  align-items: flex-start;
+  padding: var(--vd-space-2) var(--vd-space-1);
+  min-height: 44px;
+  border-bottom: 1px solid var(--vd-border);
+  cursor: default;
+}
+.noticeOpenable { cursor: pointer; }
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vd-nav-active);
+  flex: none;
+  margin-top: 8px;
+}
+
+.text { flex: 1; min-width: 0; }
+.noticeTitle { composes: vd-t-footnote vd-w7 from global; color: var(--vd-ink-1); }
+.noticeBody { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.dismiss {
+  cursor: pointer;
+  color: var(--vd-ink-4);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}

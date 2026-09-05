@@ -5,7 +5,7 @@ import { setDocumentTitle } from '../lib/platform';
 import { AppShell } from './AppShell';
 import { AuthProvider, useAuth } from './auth';
 import { SignedInRoutes, SignedOutRoutes } from './routes';
-import { gradients, radius } from '../lib/theme';
+import s from './App.module.css';
 
 export function App() {
   return (
@@ -17,11 +17,9 @@ export function App() {
 
 function LoadingSkeleton() {
   return (
-    <div style={{ flex: 1, minHeight: '100dvh', background: gradients.app, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: 40 }}>
+    <div className={s.loading}>
       <MiraPresence size={96} />
-      {[220, 160].map(w => (
-        <div key={w} style={{ width: w, maxWidth: '70%', height: 14, borderRadius: radius.pill, background: 'var(--vd-surface-card)', animation: 'vd-shimmer calc(var(--vd-dur-5) * 4) var(--vd-ease-spring) infinite' }} />
-      ))}
+      {[220, 160].map(w => <div key={w} className={s.bar} style={{ width: w }} />)}
     </div>
   );
 }

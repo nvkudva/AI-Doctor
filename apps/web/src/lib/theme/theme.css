@@ -3,6 +3,11 @@
    Metric + motion scales are theme-independent (second :root block); every
    colour token is defined in BOTH theme blocks. */
 
+/* Cascade layers, lowest priority first. Document base (including the
+   `button { font: inherit }` reset) must lose to a type role, and both must
+   lose to a component's own .module.css, which is unlayered. */
+@layer vd-base, vd-type;
+
 :root {
   --vd-bg-app: linear-gradient(180deg, #cdb6ec 0%, #d3c2ec 38%, #d8d0ea 72%, #d5d2e4 100%);
   --vd-bg-desk: linear-gradient(180deg, #efe9fa 0%, #e4dbf3 100%);
@@ -181,6 +186,14 @@
   --vd-space-9: 40px;
   --vd-space-10: 56px;
 
+  /* Gradient recipes — the colours themselves stay in the theme blocks, so a
+     gradient resolves per theme wherever it is used. */
+  --vd-grad-primary: linear-gradient(135deg, var(--vd-brand-1), var(--vd-brand-2));
+  --vd-grad-send: linear-gradient(135deg, var(--vd-send-1), var(--vd-send-2));
+  --vd-grad-approve: linear-gradient(180deg, oklch(0.73 0.15 155), oklch(0.63 0.16 160));
+  --vd-grad-call: linear-gradient(158deg, oklch(0.75 0.12 300), oklch(0.6 0.17 292));
+  --vd-grad-danger: linear-gradient(135deg, #E5484D, #B31B34);
+
   --vd-radius-xs: 8px;
   --vd-radius-sm: 12px;
   --vd-radius-md: 16px;
@@ -214,66 +227,91 @@
   --vd-dur-orb-breathe: calc(var(--vd-dur-4) * 12.5);
 }
 
-/* Tinted label (status pills, suggestion pills). The bg/fg pair carries the
-   contrast; this carries the material. In light that is a specular sheen and a
-   lifted edge; in dark both are off, because a white sheen over a dark chip
-   reads as embossed plastic. The border tints itself from the label's own
-   colour, so it never outlines the chip in a foreign hue. */
-.vd-tag {
-  border: 1px solid color-mix(in oklab, currentColor var(--vd-tag-border), transparent);
-  background-image: var(--vd-tag-sheen);
-  box-shadow: var(--vd-tag-shadow);
+@layer vd-type {
+  /* Type roles (DESIGN §3) — the single definition of the scale. The bare class
+     is the mobile step; only font-size changes per breakpoint, so a responsive
+     call site overrides font-size alone in its own module. */
+  .vd-t-display    { font-size: 30px; font-weight: 700; line-height: 1.1;  letter-spacing: -0.022em; }
+  .vd-t-largeTitle { font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+  .vd-t-title      { font-size: 20px; font-weight: 700; line-height: 1.2;  letter-spacing: -0.015em; }
+  .vd-t-headline   { font-size: 16px; font-weight: 700; line-height: 1.3;  letter-spacing: -0.01em; }
+  .vd-t-body       { font-size: 15px; font-weight: 400; line-height: 1.55; letter-spacing: 0; }
+  .vd-t-callout    { font-size: 14px; font-weight: 400; line-height: 1.5;  letter-spacing: 0; }
+  .vd-t-subhead    { font-size: 13px; font-weight: 600; line-height: 1.45; letter-spacing: 0; }
+  .vd-t-footnote   { font-size: 12px; font-weight: 400; line-height: 1.45; letter-spacing: 0; }
+  .vd-t-caption    { font-size: 11px; font-weight: 600; line-height: 1.35; letter-spacing: 0.01em; }
+  .vd-t-micro      { font-size: 11px; font-weight: 700; line-height: 1.2;  letter-spacing: 0.07em; text-transform: uppercase; }
+
+  /* Weight overrides ride on top of a role without redefining the role. */
+  .vd-w6 { font-weight: 600; }
+  .vd-w7 { font-weight: 700; }
+
+  /* One-line truncation — the most repeated recipe in the app. */
+  .vd-truncate { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
-/* Document base — moved out of index.html so font.family has one definition. */
-* { box-sizing: border-box; }
+@layer vd-base {
+  /* Tinted label (status pills, suggestion pills). The bg/fg pair carries the
+     contrast; this carries the material. In light that is a specular sheen and a
+     lifted edge; in dark both are off, because a white sheen over a dark chip
+     reads as embossed plastic. The border tints itself from the label's own
+     colour, so it never outlines the chip in a foreign hue. */
+  .vd-tag {
+    border: 1px solid color-mix(in oklab, currentColor var(--vd-tag-border), transparent);
+    background-image: var(--vd-tag-sheen);
+    box-shadow: var(--vd-tag-shadow);
+  }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: #cdb6ec;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
-}
-[data-theme="dark"] body { background: #241b45; }
+  /* Document base — moved out of index.html so font.family has one definition. */
+  * { box-sizing: border-box; }
 
-button, input, textarea, select { font: inherit; color: inherit; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #cdb6ec;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
+  }
+  [data-theme="dark"] body { background: #241b45; }
 
-.vd-scroll::-webkit-scrollbar { width: 0; }
+  button, input, textarea, select { font: inherit; color: inherit; }
 
-/* Section labels: 12/8 rhythm between sections, flush when first in a surface. */
-.vd-microlabel { margin: var(--vd-space-4) 0 var(--vd-space-3); }
-.vd-microlabel:first-child { margin-top: 0; }
+  .vd-scroll::-webkit-scrollbar { width: 0; }
 
-:focus-visible {
-  outline: 2px solid var(--vd-focus);
-  outline-offset: 2px;
-  border-radius: inherit;
-}
+  /* Section labels: 12/8 rhythm between sections, flush when first in a surface. */
+  .vd-microlabel { margin: var(--vd-space-4) 0 var(--vd-space-3); }
+  .vd-microlabel:first-child { margin-top: 0; }
 
-/* Liquid Glass (DESIGN §8.1) — the ONLY way to make a glass surface.
-   Components apply the class and keep geometry inline. */
-.vd-glass,
-.vd-glass-thin,
-.vd-glass-thick {
-  background: var(--vd-glass-bg);
-  border: 1px solid var(--vd-glass-border);
-  box-shadow: var(--vd-glass-hi), var(--vd-glass-lo), var(--vd-elev-4);
-  border-radius: var(--vd-radius-2xl);
-}
+  :focus-visible {
+    outline: 2px solid var(--vd-focus);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
 
-.vd-glass { backdrop-filter: var(--vd-glass-blur); -webkit-backdrop-filter: var(--vd-glass-blur); }
-.vd-glass-thin { backdrop-filter: var(--vd-glass-blur-thin); -webkit-backdrop-filter: var(--vd-glass-blur-thin); }
-.vd-glass-thick { backdrop-filter: var(--vd-glass-blur-thick); -webkit-backdrop-filter: var(--vd-glass-blur-thick); }
+  /* Liquid Glass (DESIGN §8.1) — the ONLY way to make a glass surface.
+     Components apply the class and keep geometry inline. */
+  .vd-glass,
+  .vd-glass-thin,
+  .vd-glass-thick {
+    background: var(--vd-glass-bg);
+    border: 1px solid var(--vd-glass-border);
+    box-shadow: var(--vd-glass-hi), var(--vd-glass-lo), var(--vd-elev-4);
+    border-radius: var(--vd-radius-2xl);
+  }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .vd-glass, .vd-glass-thin, .vd-glass-thick { background: var(--vd-glass-solid); }
-}
+  .vd-glass { backdrop-filter: var(--vd-glass-blur); -webkit-backdrop-filter: var(--vd-glass-blur); }
+  .vd-glass-thin { backdrop-filter: var(--vd-glass-blur-thin); -webkit-backdrop-filter: var(--vd-glass-blur-thin); }
+  .vd-glass-thick { backdrop-filter: var(--vd-glass-blur-thick); -webkit-backdrop-filter: var(--vd-glass-blur-thick); }
 
-@media (prefers-reduced-transparency: reduce) {
-  .vd-glass, .vd-glass-thin, .vd-glass-thick {
-    background: var(--vd-glass-solid);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .vd-glass, .vd-glass-thin, .vd-glass-thick { background: var(--vd-glass-solid); }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .vd-glass, .vd-glass-thin, .vd-glass-thick {
+      background: var(--vd-glass-solid);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
   }
 }
 

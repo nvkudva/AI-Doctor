@@ -1,0 +1,92 @@
+/* The one button (DESIGN §7): size classes carry metrics + type, skin classes
+   carry material. Both are token-only. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: var(--vd-radius-pill);
+}
+
+.disabled { cursor: default; opacity: 0.5; pointer-events: none; }
+.fullWidth { width: 100%; }
+
+/* Split-pill halves share a 24px outer corner. */
+.halfLeft  { border-radius: var(--vd-radius-xl) 0 0 var(--vd-radius-xl); }
+.halfRight { border-radius: 0 var(--vd-radius-xl) var(--vd-radius-xl) 0; }
+
+.sizePrimary { composes: vd-t-body vd-w7 from global; height: 48px; padding: 0 24px; }
+@media (min-width: 800px)  { .sizePrimary { height: 50px; padding: 0 28px; font-size: 16px; } }
+@media (min-width: 1160px) { .sizePrimary { height: 52px; padding: 0 32px; } }
+
+.sizeSecondary { composes: vd-t-subhead vd-w7 from global; height: 48px; padding: 0 20px; }
+@media (min-width: 800px) { .sizeSecondary { height: 50px; padding: 0 24px; font-size: 14px; } }
+
+.sizeTertiary { composes: vd-t-subhead vd-w6 from global; height: 48px; padding: 0 20px; }
+@media (min-width: 800px) { .sizeTertiary { font-size: 14px; } }
+
+.sizeApprove { composes: vd-t-caption vd-w7 from global; height: 36px; padding: 0 14px; }
+
+/* Declared after the size classes so it wins the padding. */
+.iconOnly { min-width: 48px; padding: 0; }
+
+.skinPrimary {
+  background: var(--vd-grad-primary);
+  color: var(--vd-ink-on-brand);
+  border: 1px solid transparent;
+  box-shadow: var(--vd-shadow-cta);
+}
+.skinSecondary {
+  background: var(--vd-surface-chip);
+  color: var(--vd-ink-1);
+  border: 1px solid transparent;
+}
+.skinTertiary {
+  background: transparent;
+  color: var(--vd-ink-2);
+  border: 1px solid var(--vd-border-strong);
+}
+.skinDanger {
+  background: var(--vd-grad-danger);
+  color: var(--vd-ink-on-brand);
+  border: 1px solid transparent;
+  box-shadow: var(--vd-elev-2);
+}
+.skinApprove {
+  background: var(--vd-ok-bg);
+  color: var(--vd-ok-fg);
+  border: 1px solid var(--vd-glass-border);
+  box-shadow: var(--vd-glass-hi), var(--vd-elev-1);
+}
+
+/* Circular glass action button — 44 on coarse pointers, 40 visual at desktop. */
+.icon {
+  width: var(--icon-btn-size, 44px);
+  height: var(--icon-btn-size, 44px);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+}
+@media (min-width: 1160px) { .icon { width: var(--icon-btn-size, 40px); height: var(--icon-btn-size, 40px); } }
+
+.iconGlass {
+  color: var(--vd-ink-on-glass);
+  box-shadow: var(--vd-glass-hi), var(--vd-elev-1);
+}
+.iconCard {
+  color: var(--vd-ink-2);
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+  box-shadow: var(--vd-elev-1);
+}
+.iconPlain {
+  color: var(--vd-ink-2);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+}

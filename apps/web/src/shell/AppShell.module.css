@@ -1,0 +1,35 @@
+/* Chrome-less full-viewport wrapper: offline banner, module slot, update toast. */
+.shell { min-height: 100dvh; display: flex; flex-direction: column; }
+.main { flex: 1; display: flex; flex-direction: column; }
+
+.offline {
+  composes: vd-t-footnote vd-w7 from global;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+  text-align: center;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 8px 12px;
+}
+
+.toast {
+  composes: vd-t-subhead from global;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-1);
+  padding: 12px 18px;
+  border-radius: var(--vd-radius-pill);
+  border: 1px solid var(--vd-border);
+  cursor: pointer;
+  box-shadow: var(--vd-elev-5);
+}
+@media (min-width: 800px) { .toast { bottom: 24px; } }

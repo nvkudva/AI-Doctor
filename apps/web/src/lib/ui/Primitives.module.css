@@ -1,0 +1,35 @@
+/* Status pill: geometry + type only — the bg/fg pair is a theme token pair
+   chosen per status, so it stays inline. */
+.pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: var(--vd-radius-pill);
+}
+
+.microLabel {
+  composes: vd-microlabel vd-t-micro from global;
+}
+
+.disclosure { margin-bottom: 8px; }
+
+.summary {
+  composes: vd-t-footnote vd-w7 from global;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  color: var(--vd-ink-3);
+  padding: 6px 0;
+  min-height: 44px;
+}
+
+.chev {
+  display: inline-flex;
+  transition: transform var(--vd-dur-3) var(--vd-ease-spring);
+}
+.chevClosed { transform: rotate(-90deg); }
+
+.body { animation: vd-fade 0.25s ease both; }

@@ -1,0 +1,62 @@
+/* Solid content surface. Tone, elevation and padding arrive as custom
+   properties so one rule covers every variant (DESIGN §8.2). */
+.card {
+  background: var(--card-bg);
+  padding: var(--card-pad, 16px);
+  border-radius: var(--vd-radius-md);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-elev, var(--vd-elev-2));
+}
+@media (min-width: 800px) {
+  .card { padding: var(--card-pad, 20px); border-radius: var(--vd-radius-lg); }
+}
+@media (min-width: 1160px) {
+  .card { padding: var(--card-pad, 24px); }
+}
+
+.toneCard   { --card-bg: var(--vd-surface-card); }
+.tonePanel  { --card-bg: var(--vd-surface-panel); }
+.toneRaised { --card-bg: var(--vd-surface-raised); }
+
+.plain     { --card-border: transparent; }
+.bordered  { --card-border: var(--vd-border); }
+.selected  { --card-border: var(--vd-selected-ring); }
+
+.clickable { cursor: pointer; }
+
+/* Empty state: 88 disc, headline + callout, optional action. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 40px 20px;
+}
+
+.glyph {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vd-ink-3);
+}
+
+.emptyTitle {
+  composes: vd-t-headline from global;
+  color: var(--vd-ink-1);
+}
+@media (min-width: 800px) { .emptyTitle { font-size: 17px; } }
+
+.emptyBody {
+  composes: vd-t-callout from global;
+  color: var(--vd-ink-soft);
+  max-width: 38ch;
+}
+@media (min-width: 800px) { .emptyBody { font-size: 15px; } }
+
+.action { margin-top: 4px; }

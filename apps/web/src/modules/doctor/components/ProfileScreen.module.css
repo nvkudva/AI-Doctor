@@ -1,0 +1,27 @@
+/* Doctor profile — the patient profile's layout with practice figures in
+   place of vitals (DESIGN §11.7). */
+.duty {
+  composes: vd-t-caption from global;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--vd-space-2);
+  margin-bottom: var(--vd-space-3);
+  padding: 6px 12px;
+  background: var(--vd-ok-bg);
+  border-radius: var(--vd-radius-pill);
+  color: var(--vd-ok-fg);
+}
+
+.card { margin-bottom: 8px; }
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  align-items: center;
+}
+.fieldLabel { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+.fieldValue { composes: vd-t-footnote vd-w7 from global; color: var(--vd-ink-1); text-align: right; }
+
+.header { margin-bottom: var(--vd-space-4); }

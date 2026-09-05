@@ -2,7 +2,22 @@
 
 **Status:** Binding. `docs/PRD.md` §5.0 (UI-1, UI-2) and §5.0.1 (MC-1…MC-7) govern *what*; this document governs *how it looks and measures*. Implementation checklist: `docs/DESIGN-TASKS.md`.
 
-**Scope:** one PWA, two modules (`patient`, `doctor`) plus `login`, sharing `lib/theme`, `lib/ui`, `shell`. Styling stays as it is today — React inline styles reading `var(--vd-*)` from `lib/theme/theme.css`, aliased in `lib/theme/index.ts`. No Tailwind, no CSS-in-JS. Media queries live in `lib/theme` (`media.*`) and are consumed via small inline `<style>` blocks; JS breakpoints come only from `shell/viewport.ts`.
+**Scope:** one PWA, two modules (`patient`, `doctor`) plus `login`, sharing `lib/theme`, `lib/ui`, `shell`.
+
+**Styling:** plain CSS, in two places and no others.
+
+1. **`lib/theme/theme.css`** — the single source of truth. Every colour, metric, duration and easing is a `--vd-*` custom property, defined for light on `:root` and re-defined for dark on `[data-theme="dark"]`; nothing else in the app may hold a colour value. It also carries the shared *material* classes (`.vd-glass*`, `.vd-tag`), the type-role classes (`.vd-t-body`, `.vd-t-caption`, …), the `@keyframes`, and the document reset.
+2. **One `.module.css` per component**, co-located with its `.tsx` (`Card.tsx` ↔ `Card.module.css`). It owns that component's layout, geometry, states and its own media queries, and reads `var(--vd-*)` for every value. Class names are locally scoped by Vite, so two components can both have a `.card` and never collide.
+
+No Tailwind, no CSS-in-JS, no styled-components, no `<style>` blocks injected from JSX.
+
+**Where the two meet.** A component class pulls a type role in with `composes: vd-t-callout vd-w7 from global;` rather than restating the scale. Because a role's *size* is the only thing that changes per breakpoint, a responsive call site overrides `font-size` alone in its own media query.
+
+**Cascade layers.** `theme.css` declares `@layer vd-base, vd-type;` first. Component `.module.css` files are unlayered, so they always win over both — a component can override `.vd-glass`'s shadow or a type role's size without `!important` and without depending on stylesheet import order.
+
+**What is left in TypeScript.** Only values a component must branch on in JS: `statusPill` (label + tint pair per status), `tints` (a pair chosen from data), `toneStyle`, `breakpoints`, and the theme switch (`getTheme` / `setTheme` / `initTheme`). Inline `style` is for one thing — passing a dynamic value into CSS, ideally as a custom property (`--card-elev`, `--orb-size`, `--mira-left`). It is never used for static styling.
+
+**Breakpoints.** JS breakpoints come only from `shell/viewport.ts`, and a component reaches for it only when a real CSS media query cannot express the change (a numeric prop, a different element tree). Layout, spacing and type respond in CSS.
 
 **Aesthetic target:** Apple / iOS "Liquid Glass" — translucency with backdrop blur, layered depth, circular and pill controls, generous radii, spring motion, full light+dark parity. It must read as a native iOS app that scales to iPad and Mac.
 
@@ -85,7 +100,7 @@
 | `--vd-space-*`, `--vd-radius-*` | see §4 | see §4 | metrics | **add** |
 | `--vd-accent-ink` | — | — | superseded by `--vd-ink-on-glass` | **delete after rename** |
 
-`lib/theme/index.ts` gains matching aliases: `ink.onGlass` → `--vd-ink-on-glass`, plus `tints`, `space`, `elevation`, `motion`, and `nav.idle`.
+Every one of these is consumed as `var(--vd-*)` directly from a `.module.css`. `lib/theme/index.ts` re-exports only the pairs a component picks from data (`statusPill`, `tints`, `toneStyle`).
 
 ### 2.3 Contrast failures found (measured, sRGB, WCAG 2.1)
 
@@ -123,7 +138,7 @@ The `--vd-ink-3` / `--vd-ink-soft` / `--vd-ink-4` / `--vd-nav-active` value chan
 
 Family: `-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif` (`font.family`). Weights used: 400, 600, 700 only.
 
-Sizes step up at tablet and desktop. Implement as three variants in `type` (`type.body`, `type.bodyT`, `type.bodyD`) or as a `useTypeScale()` helper keyed off `shell/viewport` — one mechanism, applied everywhere.
+Sizes step up at tablet and desktop. Each role is one class in `theme.css` (`.vd-t-body`) holding the mobile step plus weight, line-height and tracking; a component class pulls it in with `composes: vd-t-body from global`. Only `font-size` differs per breakpoint, so a responsive call site adds `@media (min-width: 800px) { .x { font-size: 16px } }` in its own module and nothing else. `.vd-w6` / `.vd-w7` override weight without restating a role.
 
 | Role | Mobile <800 | Tablet 800–1159 | Desktop ≥1160 | Weight | Line-height | Tracking | Used for |
 |---|---|---|---|---|---|---|---|
@@ -194,7 +209,7 @@ Shadows carry hue, never neutral grey. Dark mode drops opacity and blur radius; 
 | `--vd-elev-4` | `0 14px 34px oklch(.45 .12 295/.30), 0 2px 8px rgba(46,37,71,.14)` | `0 14px 32px rgba(0,0,0,.55)` | glass dock, bottom nav, FAB |
 | `--vd-elev-5` | `0 24px 60px rgba(12,20,60,.35)` | `0 24px 56px rgba(0,0,0,.6)` | popovers, sheets, modals |
 
-`shadows` in `lib/theme/index.ts` becomes `elevation = {0..5}` mapping to these; the current `chip`/`card`/`cta`/`popover` keys are deleted after migration (`cta` survives as `--vd-shadow-cta`, which is a brand glow, not an elevation).
+Components read `var(--vd-elev-0…5)` from CSS. `<Card>` exposes the step as `--card-elev`, so a module can set its own depth without a prop. `--vd-shadow-cta` stays separate: it is a brand glow, not an elevation.
 
 ---
 
@@ -289,7 +304,7 @@ Never nest glass inside glass. Never place glass on glass-adjacent gradients wit
 }
 ```
 
-`--vd-glass-solid` is opaque and matches the glass midpoint in each theme, so nothing shifts more than a tone. Because inline styles cannot express `@supports`, glass must move out of per-component inline styles into a `.vd-glass` / `.vd-glass-thin` / `.vd-glass-thick` class set in `theme.css`; components apply the class and keep only geometry inline.
+`--vd-glass-solid` is opaque and matches the glass midpoint in each theme, so nothing shifts more than a tone. Glass therefore lives only in the `.vd-glass` / `.vd-glass-thin` / `.vd-glass-thick` class set in `theme.css`, where `@supports` and `prefers-reduced-transparency` can reach it. A component applies the class and puts its own geometry in its `.module.css`; because that module is unlayered it can override the glass shadow or radius directly.
 
 ---
 
@@ -298,16 +313,16 @@ Never nest glass inside glass. Never place glass on glass-adjacent gradients wit
 | Name | Range | JS | CSS |
 |---|---|---|---|
 | mobile | `< 800` | `useIsMobile()` → `(max-width: 799.98px)` | `@media (max-width: 799.98px)` |
-| tablet | `800 – 1159` | `useBreakpoint() === 'tablet'` | `media.tabletUp` + `(max-width: 1159.98px)` |
-| desktop | `≥ 1160` | `useBreakpoint() === 'desktop'` | `media.desktopUp` = `(min-width: 1160px)` |
+| tablet | `800 – 1159` | `useBreakpoint() === 'tablet'` | `@media (min-width: 800px)` |
+| desktop | `≥ 1160` | `useBreakpoint() === 'desktop'` | `@media (min-width: 1160px)` |
 
-`shell/viewport.ts` today uses `max-width: 800px` while `media.tabletUp` is `min-width: 800px` — **at exactly 800 px both are true**. Fix to `799.98px` and add `useBreakpoint(): 'mobile' | 'tablet' | 'desktop'`; add `media.desktopUp`. Modules must not call `matchMedia` themselves.
+Mobile stops at `799.98px` so it never overlaps `min-width: 800px` at exactly 800. Breakpoints are written literally in each `.module.css`; `shell/viewport.ts` is the only place that calls `matchMedia`, and modules must not call it themselves.
 
 ---
 
 ## 10. Layout specs per breakpoint
 
-Shared: the app shell never introduces its own chrome; each module owns its layout. Page background = `gradients.app` (patient/login) or `gradients.desk` (doctor). Vertical safe areas via `env(safe-area-inset-*)` on mobile only.
+Shared: the app shell never introduces its own chrome; each module owns its layout. Page background = `var(--vd-bg-app)` (patient/login) or `var(--vd-bg-desk)` (doctor). Vertical safe areas via `env(safe-area-inset-*)` on mobile only.
 
 ### 10.1 Patient navigation *(this replaces the bottom nav above 800 px)*
 

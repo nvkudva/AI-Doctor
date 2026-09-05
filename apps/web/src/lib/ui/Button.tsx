@@ -1,50 +1,25 @@
 // The one button. Five variants (DESIGN §7), per-breakpoint metrics, tokens
 // only. Replaces every raw <button> and div-CTA in the modules.
-import { gradients, ink, lines, radius, surfaces, type, type Breakpoint } from '../theme';
-import { useBreakpoint } from '../../shell/viewport';
 import { Icon, type IconName } from './Primitives';
+import s from './Button.module.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'approve';
 
-interface Metrics { h: number; padX: number; font: React.CSSProperties }
+const SIZE: Record<ButtonVariant, string> = {
+  primary: s.sizePrimary,
+  danger: s.sizePrimary,
+  secondary: s.sizeSecondary,
+  tertiary: s.sizeTertiary,
+  approve: s.sizeApprove,
+};
 
-function metrics(variant: ButtonVariant, bp: Breakpoint): Metrics {
-  const label = { ...type.body, ...(bp === 'mobile' ? {} : type.bodyT) };
-  const small = { ...(bp === 'mobile' ? type.subhead : type.subheadT) };
-  switch (variant) {
-    case 'secondary':
-      return { h: bp === 'mobile' ? 48 : 50, padX: bp === 'mobile' ? 20 : 24, font: { ...small, fontWeight: 700 } };
-    case 'tertiary':
-      return { h: 48, padX: 20, font: { ...small, fontWeight: 600 } };
-    // A compact glass pill, not a hero CTA — it sits inside chrome.
-    case 'approve':
-      return { h: 36, padX: 14, font: { ...type.caption, fontWeight: 700 } };
-    default:
-      return {
-        h: bp === 'mobile' ? 48 : bp === 'tablet' ? 50 : 52,
-        padX: bp === 'mobile' ? 24 : bp === 'tablet' ? 28 : 32,
-        font: { ...label, fontWeight: 700 },
-      };
-  }
-}
-
-function skin(variant: ButtonVariant): React.CSSProperties {
-  switch (variant) {
-    case 'secondary':
-      return { background: surfaces.chip, color: ink.primary, border: '1px solid transparent' };
-    case 'tertiary':
-      return { background: 'transparent', color: ink.body, border: `1px solid ${lines.strong}` };
-    case 'danger':
-      return { background: gradients.danger, color: ink.onBrand, border: '1px solid transparent', boxShadow: 'var(--vd-elev-2)' };
-    case 'approve':
-      return {
-        background: 'var(--vd-ok-bg)', color: 'var(--vd-ok-fg)',
-        border: '1px solid var(--vd-glass-border)', boxShadow: 'var(--vd-glass-hi), var(--vd-elev-1)',
-      };
-    default:
-      return { background: gradients.primary, color: ink.onBrand, border: '1px solid transparent', boxShadow: 'var(--vd-shadow-cta)' };
-  }
-}
+const SKIN: Record<ButtonVariant, string> = {
+  primary: s.skinPrimary,
+  secondary: s.skinSecondary,
+  tertiary: s.skinTertiary,
+  danger: s.skinDanger,
+  approve: s.skinApprove,
+};
 
 export interface ButtonProps {
   children?: React.ReactNode;
@@ -64,42 +39,30 @@ export interface ButtonProps {
   'aria-expanded'?: boolean;
   'aria-haspopup'?: boolean | 'menu' | 'dialog';
   htmlType?: 'button' | 'submit';
+  className?: string;
   style?: React.CSSProperties;
 }
 
 export function Button({
   children, variant = 'primary', onClick, disabled, fullWidth, icon, iconRight,
-  half, width, htmlType = 'button', style, ...aria
+  half, width, htmlType = 'button', className, style, ...aria
 }: ButtonProps) {
-  const bp = useBreakpoint();
-  const m = metrics(variant, bp);
-  const iconOnly = !children;
-  const corner = radius.xl;
-  const shape: React.CSSProperties =
-    half === 'left' ? { borderRadius: `${corner}px 0 0 ${corner}px` }
-      : half === 'right' ? { borderRadius: `0 ${corner}px ${corner}px 0` }
-        : { borderRadius: radius.pill };
+  const cls = [
+    s.btn, SIZE[variant], SKIN[variant],
+    !children && s.iconOnly,
+    fullWidth && s.fullWidth,
+    half === 'left' ? s.halfLeft : half === 'right' ? s.halfRight : null,
+    disabled && s.disabled,
+    className,
+  ].filter(Boolean).join(' ');
   return (
     <button
       type={htmlType}
       onClick={onClick}
       disabled={disabled}
+      className={cls}
       {...aria}
-      style={{
-        height: m.h,
-        minWidth: iconOnly ? 48 : undefined,
-        width: width ?? (fullWidth ? '100%' : undefined),
-        padding: iconOnly ? 0 : `0 ${m.padX}px`,
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        pointerEvents: disabled ? 'none' : undefined,
-        whiteSpace: 'nowrap',
-        ...m.font,
-        ...skin(variant),
-        ...shape,
-        ...style,
-      }}
+      style={{ ...(width === undefined ? {} : { width }), ...style }}
     >
       {icon && <Icon name={icon} size={18} />}
       {children}
@@ -122,9 +85,11 @@ export function IconButton({
   'aria-expanded'?: boolean;
   'aria-haspopup'?: boolean | 'menu' | 'dialog';
 }) {
-  const bp = useBreakpoint();
-  const d = size ?? (bp === 'desktop' ? 40 : 44);
   const glass = tone === 'glass';
+  const cls = [
+    s.icon,
+    glass ? `vd-glass ${s.iconGlass}` : tone === 'card' ? s.iconCard : s.iconPlain,
+  ].join(' ');
   return (
     <button
       type="button"
@@ -132,16 +97,8 @@ export function IconButton({
       aria-label={label}
       title={label}
       {...aria}
-      className={glass ? 'vd-glass' : undefined}
-      style={{
-        width: d, height: d, flex: 'none',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: radius.pill, cursor: 'pointer', color: glass ? ink.onGlass : ink.body,
-        background: tone === 'card' ? surfaces.card : glass ? undefined : 'transparent',
-        border: tone === 'card' ? `1px solid ${lines.hairline}` : glass ? undefined : '1px solid transparent',
-        boxShadow: tone === 'card' ? 'var(--vd-elev-1)' : glass ? 'var(--vd-glass-hi), var(--vd-elev-1)' : 'none',
-        ...style,
-      }}
+      className={cls}
+      style={{ ...(size === undefined ? {} : { '--icon-btn-size': `${size}px` }), ...style } as React.CSSProperties}
     >
       <Icon name={icon} size={20} />
     </button>

@@ -12,8 +12,9 @@ import { Card } from './Card';
 import { Icon, pressProps } from './Primitives';
 import { type VoiceState } from './Mira';
 import { useRailOffset } from './NavBar';
-import { elevation, gradients, ink, lines, radius, space, surfaces, toneStyle, type, z, type Tone } from '../theme';
+import { toneStyle, type Tone } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
+import s from './MiraPanel.module.css';
 
 export interface Suggestion {
   label: string;
@@ -48,16 +49,9 @@ export interface MiraSession {
   retry?: () => void;
 }
 
-const PHONE_W = 393;
-const PHONE_H = 852;
-
 // Waveform prototype: 29 bars on one keyframe, staggered by delay. Amplitude
 // and tempo come from the voice state; the orb itself lives in the nav now.
 const BARS = 29;
-const waveCss = `
-@keyframes vd-wave{0%,100%{transform:scaleY(.18)}50%{transform:scaleY(1)}}
-.vd-wave-bar{transform-origin:center;animation:vd-wave var(--vd-wave-dur) var(--vd-ease-spring) infinite both}
-@media (prefers-reduced-motion: reduce){.vd-wave-bar{animation:none;transform:scaleY(.4)}}`;
 
 const WAVE_TEMPO: Record<VoiceState, string> = {
   idle: '2.6s',
@@ -79,39 +73,17 @@ function Waveform({ state, onTap }: { state: VoiceState; onTap: () => void }) {
   return (
     <div
       {...pressProps(onTap, state === 'speaking' ? 'Interrupt Dr. Mira' : 'Talk to Dr. Mira')}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-        height: 64, cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-      }}
+      className={s.wave}
     >
       {Array.from({ length: BARS }, (_, i) => (
         <span
           key={i}
-          className="vd-wave-bar"
-          style={{
-            width: 4, height: barHeight(i, state), borderRadius: radius.pill,
-            background: state === 'idle' ? 'var(--vd-border-strong)' : gradients.call,
-            animationDelay: `${(i % 7) * 0.11}s`,
-          }}
+          className={`${s.bar}${state === 'idle' ? ' ' + s.barIdle : ''}`}
+          style={{ height: barHeight(i, state), animationDelay: `${(i % 7) * 0.11}s` }}
         />
       ))}
     </div>
   );
-}
-
-// One skin for a chat bubble; the suggestion pills reuse the incoming one so a
-// pill reads as a reply you could have made.
-function bubbleStyle(mine: boolean): React.CSSProperties {
-  return {
-    padding: '8px 12px',
-    borderRadius: radius.lg,
-    ...type.footnote,
-    background: mine ? surfaces.bubbleMine : surfaces.card,
-    color: ink.body,
-    border: mine ? 'none' : `1px solid ${lines.hairline}`,
-    boxShadow: elevation[1],
-    textAlign: 'left',
-  };
 }
 
 // A dock switch. `off` tints it red, the way a call UI marks a disabled input.
@@ -122,12 +94,7 @@ function DockBtn({ off, label, onClick, children }: {
     <div
       {...pressProps(onClick, label)}
       title={label}
-      style={{
-        width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: elevation[1],
-        background: off ? 'var(--vd-bad-bg)' : surfaces.card,
-        color: off ? 'var(--vd-bad-fg)' : ink.onGlass,
-      }}
+      className={`${s.dockBtn}${off ? ' ' + s.dockBtnOff : ''}`}
     >
       <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
         {children}
@@ -158,8 +125,7 @@ export function MiraPanel({
   /** localStorage key for the unsent draft. */
   draftKey: string;
 }) {
-  const bp = useBreakpoint();
-  const mobile = bp === 'mobile';
+  const mobile = useBreakpoint() === 'mobile';
   const railOffset = useRailOffset();
   const [input, setInput] = useState(() => {
     try { return localStorage.getItem(draftKey) || ''; } catch { return ''; }
@@ -203,9 +169,6 @@ export function MiraPanel({
     setInput('');
   };
 
-  // Matches the bar's own gutters below 800, and the rail's above it.
-  const gutter = mobile ? 14 : bp === 'tablet' ? 16 : 20;
-  const dockGap = 10;
   const statusLine =
     session.status === 'listening' ? 'Listening — speak naturally…'
       : session.status === 'thinking' ? 'Thinking…'
@@ -219,79 +182,52 @@ export function MiraPanel({
           stays usable. The card carries the pop animation, which owns
           `transform`. */}
       <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: z.nav + 1, pointerEvents: 'none',
-          display: 'flex',
-          alignItems: mobile ? 'flex-end' : 'flex-start',
-          justifyContent: mobile ? 'center' : 'flex-start',
-          paddingTop: gutter,
-          paddingRight: gutter,
-          paddingLeft: mobile ? gutter : railOffset + dockGap,
-          // Clears the bar and the orb that overhangs its top edge.
-          paddingBottom: mobile ? `calc(${62 + 30 + 16 + dockGap}px + env(safe-area-inset-bottom))` : gutter,
-        }}
+        className={s.positioner}
+        style={{ '--mira-left': mobile ? undefined : `${railOffset + 10}px` } as React.CSSProperties}
       >
-      <div
-        role="dialog"
-        aria-label="Dr. Mira"
-        style={{
-          pointerEvents: 'auto',
-          width: mobile ? `min(372px, 100%)` : `min(${PHONE_W}px, 100%)`,
-          aspectRatio: `${PHONE_W} / ${PHONE_H}`,
-          maxHeight: '100%',
-          display: 'flex',
-          animation: 'vd-pop var(--vd-dur-4) var(--vd-ease-overshoot) both',
-        }}
-      >
-        <Card
-          level={5}
-          pad={0}
-          style={{
-            flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
-            overflow: 'hidden', borderRadius: radius['2xl'],
-          }}
-        >
-          <style>{waveCss}</style>
-          <div style={{ flex: 'none', textAlign: 'center', padding: `${space[4]}px ${space[4]}px 0` }}>
-            <span style={{ ...type.subhead, fontWeight: 700, color: ink.primary }}>Dr. Mira · </span>
-            <span style={{ ...type.subhead, fontWeight: 600, color: session.status === 'idle' ? ink.secondary : 'var(--vd-ok-fg)' }}>
+      <div role="dialog" aria-label="Dr. Mira" className={s.frame}>
+        <Card className={s.surface}>
+          <div className={s.title}>
+            <span className={s.titleName}>Dr. Mira · </span>
+            <span className={`${s.titleState}${session.status === 'idle' ? ' ' + s.titleIdle : ''}`}>
               {session.status === 'idle' ? 'Idle' : 'Live'}
             </span>
           </div>
 
           <div
-            style={{ flex: 'none', padding: `0 ${space[4]}px`, ['--vd-wave-dur' as string]: WAVE_TEMPO[session.status] }}
+            className={s.waveWrap}
+            style={{ '--vd-wave-dur': WAVE_TEMPO[session.status] } as React.CSSProperties}
           >
             <Waveform state={session.status} onTap={session.orbTap} />
             {/* Only rendered when there is something to say, so the wave sits
                 straight on top of the notes. */}
             {statusLine && (
-              <div aria-live="polite" style={{ ...type.footnote, fontWeight: 600, color: ink.secondary, textAlign: 'center', paddingBottom: space[2] }}>
+              <div aria-live="polite" className={s.status}>
                 {statusLine}
               </div>
             )}
           </div>
 
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `0 ${space[4]}px ${space[4]}px` }}>
+          <div className={s.body}>
             {session.micDenied && (
-              <Card level={1} pad="12px 14px" style={{ marginBottom: space[3], border: '1px solid var(--vd-warn-bg)' }}>
-                <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>Microphone is blocked</div>
-                <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>Allow mic access to talk — or keep typing, that works fully.</div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <Card level={1} pad="12px 14px" className={s.micCard}>
+                <div className={s.micTitle}>Microphone is blocked</div>
+                <div className={s.micBody}>Allow mic access to talk — or keep typing, that works fully.</div>
+                <div className={s.micActions}>
                   <Button variant="secondary" fullWidth onClick={() => { session.clearMicDenied?.(); session.orbTap(); }}>Try again</Button>
                   <Button variant="tertiary" fullWidth onClick={() => session.clearMicDenied?.()}>Keep typing</Button>
                 </div>
               </Card>
             )}
 
-            <Card tone="panel" level={0} pad={0} bordered={false} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0' }}>
-                <div style={{ width: 36, height: 4, borderRadius: radius.pill, background: lines.strong }} />
-                <span style={{ ...type.micro, whiteSpace: 'nowrap', color: ink.soft, marginTop: 5 }}>Consultation notes</span>
+            <Card tone="panel" bordered={false} className={s.notesCard}>
+              <div className={s.notesHead}>
+                <div className={s.grabber} />
+                <span className={s.notesLabel}>Consultation notes</span>
               </div>
-              <div ref={notesRef} className="vd-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: `0 ${space[4]}px ${space[3]}px` }}>
+              <div ref={notesRef} className={s.notes}>
                 {session.messages.length === 0 && (
-                  <div style={{ ...type.footnote, color: ink.secondary, textAlign: 'center', padding: `${space[4]}px 0` }}>
+                  <div className={s.notesEmpty}>
                     Nothing yet — tap the orb or send a message to begin.
                   </div>
                 )}
@@ -300,21 +236,11 @@ export function MiraPanel({
                   const next = session.messages[i + 1];
                   const groupEnd = !next || next.role !== m.role;
                   return (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start',
-                        padding: '3px 0', animation: 'vd-fade var(--vd-dur-3) var(--vd-ease-out) both',
-                      }}
-                    >
-                      <div style={{ ...bubbleStyle(mine), maxWidth: '86%', minWidth: 0 }}>
-                        <div style={{ wordWrap: 'break-word' }}>{m.text}</div>
+                    <div key={i} className={`${s.turn}${mine ? ' ' + s.turnMine : ''}`}>
+                      <div className={`${s.bubble}${mine ? ' ' + s.bubbleMine : ''}`}>
+                        <div className={s.bubbleText}>{m.text}</div>
                         {groupEnd && (
-                          <div style={{
-                            marginTop: 3, ...type.micro, letterSpacing: 0, textTransform: 'none',
-                            color: mine ? ink.body : ink.secondary, opacity: mine ? 0.75 : 1,
-                            textAlign: mine ? 'right' : 'left',
-                          }}>
+                          <div className={`${s.stamp}${mine ? ' ' + s.stampMine : ''}`}>
                             {mine ? youLabel : 'Dr. Mira'} · {relTime(m.at)}
                           </div>
                         )}
@@ -326,25 +252,21 @@ export function MiraPanel({
             </Card>
 
             {session.failed && (
-              <div style={{ marginTop: space[3], background: 'var(--vd-bad-bg)', borderRadius: radius.md, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, ...type.footnote, fontWeight: 700, color: 'var(--vd-bad-fg)' }}>That didn’t go through</div>
+              <div className={s.failed}>
+                <div className={s.failedText}>That didn’t go through</div>
                 <Button variant="secondary" onClick={() => session.retry?.()}>Try again</Button>
               </div>
             )}
 
             {session.suggestions.length > 0 && (
-              <div style={{ flex: 'none', display: 'flex', gap: space[2], marginTop: space[3], overflowX: 'auto', paddingBottom: 2 }} className="vd-scroll">
+              <div className={s.pills}>
                 {session.suggestions.map(sg => (
                   <button
                     key={sg.label}
                     type="button"
-                    className="vd-tag"
+                    className={`vd-tag ${s.pill}`}
                     onClick={() => session.send(sg.label)}
-                    style={{
-                      ...type.caption, fontWeight: 700, flex: 'none', cursor: 'pointer',
-                      whiteSpace: 'nowrap', padding: '5px 11px', borderRadius: radius.pill,
-                      ...toneStyle(sg.tone ?? 'neutral'),
-                    }}
+                    style={toneStyle(sg.tone ?? 'neutral')}
                   >
                     {sg.label}
                   </button>
@@ -352,22 +274,22 @@ export function MiraPanel({
               </div>
             )}
 
-            <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 6, marginTop: space[3], background: surfaces.card, border: `1px solid ${lines.hairline}`, borderRadius: radius.pill, padding: '4px 4px 4px 14px' }}>
+            <div className={s.composer}>
               <input
                 value={input}
                 aria-label="Type your message instead"
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && send()}
                 placeholder={placeholder}
-                style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 16, color: ink.primary, padding: '10px 6px', minWidth: 0 }}
+                className={s.input}
               />
-              <div {...pressProps(send, 'Send message')} style={{ cursor: 'pointer', width: 44, height: 44, borderRadius: radius.pill, background: gradients.send, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--vd-shadow-cta)', flex: 'none', color: 'var(--vd-ink-on-brand)' }}>
+              <div {...pressProps(send, 'Send message')} className={s.send}>
                 <Icon name="send" size={18} />
               </div>
             </div>
 
-            <div style={{ flex: 'none', display: 'flex', justifyContent: 'center', marginTop: space[3] }}>
-              <div className="vd-glass" style={{ display: 'flex', alignItems: 'center', gap: 10, height: 62, padding: '0 14px', borderRadius: radius.pill }}>
+            <div className={s.dockRow}>
+              <div className={`vd-glass ${s.dock}`}>
                 <DockBtn
                   off={session.speakerOff}
                   label={session.speakerOff ? 'Let Dr. Mira speak' : 'Silence Dr. Mira'}
@@ -399,7 +321,7 @@ export function MiraPanel({
                 </DockBtn>
                 <div
                   {...pressProps(onClose, 'Hide Dr. Mira')}
-                  style={{ width: 44, height: 44, borderRadius: radius.pill, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: gradients.danger, boxShadow: elevation[2], color: 'var(--vd-ink-on-brand)' }}
+                  className={s.hangUp}
                 >
                   <Icon name="x" size={20} />
                 </div>

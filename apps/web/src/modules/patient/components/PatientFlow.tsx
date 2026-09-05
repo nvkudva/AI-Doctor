@@ -14,6 +14,7 @@ import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { RecommendationScreen } from './RecommendationScreen';
 import { EmptyRecommendation } from './EmptyRecommendation';
+import s from './PatientFlow.module.css';
 
 type Screen = 'home' | 'recommendation' | 'records' | 'profile';
 
@@ -162,7 +163,7 @@ export function PatientFlow() {
         placeholder="Type instead — e.g. fever 3 days…"
         draftKey="vd_consult_draft"
       />
-      <div style={{ position: 'relative', flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className={s.screen}>
         {screen === 'home' && <HomeScreen onStart={startConsult} />}
         {screen === 'recommendation' && rec && (
           <RecommendationScreen

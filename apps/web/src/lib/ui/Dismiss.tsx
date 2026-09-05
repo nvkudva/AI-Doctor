@@ -1,6 +1,6 @@
 // Shared dismiss: Escape hook + outside-tap catcher overlay.
 import { useEffect, useRef } from 'react';
-import { z } from '../theme';
+import s from './Sheet.module.css';
 
 export function useDismiss(onClose: () => void, enabled = true) {
   const ref = useRef(onClose);
@@ -20,7 +20,7 @@ export function DismissCatcher({ onClose }: { onClose: () => void }) {
     <div
       onClick={onClose}
       aria-hidden="true"
-      style={{ position: 'fixed', inset: 0, zIndex: z.catcher, cursor: 'default' }}
+      className={s.catcher}
     />
   );
 }

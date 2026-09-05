@@ -2,27 +2,23 @@
 // then settings. The doctor profile mirrors this layout (DESIGN §11.7).
 import { useNavigate } from 'react-router';
 import {
-  AppHeader, Card, EmptyState, MenuRow, ProfileSection, SignOutButton, StatRow, ThemeToggle,
-  bottomBarInset, profileCss,
+  AppHeader, Card, EmptyState, MenuRow, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
 } from '../../../lib/ui';
-import { ink, space, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
 import type { UserRx } from '../../../store';
 import { PatientNotify } from './PatientNotify';
+import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   return (
-    <div className="vd-scroll vd-profile" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: `20px 20px ${bottomBarInset}` }}>
-      <style>{profileCss}</style>
-
+    <div className={profile.screen}>
       <AppHeader
-
         title=""
         identity={{ name: user?.name || 'Alex Kumar', email: user?.email || 'alex.kumar@gmail.com' }}
         actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}
-        style={{ marginBottom: space[4] }}
+        className={s.header}
       />
 
       <StatRow items={[
@@ -35,32 +31,32 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       {prescriptions.length === 0
         ? <EmptyState icon="doc" title="No prescriptions on file" body="Approved prescriptions are saved here." />
         : (
-          <div className="vd-profile-list">
+          <div className={profile.list}>
             {prescriptions.map((p, i) => (
-              <Card key={i} level={1} pad="13px 15px" style={{ marginBottom: 8 }}>
-                <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{p.name}</div>
-                <div style={{ ...type.footnote, color: ink.secondary }}>{p.detail} · {p.date}</div>
+              <Card key={i} level={1} pad="13px 15px" className={s.rx}>
+                <div className={s.rxName}>{p.name}</div>
+                <div className={s.rxMeta}>{p.detail} · {p.date}</div>
               </Card>
             ))}
           </div>
         )}
 
       <ProfileSection>Coverage &amp; payment</ProfileSection>
-      <div className="vd-profile-pair">
+      <div className={profile.pair}>
         <Card level={1} pad={12}>
-          <div style={{ ...type.micro, color: ink.secondary }}>Insurance</div>
-          <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>Star Health · AX-48291</div>
-          <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>Family Floater · ₹500 copay</div>
+          <div className={s.tileLabel}>Insurance</div>
+          <div className={s.tileValue}>Star Health · AX-48291</div>
+          <div className={s.tileMeta}>Family Floater · ₹500 copay</div>
         </Card>
         <Card level={1} pad={12}>
-          <div style={{ ...type.micro, color: ink.secondary }}>Payment</div>
-          <div style={{ ...type.callout, fontWeight: 700, color: ink.primary, marginTop: 4 }}>•••• 4291</div>
-          <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>HDFC · Exp 09/28</div>
+          <div className={s.tileLabel}>Payment</div>
+          <div className={s.tileValue}>•••• 4291</div>
+          <div className={s.tileMeta}>HDFC · Exp 09/28</div>
         </Card>
       </div>
 
       <ProfileSection>Settings</ProfileSection>
-      <Card level={1} pad={6} className="vd-profile-list">
+      <Card level={1} pad={6} className={profile.list}>
         <MenuRow icon="person" onClick={() => nav('/doctor')}>Doctor view</MenuRow>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>

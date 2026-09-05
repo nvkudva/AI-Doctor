@@ -2,9 +2,9 @@
 // badge, 44 circular glass actions on the right. No background of its own, so
 // it sits on the module's ground identically in both apps.
 import { useState } from 'react';
-import { getTheme, gradients, ink, radius, setTheme, type, type Theme } from '../theme';
-import { useBreakpoint } from '../../shell/viewport';
+import { getTheme, setTheme, type Theme } from '../theme';
 import { IconButton } from './Button';
+import s from './AppHeader.module.css';
 
 /** "Good evening, Sara" — the title both modules show on their landing screen. */
 export function greeting(name?: string): string {
@@ -36,7 +36,7 @@ function initialsOf(name: string): string {
 }
 
 export function AppHeader({
-  title, subtitle, badge, actions, identity, style,
+  title, subtitle, badge, actions, identity, className, style,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -46,59 +46,33 @@ export function AppHeader({
   actions?: React.ReactNode;
   /** Profile screens lead with the account instead of a title. */
   identity?: { name: string; email: string };
+  className?: string;
   style?: React.CSSProperties;
 }) {
-  const bp = useBreakpoint();
-  const mobile = bp === 'mobile';
-  const titleType = mobile ? type.largeTitle : bp === 'tablet' ? type.largeTitleT : type.largeTitleD;
   return (
     <header
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        ...(identity && mobile ? { flexDirection: 'column-reverse', alignItems: 'stretch' } : {}),
-        minHeight: mobile ? 64 : bp === 'tablet' ? 72 : 76,
-        ...style,
-      }}
+      className={[s.header, identity && s.stacked, className].filter(Boolean).join(' ')}
+      style={style}
     >
       {identity ? (
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            flex: 'none', width: mobile ? 44 : 52, height: mobile ? 44 : 52, borderRadius: radius.pill,
-            background: gradients.primary, color: 'var(--vd-ink-on-brand)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            ...(mobile ? type.callout : type.headline), fontWeight: 700,
-          }}>
-            {initialsOf(identity.name)}
-          </div>
+        <div className={s.identity}>
+          <div className={s.avatar}>{initialsOf(identity.name)}</div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ ...(mobile ? type.title : type.titleT), color: ink.primary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {identity.name}
-            </div>
-            <div style={{ ...type.footnote, color: ink.soft, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {identity.email}
-            </div>
+            <div className={s.name}>{identity.name}</div>
+            <div className={s.email}>{identity.email}</div>
           </div>
         </div>
       ) : (
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <div style={{ ...titleType, color: ink.primary, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {title}
+        <div className={s.titleBlock}>
+          <div className={s.titleRow}>
+            <div className={s.title}>{title}</div>
+            {badge}
           </div>
-          {badge}
+          {subtitle && <div className={s.subtitle}>{subtitle}</div>}
         </div>
-        {subtitle && (
-          <div style={{ ...(mobile ? type.callout : type.calloutT), color: ink.soft, marginTop: 2 }}>{subtitle}</div>
-        )}
-      </div>
       )}
       {actions && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, flex: 'none',
-          ...(identity && mobile ? { justifyContent: 'flex-end' } : {}),
-        }}>
-          {actions}
-        </div>
+        <div className={`${s.actions}${identity ? ' ' + s.actionsStacked : ''}`}>{actions}</div>
       )}
     </header>
   );

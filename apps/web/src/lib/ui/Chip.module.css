@@ -1,0 +1,29 @@
+/* The one chip: 44 on mobile, 40 from tablet up (DESIGN §7, §11.3). */
+.chip {
+  composes: vd-t-footnote vd-w6 from global;
+  height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-2);
+  border: 1px solid var(--vd-border-strong);
+  transition:
+    background var(--vd-dur-2) var(--vd-ease-spring),
+    color var(--vd-dur-2) var(--vd-ease-spring);
+  white-space: nowrap;
+}
+@media (min-width: 800px) {
+  .chip { height: 40px; padding: 0 16px; font-size: 13px; }
+}
+
+.selected {
+  background: var(--vd-surface-mine);
+  color: var(--vd-ink-1);
+  border-color: transparent;
+}
+
+.pressable { cursor: pointer; }
+.disabled { cursor: default; opacity: 0.5; }

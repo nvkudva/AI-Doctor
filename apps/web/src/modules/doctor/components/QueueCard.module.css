@@ -1,0 +1,32 @@
+/* One review-queue row (DESIGN §10.6). The fine-pointer hover lift is a
+   custom-property swap so it composes with the urgent glow. */
+.card { min-height: 96px; display: flex; flex-direction: column; gap: var(--vd-space-1); }
+@media (min-width: 800px) { .card { min-height: 104px; } }
+
+@media (pointer: fine) {
+  .card {
+    transition:
+      box-shadow var(--vd-dur-2) var(--vd-ease-spring),
+      border-color var(--vd-dur-2) var(--vd-ease-spring);
+  }
+  .card:hover { border-color: color-mix(in srgb, var(--vd-selected-ring) 30%, transparent); }
+  .card:hover:not(.urgent) { --card-elev: var(--vd-elev-3); }
+}
+
+.urgent { --card-elev: var(--vd-elev-2), var(--vd-urgent-glow); }
+.urgentSelected { --card-elev: var(--vd-elev-3), var(--vd-urgent-glow); }
+
+.name { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.title { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+.summary { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+.meta { composes: vd-t-caption from global; font-weight: 400; color: var(--vd-ink-4); }
+
+.tags {
+  display: flex;
+  gap: var(--vd-space-2);
+  margin-top: var(--vd-space-1);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.confidence { width: 8px; height: 8px; border-radius: 50%; flex: none; }

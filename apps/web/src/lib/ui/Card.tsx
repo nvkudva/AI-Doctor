@@ -1,15 +1,16 @@
 // Solid content surfaces (DESIGN §8.2 — glass floats, solid holds content)
 // and the shared empty state built on top of one.
-import { ink, lines, radius, surfaces, type } from '../theme';
-import { useBreakpoint } from '../../shell/viewport';
 import { Icon, type IconName } from './Primitives';
+import s from './Card.module.css';
+
+const TONE = { card: s.toneCard, panel: s.tonePanel, raised: s.toneRaised };
 
 export function Card({
-  children, tone = 'card', level = 2, pad, bordered = true, onClick, selected, className, style,
+  children, tone = 'card', level, pad, bordered = true, onClick, selected, className, style,
 }: {
   children: React.ReactNode;
   tone?: 'card' | 'panel' | 'raised';
-  /** Elevation step 0–5. */
+  /** Elevation step 0–5. Omit to keep the CSS default (2). */
   level?: 0 | 1 | 2 | 3 | 4 | 5;
   /** Override the per-breakpoint padding (16 / 20 / 24). */
   pad?: number | string;
@@ -19,25 +20,19 @@ export function Card({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const bp = useBreakpoint();
-  const padding = pad ?? (bp === 'mobile' ? 16 : bp === 'tablet' ? 20 : 24);
-  const bg = tone === 'panel' ? surfaces.panel : tone === 'raised' ? surfaces.raised : surfaces.card;
+  const edge = selected ? s.selected : bordered ? s.bordered : s.plain;
   return (
     <div
-      className={className}
+      className={[s.card, TONE[tone], edge, onClick && s.clickable, className].filter(Boolean).join(' ')}
       onClick={onClick}
       {...(onClick ? { role: 'button', tabIndex: 0, onKeyDown: (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); }
       } } : {})}
       style={{
-        background: bg,
-        padding,
-        borderRadius: bp === 'mobile' ? radius.md : radius.lg,
-        border: `1px solid ${selected ? lines.selected : bordered ? lines.hairline : 'transparent'}`,
-        boxShadow: `var(--vd-elev-${level})`,
-        cursor: onClick ? 'pointer' : undefined,
+        ...(level === undefined ? {} : { '--card-elev': `var(--vd-elev-${level})` }),
+        ...(pad === undefined ? {} : { '--card-pad': typeof pad === 'number' ? `${pad}px` : pad }),
         ...style,
-      }}
+      } as React.CSSProperties}
     >
       {children}
     </div>
@@ -54,30 +49,15 @@ export function EmptyState({
   action?: React.ReactNode;
   style?: React.CSSProperties;
 }) {
-  const bp = useBreakpoint();
   const glyph = typeof icon === 'string'
-    ? (
-      <div style={{
-        width: 88, height: 88, borderRadius: radius.pill, background: surfaces.panel,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', color: ink.secondary,
-      }}>
-        <Icon name={icon as IconName} size={34} />
-      </div>
-    )
+    ? <div className={s.glyph}><Icon name={icon as IconName} size={34} /></div>
     : icon;
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      textAlign: 'center', gap: 12, padding: '40px 20px', ...style,
-    }}>
+    <div className={s.empty} style={style}>
       {glyph}
-      <div style={{ ...(bp === 'mobile' ? type.headline : type.headlineT), color: ink.primary }}>{title}</div>
-      {body && (
-        <div style={{ ...(bp === 'mobile' ? type.callout : type.calloutT), color: ink.soft, maxWidth: '38ch' }}>
-          {body}
-        </div>
-      )}
-      {action && <div style={{ marginTop: 4 }}>{action}</div>}
+      <div className={s.emptyTitle}>{title}</div>
+      {body && <div className={s.emptyBody}>{body}</div>}
+      {action && <div className={s.action}>{action}</div>}
     </div>
   );
 }

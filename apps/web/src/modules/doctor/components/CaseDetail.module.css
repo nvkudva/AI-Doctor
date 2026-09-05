@@ -1,0 +1,138 @@
+/* Full case view (DESIGN §10.7): the case column measure, its sticky decision
+   header, the AI consultation card, and the patient side panel. */
+.col {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-4);
+}
+@media (min-width: 800px)  { .col { max-width: 720px; gap: var(--vd-space-5); } }
+@media (min-width: 1160px) { .col { max-width: 760px; gap: var(--vd-space-6); } }
+
+/* Long-form measure — never wider than a comfortable line. */
+.read {
+  composes: vd-t-callout from global;
+  max-width: 68ch;
+  color: var(--vd-ink-2);
+}
+@media (min-width: 800px) { .read { font-size: 15px; } }
+
+.bar {
+  position: sticky;
+  top: var(--vd-space-2);
+  z-index: 6;
+  padding: var(--vd-space-3) var(--vd-space-4);
+  border-radius: var(--vd-radius-md);
+  border: 1px solid var(--vd-glass-border);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--vd-space-3);
+}
+@media (min-width: 800px) {
+  .bar {
+    top: calc(72px + var(--vd-space-4));
+    padding: var(--vd-space-4) var(--vd-space-5);
+    border-radius: var(--vd-radius-lg);
+  }
+}
+@media (min-width: 1160px) { .bar { top: calc(76px + var(--vd-space-5)); } }
+
+.who { min-width: 0; flex: 1 1 160px; }
+.patient { composes: vd-t-headline vd-truncate from global; color: var(--vd-ink-1); }
+@media (min-width: 800px) { .patient { font-size: 17px; } }
+
+.small { composes: vd-t-footnote from global; color: var(--vd-ink-soft); }
+@media (min-width: 800px) { .small { font-size: 13px; } }
+
+.decide { position: relative; display: flex; gap: 2px; flex: none; }
+
+.card { display: flex; flex-direction: column; }
+.cardHead { display: flex; gap: var(--vd-space-3); align-items: center; }
+
+.summary { composes: read; margin-bottom: var(--vd-space-3); }
+.said { composes: read; margin: 0; padding-left: 18px; }
+
+.assessment {
+  composes: read;
+  background: var(--vd-assessment-bg);
+  border: 1px solid var(--vd-assessment-bd);
+  border-radius: var(--vd-radius-sm);
+  padding: var(--vd-space-4);
+}
+
+.mini {
+  composes: vd-t-callout from global;
+  background: var(--vd-surface-panel);
+  border-radius: var(--vd-radius-sm);
+  padding: var(--vd-space-3) var(--vd-space-4);
+  color: var(--vd-ink-2);
+  margin-bottom: var(--vd-space-2);
+}
+@media (min-width: 800px) { .mini { font-size: 15px; } }
+.miniWhy { color: var(--vd-ink-3); }
+
+.advice { composes: read; margin-top: var(--vd-space-3); }
+.audit { composes: small; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }
+.declined { composes: read; color: var(--vd-bad-fg); margin-top: var(--vd-space-3); }
+
+.dock {
+  position: fixed;
+  left: var(--vd-space-5);
+  right: var(--vd-space-5);
+  z-index: 6;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  height: 60px;
+  border-radius: var(--vd-radius-2xl);
+  padding: 0 var(--vd-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--vd-space-3);
+}
+.dockMenu { position: relative; flex: none; }
+.dockMore {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--vd-glass-border);
+  color: var(--vd-ink-on-glass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Patient side panel — pane 3 at desktop, inline below the case otherwise. */
+.panel { display: flex; flex-direction: column; gap: var(--vd-space-4); }
+@media (min-width: 800px) { .panel { gap: var(--vd-space-5); } }
+
+.history { composes: vd-t-callout from global; color: var(--vd-ink-2); }
+@media (min-width: 800px) { .history { font-size: 15px; } }
+
+.past { margin-bottom: var(--vd-space-2); }
+.pastNote { color: var(--vd-ink-3); }
+
+.lab {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: var(--vd-space-3) 0;
+  border-bottom: 1px solid var(--vd-border);
+}
+.labLast { border-bottom: none; }
+.labName {
+  composes: small;
+  composes: vd-w6 from global;
+  color: var(--vd-ink-1);
+}
+.labDate { composes: small; color: var(--vd-ink-3); }
+.labResult {
+  composes: vd-t-caption from global;
+  padding: 4px 10px;
+  border-radius: var(--vd-radius-pill);
+  flex: none;
+}

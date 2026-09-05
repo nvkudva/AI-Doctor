@@ -1,0 +1,139 @@
+/* Login (DESIGN §10.9): one column on mobile, brand column + sign-in card
+   at ≥800. The card dissolves into the ground on mobile. */
+.page { min-height: 100dvh; display: flex; justify-content: center; background: var(--vd-bg-app); }
+
+.wrap {
+  width: min(420px, 100%);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 40px;
+  text-align: center;
+}
+@media (min-width: 800px) {
+  .wrap {
+    width: min(900px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 48px;
+    align-items: center;
+    text-align: left;
+    padding: 40px 32px;
+  }
+}
+@media (min-width: 1160px) {
+  .wrap { width: min(1080px, 100%); grid-template-columns: minmax(0, 1fr) 440px; gap: 64px; }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+@media (min-width: 800px) { .brand { align-items: flex-start; text-align: left; } }
+
+.name { composes: vd-t-display from global; color: var(--vd-ink-1); }
+@media (min-width: 800px)  { .name { font-size: 34px; } }
+@media (min-width: 1160px) { .name { font-size: 38px; } }
+
+.lede { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 12px; max-width: 320px; }
+@media (min-width: 800px) { .lede { font-size: 16px; line-height: 1.55; } }
+
+.trust { display: flex; flex-direction: column; gap: 10px; }
+.trustRow {
+  composes: vd-t-callout from global;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vd-ink-2);
+}
+.trustIcon { flex: none; display: flex; color: var(--vd-ok-fg); }
+
+/* Doubled class so these beat Card's own custom-property defaults. */
+.card.card {
+  width: 100%;
+  text-align: left;
+  border-radius: var(--vd-radius-xl);
+  --card-bg: transparent;
+  --card-pad: 0;
+  --card-elev: var(--vd-elev-0);
+  --card-border: transparent;
+}
+@media (min-width: 800px) {
+  .card.card {
+    --card-bg: var(--vd-surface-card);
+    --card-pad: 28px;
+    --card-elev: var(--vd-elev-3);
+    --card-border: var(--vd-border);
+  }
+}
+@media (min-width: 1160px) { .card.card { --card-pad: 32px; } }
+
+.gate {
+  composes: vd-t-subhead from global;
+  cursor: pointer;
+  width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-surface-card);
+  border: 1.5px solid var(--vd-border-strong);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--vd-ink-1);
+  margin-bottom: 12px;
+}
+.gateOn { border-color: var(--vd-ink-1); }
+
+.track {
+  width: 38px;
+  height: 23px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-border-strong);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  justify-content: flex-start;
+  flex: none;
+  transition: background var(--vd-dur-2) var(--vd-ease-spring);
+}
+.trackOn { background: var(--vd-ink-1); justify-content: flex-end; }
+.knob { width: 19px; height: 19px; border-radius: 50%; background: var(--vd-surface-card); }
+
+.error { composes: vd-t-footnote vd-w6 from global; color: var(--vd-bad-fg); margin-bottom: 10px; }
+
+.google {
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+  box-shadow: var(--vd-elev-2);
+  gap: 11px;
+}
+
+.demoNote { composes: vd-t-footnote from global; color: var(--vd-ink-soft); margin-top: 10px; }
+
+.divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 14px; }
+.rule { flex: 1; height: 1px; background: var(--vd-border-strong); }
+.dividerLabel { composes: vd-t-micro from global; letter-spacing: 0.06em; color: var(--vd-ink-soft); }
+
+.demos { display: flex; gap: 10px; align-items: stretch; }
+.demoCard {
+  flex: 1;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.demoIcon { display: flex; color: var(--vd-ink-1); }
+.demoLabel { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.demoWho { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.footnote { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 16px; }
+@media (min-width: 800px) { .footnote { font-size: 15px; } }

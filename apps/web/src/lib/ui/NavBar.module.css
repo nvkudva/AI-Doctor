@@ -1,0 +1,179 @@
+/* One navigation component, three forms (DESIGN §10.1, §10.8): bottom glass
+   pill on mobile, 76px icon rail at tablet, 248px labelled sidebar at desktop.
+   The wide/narrow split is user state (collapse), so it is a class, not a
+   media query; everything else is a media query. */
+.rail {
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
+  flex: none;
+  height: calc(100dvh - 32px);
+  border-radius: var(--vd-radius-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-2);
+  transition: width var(--vd-dur-3) var(--vd-ease-spring);
+}
+@media (min-width: 1160px) {
+  .rail { top: 20px; height: calc(100dvh - 40px); }
+}
+
+.narrow { width: 76px; padding: 14px; align-items: center; }
+.wide   { width: 248px; padding: 16px; align-items: stretch; }
+
+.collapse {
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--vd-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--vd-glass-border);
+  background: transparent;
+  color: var(--vd-ink-3);
+  transform: rotate(-90deg);
+}
+.collapseWide { align-self: flex-end; transform: rotate(90deg); }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-4);
+  height: 48px;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+  color: var(--vd-nav-idle);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--vd-dur-2) var(--vd-ease-spring);
+  background: transparent;
+  justify-content: center;
+  align-self: center;
+  width: 48px;
+}
+.itemWide {
+  justify-content: flex-start;
+  align-self: stretch;
+  width: auto;
+  padding: 0 var(--vd-space-4);
+  border-radius: var(--vd-radius-lg);
+}
+.itemActive { background: var(--vd-selected-ring); color: var(--vd-nav-active); }
+
+.itemLabel { composes: vd-t-subhead vd-w6 from global; font-size: 14px; white-space: nowrap; }
+.itemLabelActive { font-weight: 700; }
+
+.spacer { flex: 1; }
+
+.orbRow {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-4);
+  cursor: pointer;
+  align-self: center;
+  padding: 0;
+  height: 56px;
+  border-radius: var(--vd-radius-2xl);
+  background: transparent;
+  box-shadow: none;
+  color: var(--vd-ink-on-brand);
+  -webkit-tap-highlight-color: transparent;
+}
+.orbRowWide {
+  align-self: stretch;
+  padding: 0 var(--vd-space-4) 0 4px;
+  background: var(--vd-grad-call);
+  box-shadow: var(--vd-shadow-cta), var(--vd-glass-hi);
+}
+
+.orbDisc {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--vd-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vd-grad-call);
+  border: 1px solid var(--vd-glass-border);
+  box-shadow: var(--vd-shadow-cta), var(--vd-glass-hi);
+}
+.orbDiscWide { background: transparent; border: none; box-shadow: none; }
+
+.orbLabel { composes: vd-t-subhead vd-w7 from global; font-size: 14px; }
+
+/* Mobile bottom bar. */
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 0 14px calc(16px + env(safe-area-inset-bottom));
+}
+.dockInner { position: relative; width: 100%; max-width: 372px; margin: 0 auto; }
+
+.bar {
+  height: 62px;
+  border-radius: var(--vd-radius-2xl);
+  box-shadow: var(--vd-glass-hi), var(--vd-elev-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--vd-space-1);
+}
+
+/* Clears the FAB's icon row; labels sit below its lower edge. */
+.fabGap { flex: none; width: 56px; }
+
+.fab {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  width: 62px;
+  height: 62px;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+  background: var(--vd-grad-call);
+  border: 1px solid var(--vd-glass-border);
+  box-shadow: var(--vd-shadow-cta), var(--vd-glass-hi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aura {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--vd-radius-pill);
+  pointer-events: none;
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 8px 0;
+  color: var(--vd-nav-idle);
+  -webkit-tap-highlight-color: transparent;
+}
+.tabActive { color: var(--vd-nav-active); }
+
+.tabLabel {
+  composes: vd-t-caption vd-truncate from global;
+  font-size: 10px;
+  letter-spacing: 0;
+  font-weight: 600;
+  max-width: 100%;
+  transition: color var(--vd-dur-2) var(--vd-ease-spring);
+}
+.tabLabelActive { font-weight: 700; }

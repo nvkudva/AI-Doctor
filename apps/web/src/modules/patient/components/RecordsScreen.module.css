@@ -1,0 +1,128 @@
+/* Records: history · labs behind a segmented control. Columns widen at
+   ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs. */
+.screen {
+  composes: vd-scroll from global;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 20px calc(110px + env(safe-area-inset-bottom));
+}
+@media (min-width: 800px) {
+  .screen { max-width: 860px; margin: 0 auto; width: 100%; padding: 20px 28px 40px; }
+}
+@media (min-width: 1160px) {
+  .screen { max-width: 1180px; padding: 24px 32px 40px; }
+}
+
+.header { margin-bottom: 14px; }
+
+.seg {
+  position: relative;
+  display: flex;
+  margin-bottom: 18px;
+  height: 44px;
+  background: var(--vd-surface-panel);
+  border: 1px solid var(--vd-border);
+  border-radius: var(--vd-radius-pill);
+  padding: 3px;
+}
+@media (min-width: 800px)  { .seg { max-width: 420px; } }
+@media (min-width: 1160px) { .seg { height: 40px; } }
+
+.thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-raised);
+  box-shadow: var(--vd-elev-1);
+  width: calc((100% - 6px) / 2);
+  transition: left var(--vd-dur-3) var(--vd-ease-spring);
+}
+
+.tab {
+  composes: vd-t-subhead vd-w7 from global;
+  cursor: pointer;
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: capitalize;
+  color: var(--vd-ink-soft);
+}
+@media (min-width: 800px) { .tab { font-size: 14px; } }
+.tabOn { color: var(--vd-ink-1); }
+
+.list { }
+@media (min-width: 800px) { .list { max-width: 720px; } }
+@media (min-width: 1160px) {
+  .list {
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+  .list > * { margin-bottom: 0; }
+}
+
+.grid { }
+@media (min-width: 800px) {
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .grid > * { margin-bottom: 0; }
+}
+@media (min-width: 1160px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+}
+
+.sectionTitle { composes: vd-t-subhead vd-w7 from global; color: var(--vd-ink-1); margin: 14px 4px 10px; }
+.sectionSub { composes: vd-t-footnote from global; color: var(--vd-ink-soft); margin-bottom: 12px; }
+
+.doc { margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.docIcon { display: flex; color: var(--vd-ink-soft); }
+.docName { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.docDate { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.consult { margin-bottom: 10px; }
+.consultHead { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.consultTitle { composes: vd-t-headline vd-w6 from global; color: var(--vd-ink-1); }
+.consultPill { flex: none; }
+.consultMeta { composes: vd-t-subhead from global; font-weight: 400; color: var(--vd-ink-3); margin-top: 3px; }
+.consultNote { composes: vd-t-callout from global; color: var(--vd-ink-3); margin-top: 8px; }
+
+.more {
+  composes: vd-t-footnote vd-w7 from global;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  color: var(--vd-ink-soft);
+  margin-top: 6px;
+}
+.moreChev { display: inline-flex; transition: transform var(--vd-dur-3) var(--vd-ease-spring); }
+.moreChevOpen { transform: rotate(180deg); }
+
+.detail { margin-top: 10px; border-top: 1px solid var(--vd-border); padding-top: 10px; }
+.detailText { composes: vd-t-callout from global; color: var(--vd-ink-2); }
+.detailStrong { composes: vd-t-callout vd-w6 from global; color: var(--vd-ink-2); }
+
+.miniRow {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-2);
+  background: var(--vd-surface-panel);
+  border-radius: var(--vd-radius-sm);
+  padding: 8px 11px;
+  margin-bottom: 6px;
+}
+
+.lab { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.labName { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.labDate { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+.labResult {
+  composes: vd-t-caption vd-w7 from global;
+  padding: 5px 11px;
+  border-radius: var(--vd-radius-pill);
+  flex: none;
+}

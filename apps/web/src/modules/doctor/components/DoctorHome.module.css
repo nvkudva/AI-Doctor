@@ -1,0 +1,7 @@
+/* Doctor landing: three counts across the top, then the next few cases. */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 800px) { .stats { gap: 16px; } }
+
+.stat { text-align: center; }
+.statValue { composes: vd-t-largeTitle from global; line-height: 1; }
+.statLabel { composes: vd-t-caption from global; color: var(--vd-ink-3); margin-top: var(--vd-space-2); }

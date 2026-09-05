@@ -1,0 +1,4 @@
+/* Full-bleed desk header, aligned to the 1560/40 desk gutters. */
+.header { padding: 0 16px; }
+@media (min-width: 800px)  { .header { padding: 0 28px; } }
+@media (min-width: 1160px) { .header { padding: 0 max(40px, calc((100% - 1560px) / 2 + 40px)); } }

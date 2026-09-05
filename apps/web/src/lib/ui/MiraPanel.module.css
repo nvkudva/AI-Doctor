@@ -1,0 +1,259 @@
+/* The one Dr. Mira surface (PRD MC-1). Always a phone-shaped card, never
+   modal: the positioner lets every pointer event through so the app behind
+   stays live. It docks to the nav — on the bar below 800, against the rail's
+   edge above it (`--mira-left`). */
+.positioner {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* Clears the bar and the orb that overhangs its top edge. */
+  padding: 14px 14px calc(118px + env(safe-area-inset-bottom)) var(--mira-left, 14px);
+}
+@media (min-width: 800px) {
+  .positioner {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 16px 16px 16px var(--mira-left);
+  }
+}
+@media (min-width: 1160px) {
+  .positioner { padding: 20px 20px 20px var(--mira-left); }
+}
+
+.frame {
+  pointer-events: auto;
+  width: min(372px, 100%);
+  aspect-ratio: 393 / 852;
+  max-height: 100%;
+  display: flex;
+  animation: vd-pop var(--vd-dur-4) var(--vd-ease-overshoot) both;
+}
+@media (min-width: 800px) { .frame { width: min(393px, 100%); } }
+
+.surface.surface {
+  --card-pad: 0;
+  --card-elev: var(--vd-elev-5);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--vd-radius-2xl);
+}
+
+.title { flex: none; text-align: center; padding: var(--vd-space-4) var(--vd-space-4) 0; }
+.titleName { composes: vd-t-subhead vd-w7 from global; color: var(--vd-ink-1); }
+.titleState { composes: vd-t-subhead vd-w6 from global; color: var(--vd-ok-fg); }
+.titleIdle { color: var(--vd-ink-3); }
+
+.waveWrap { flex: none; padding: 0 var(--vd-space-4); }
+
+/* Waveform: 29 bars on one keyframe, staggered by delay. */
+@keyframes wave { 0%, 100% { transform: scaleY(0.18); } 50% { transform: scaleY(1); } }
+.wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 64px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bar {
+  width: 4px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-grad-call);
+  transform-origin: center;
+  animation: wave var(--vd-wave-dur) var(--vd-ease-spring) infinite both;
+}
+.barIdle { background: var(--vd-border-strong); }
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; transform: scaleY(0.4); }
+}
+
+.status {
+  composes: vd-t-footnote vd-w6 from global;
+  color: var(--vd-ink-3);
+  text-align: center;
+  padding-bottom: var(--vd-space-2);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--vd-space-4) var(--vd-space-4);
+}
+
+.micCard { margin-bottom: var(--vd-space-3); border: 1px solid var(--vd-warn-bg); }
+.micTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.micBody { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }
+.micActions { display: flex; gap: 8px; margin-top: 10px; }
+
+.notesCard.notesCard {
+  --card-pad: 0;
+  --card-elev: var(--vd-elev-0);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.notesHead {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+}
+.grabber { width: 36px; height: 4px; border-radius: var(--vd-radius-pill); background: var(--vd-border-strong); }
+.notesLabel { composes: vd-t-micro from global; white-space: nowrap; color: var(--vd-ink-soft); margin-top: 5px; }
+.notes {
+  composes: vd-scroll from global;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 var(--vd-space-4) var(--vd-space-3);
+}
+.notesEmpty {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-3);
+  text-align: center;
+  padding: var(--vd-space-4) 0;
+}
+
+.turn {
+  display: flex;
+  justify-content: flex-start;
+  padding: 3px 0;
+  animation: vd-fade var(--vd-dur-3) var(--vd-ease-out) both;
+}
+.turnMine { justify-content: flex-end; }
+
+.bubble {
+  composes: vd-t-footnote from global;
+  padding: 8px 12px;
+  border-radius: var(--vd-radius-lg);
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-2);
+  border: 1px solid var(--vd-border);
+  box-shadow: var(--vd-elev-1);
+  text-align: left;
+  max-width: 86%;
+  min-width: 0;
+}
+.bubbleMine { background: var(--vd-surface-mine); border: none; }
+.bubbleText { word-wrap: break-word; }
+
+.stamp {
+  composes: vd-t-micro from global;
+  margin-top: 3px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--vd-ink-3);
+  text-align: left;
+}
+.stampMine { color: var(--vd-ink-2); opacity: 0.75; text-align: right; }
+
+.failed {
+  margin-top: var(--vd-space-3);
+  background: var(--vd-bad-bg);
+  border-radius: var(--vd-radius-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.failedText { composes: vd-t-footnote vd-w7 from global; flex: 1; color: var(--vd-bad-fg); }
+
+.pills {
+  composes: vd-scroll from global;
+  flex: none;
+  display: flex;
+  gap: var(--vd-space-2);
+  margin-top: var(--vd-space-3);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.pill {
+  composes: vd-t-caption vd-w7 from global;
+  flex: none;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 5px 11px;
+  border-radius: var(--vd-radius-pill);
+}
+
+.composer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--vd-space-3);
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+  border-radius: var(--vd-radius-pill);
+  padding: 4px 4px 4px 14px;
+}
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  color: var(--vd-ink-1);
+  padding: 10px 6px;
+  min-width: 0;
+}
+.send {
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-grad-send);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--vd-shadow-cta);
+  flex: none;
+  color: var(--vd-ink-on-brand);
+}
+
+.dockRow { flex: none; display: flex; justify-content: center; margin-top: var(--vd-space-3); }
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 62px;
+  padding: 0 14px;
+  border-radius: var(--vd-radius-pill);
+}
+.dockBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--vd-elev-1);
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-on-glass);
+}
+.dockBtnOff { background: var(--vd-bad-bg); color: var(--vd-bad-fg); }
+.hangUp {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vd-radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vd-grad-danger);
+  box-shadow: var(--vd-elev-2);
+  color: var(--vd-ink-on-brand);
+}

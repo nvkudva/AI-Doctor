@@ -3,6 +3,7 @@ import { useClinic } from '../../../store';
 import { AppHeader, NotifyButton, ThemeToggle, greeting } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
+import s from './DeskHeader.module.css';
 
 export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotifs, onCloseNotifs, onSelectCase, filter }: {
   tenantName: string; pendingCount: number;
@@ -13,14 +14,11 @@ export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotif
 }) {
   const clinic = useClinic();
   const { user } = useAuth();
-  const bp = useBreakpoint();
-  const mobile = bp === 'mobile';
-  // Align the full-bleed header with the 1560/40 desk gutters.
-  const pad = mobile ? '0 16px' : bp === 'tablet' ? '0 28px' : '0 max(40px, calc((100% - 1560px) / 2 + 40px))';
+  const mobile = useBreakpoint() === 'mobile';
   return (
     <AppHeader
       title={greeting(user?.name || 'Dr. Sara Whitfield')}
-      style={{ padding: pad }}
+      className={s.header}
       subtitle={mobile ? undefined : `${tenantName} · ${pendingCount} pending`}
       actions={(
         <>

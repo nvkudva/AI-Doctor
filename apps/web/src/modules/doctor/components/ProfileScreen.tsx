@@ -1,15 +1,14 @@
 // Doctor profile — the patient profile's layout with practice figures in place
 // of vitals (DESIGN §11.7).
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  AppHeader, Card, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, ThemeToggle,
-  bottomBarInset, profileCss,
+  AppHeader, Card, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
 } from '../../../lib/ui';
-import { ink, radius, space, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
 import { seedDoctor } from '../../../store/seeds';
-import { useState } from 'react';
+import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => void }) {
   const { user, signOut } = useAuth();
@@ -18,11 +17,8 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
   const [notifs, setNotifs] = useState(false);
   const reviewed = clinic.queue.filter(c => c.reviewedAt).length;
   return (
-    <div className="vd-scroll vd-profile" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: `20px 20px ${bottomBarInset}` }}>
-      <style>{profileCss}</style>
-
+    <div className={profile.screen}>
       <AppHeader
-
         title=""
         identity={{ name: user?.name || 'Dr. Sara Whitfield', email: user?.email || 'sara.whitfield@example.com' }}
         actions={(
@@ -39,7 +35,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
             />
           </>
         )}
-        style={{ marginBottom: space[4] }}
+        className={s.header}
       />
 
       <StatRow items={[
@@ -49,15 +45,9 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
       ]} />
 
       <ProfileSection>Practice</ProfileSection>
-      <div className="vd-profile-list">
-        <Card level={1} pad={12} style={{ marginBottom: 8 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: space[2], marginBottom: space[3],
-            padding: '6px 12px', background: 'var(--vd-ok-bg)', borderRadius: radius.pill,
-            ...type.caption, color: 'var(--vd-ok-fg)',
-          }}>
-            On duty · accepting reviews
-          </div>
+      <div className={profile.list}>
+        <Card level={1} pad={12} className={s.card}>
+          <div className={s.duty}>On duty · accepting reviews</div>
           <Field label="Specialty" value={seedDoctor.specialty} />
           <Field label="Registration" value={seedDoctor.registration} />
           <Field label="Hospital" value={seedDoctor.hospital} />
@@ -67,7 +57,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
       </div>
 
       <ProfileSection>Settings</ProfileSection>
-      <Card level={1} pad={6} className="vd-profile-list">
+      <Card level={1} pad={6} className={profile.list}>
         <MenuRow icon="person" onClick={() => nav('/patient')}>Patient view</MenuRow>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>
@@ -77,9 +67,9 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, minHeight: 32, alignItems: 'center' }}>
-      <span style={{ ...type.footnote, color: ink.secondary }}>{label}</span>
-      <span style={{ ...type.footnote, fontWeight: 700, color: ink.primary, textAlign: 'right' }}>{value}</span>
+    <div className={s.field}>
+      <span className={s.fieldLabel}>{label}</span>
+      <span className={s.fieldValue}>{value}</span>
     </div>
   );
 }

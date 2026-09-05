@@ -1,6 +1,6 @@
 // Decline bottom sheet: reason chips + editable note shown to the patient.
 import { Button, Chip, Sheet } from '../../../lib/ui';
-import { ink, lines, radius, space, surfaces, type } from '../../../lib/theme';
+import s from './DeclineSheet.module.css';
 
 const REASONS: { chip: string; text: string }[] = [
   { chip: 'Needs in-person exam', text: 'Needs an in-person examination — please show this consult at the hospital front desk.' },
@@ -24,10 +24,10 @@ export function DeclineSheet({ open, reason, onReason, onCancel, onConfirm }: {
         </>
       )}
     >
-      <div style={{ ...type.footnote, color: ink.secondary }}>
+      <div className={s.lede}>
         The patient will see your reason, written kindly, with a next step.
       </div>
-      <div style={{ display: 'flex', gap: space[2], flexWrap: 'wrap', marginTop: space[4] }}>
+      <div className={s.reasons}>
         {REASONS.map(r => (
           <Chip key={r.chip} selected={reason === r.text} onSelect={() => onReason(r.text)}>{r.chip}</Chip>
         ))}
@@ -37,11 +37,7 @@ export function DeclineSheet({ open, reason, onReason, onCancel, onConfirm }: {
         aria-label="Reason shown to the patient"
         onChange={e => onReason(e.target.value)}
         rows={3}
-        style={{
-          width: '100%', boxSizing: 'border-box', marginTop: space[4],
-          border: `1px solid ${lines.hairline}`, borderRadius: radius.md, padding: '12px 14px',
-          background: surfaces.panel, fontSize: 16, color: ink.body, resize: 'vertical',
-        }}
+        className={s.note}
       />
     </Sheet>
   );

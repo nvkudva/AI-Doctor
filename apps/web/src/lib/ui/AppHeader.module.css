@@ -1,0 +1,51 @@
+/* Screen header (DESIGN §11.1): large title, optional subtitle or badge,
+   circular glass actions on the right. No ground of its own. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+}
+@media (min-width: 800px)  { .header { min-height: 72px; } }
+@media (min-width: 1160px) { .header { min-height: 76px; } }
+
+/* Profile screens lead with the account, which needs the full width on mobile. */
+@media (max-width: 799.98px) {
+  .stacked { flex-direction: column-reverse; align-items: stretch; }
+  .actionsStacked { justify-content: flex-end; }
+}
+
+.identity { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+
+.avatar {
+  composes: vd-t-callout vd-w7 from global;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-grad-primary);
+  color: var(--vd-ink-on-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (min-width: 800px) {
+  .avatar { width: 52px; height: 52px; font-size: 16px; line-height: 1.3; letter-spacing: -0.01em; }
+}
+
+.name { composes: vd-t-title vd-truncate from global; color: var(--vd-ink-1); }
+@media (min-width: 800px) { .name { font-size: 22px; } }
+
+.email { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-soft); }
+
+.titleBlock { flex: 1; min-width: 0; }
+.titleRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.title { composes: vd-t-largeTitle vd-truncate from global; color: var(--vd-ink-1); }
+@media (min-width: 800px)  { .title { font-size: 30px; } }
+@media (min-width: 1160px) { .title { font-size: 32px; } }
+
+.subtitle { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 2px; }
+@media (min-width: 800px) { .subtitle { font-size: 15px; } }
+
+.actions { display: flex; align-items: center; gap: 8px; flex: none; }

@@ -1,0 +1,17 @@
+/* Patient shell: full-bleed on mobile, sidebar + content column at ≥800
+   (DESIGN §10). */
+.ground { min-height: 100dvh; background: var(--vd-bg-app); }
+
+.shell {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  overflow: hidden;
+}
+@media (min-width: 800px) {
+  .shell { max-width: 1000px; margin: 0 auto; gap: 20px; padding: 16px 0 16px 16px; }
+}
+@media (min-width: 1160px) {
+  .shell { max-width: 1360px; gap: 32px; padding: 20px 0 20px 20px; }
+}

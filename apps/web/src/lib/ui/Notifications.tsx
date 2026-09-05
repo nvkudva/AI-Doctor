@@ -2,11 +2,11 @@
 // ≥800, a Sheet on mobile. Notices come from the clinic store via props so
 // this stays presentational.
 import { relAge } from '../core';
-import { ink, lines, radius, space, type } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 import { Icon } from './Primitives';
 import { IconButton } from './Button';
 import { Popover, Sheet } from './Sheet';
+import s from './Notifications.module.css';
 
 export interface NoticeEntry { t: string; d: string; at?: number; caseId?: string }
 
@@ -23,15 +23,10 @@ export function NotifyButton({ notices, open, onToggle, onClose, onSelectCase, o
   const count = notices.length;
   const list = <NoticeList notices={notices} onSelectCase={onSelectCase} onClose={onClose} onDismiss={onDismiss} />;
   return (
-    <div style={{ position: 'relative', flex: 'none' }}>
+    <div className={s.wrap}>
       <IconButton icon="bell" label="Notifications" onClick={onToggle} aria-haspopup="menu" aria-expanded={open} />
       {count > 0 && (
-        <span style={{
-          position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: radius.pill,
-          background: 'var(--vd-bad-bg)', color: 'var(--vd-bad-fg)', border: `1px solid ${lines.hairline}`,
-          ...type.micro, letterSpacing: '0', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 5px', pointerEvents: 'none',
-        }}>
+        <span className={s.badge}>
           {count}
         </span>
       )}
@@ -61,7 +56,7 @@ function NoticeList({ notices, onSelectCase, onClose, onDismiss }: {
   onDismiss: (index: number) => void;
 }) {
   if (notices.length === 0) {
-    return <div style={{ padding: space[4], ...type.footnote, color: ink.secondary }}>All caught up — no new notifications.</div>;
+    return <div className={s.empty}>All caught up — no new notifications.</div>;
   }
   const openNotice = (n: NoticeEntry, i: number) => {
     if (n.caseId && onSelectCase) onSelectCase(n.caseId);
@@ -84,15 +79,12 @@ function NoticeList({ notices, onSelectCase, onClose, onDismiss }: {
               e.preventDefault();
               openNotice(n, i);
             }}
-            style={{
-              display: 'flex', gap: space[3], alignItems: 'flex-start', padding: `${space[2]}px ${space[1]}px`,
-              minHeight: 44, borderBottom: `1px solid ${lines.hairline}`, cursor: clickable ? 'pointer' : 'default',
-            }}
+            className={`${s.notice}${clickable ? ' ' + s.noticeOpenable : ''}`}
           >
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--vd-nav-active)', flex: 'none', marginTop: 8 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ ...type.footnote, fontWeight: 700, color: ink.primary }}>{n.t}</div>
-              <div style={{ ...type.footnote, color: ink.secondary }}>{n.d}{n.at ? ` · ${relAge(n.at)}` : ''}</div>
+            <span className={s.dot} />
+            <div className={s.text}>
+              <div className={s.noticeTitle}>{n.t}</div>
+              <div className={s.noticeBody}>{n.d}{n.at ? ` · ${relAge(n.at)}` : ''}</div>
             </div>
             <span
               role="button"
@@ -105,7 +97,7 @@ function NoticeList({ notices, onSelectCase, onClose, onDismiss }: {
                 e.stopPropagation();
                 onDismiss(i);
               }}
-              style={{ cursor: 'pointer', color: ink.muted, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}
+              className={s.dismiss}
             >
               <Icon name="x" size={16} />
             </span>

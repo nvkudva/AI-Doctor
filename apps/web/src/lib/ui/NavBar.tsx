@@ -6,8 +6,8 @@
 import { useSyncExternalStore } from 'react';
 import { Icon, pressProps, type IconName } from './Primitives';
 import { MiraOrb, STATE_RING, type VoiceState } from './Mira';
-import { gradients, ink, lines, nav as navTone, radius, space, type, z } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
+import s from './NavBar.module.css';
 
 export interface NavItem {
   key: string;
@@ -69,30 +69,14 @@ export function NavBar({ items, active, onSelect, orb, railTop }: {
     ? [...items].sort((a, b) => Number(b.key === railTop) - Number(a.key === railTop))
     : items;
   return (
-    <nav
-      className="vd-glass"
-      aria-label="Primary"
-      style={{
-        position: 'sticky', top: bp === 'desktop' ? 20 : 16, alignSelf: 'flex-start',
-        width: wide ? 248 : 76, flex: 'none',
-        height: `calc(100dvh - ${bp === 'desktop' ? 40 : 32}px)`,
-        borderRadius: radius['2xl'], padding: wide ? 16 : 14,
-        display: 'flex', flexDirection: 'column', alignItems: wide ? 'stretch' : 'center',
-        gap: space[2], transition: 'width var(--vd-dur-3) var(--vd-ease-spring)',
-      }}
-    >
+    <nav className={`vd-glass ${s.rail} ${wide ? s.wide : s.narrow}`} aria-label="Primary">
       {bp === 'desktop' && (
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
           aria-label={wide ? 'Collapse navigation' : 'Expand navigation'}
           aria-expanded={wide}
-          style={{
-            alignSelf: wide ? 'flex-end' : 'center', width: 32, height: 32, borderRadius: radius.pill,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-            border: `1px solid ${lines.glass}`, background: 'transparent', color: ink.secondary,
-            transform: wide ? 'rotate(90deg)' : 'rotate(-90deg)',
-          }}
+          className={`${s.collapse}${wide ? ' ' + s.collapseWide : ''}`}
         >
           <Icon name="chevD" size={16} />
         </button>
@@ -100,30 +84,14 @@ export function NavBar({ items, active, onSelect, orb, railTop }: {
 
       {ordered.map(i => <RailItem key={i.key} item={i} active={active === i.key} wide={wide} onSelect={onSelect} />)}
 
-      <div style={{ flex: 1 }} />
+      <div className={s.spacer} />
 
-      <div
-        {...pressProps(orb.onClick, orb.label)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: space[4], cursor: 'pointer',
-          alignSelf: wide ? 'stretch' : 'center', padding: wide ? `0 ${space[4]}px 0 4px` : 0,
-          height: 56, borderRadius: radius['2xl'],
-          background: wide ? gradients.call : 'transparent',
-          boxShadow: wide ? 'var(--vd-shadow-cta), var(--vd-glass-hi)' : 'none',
-          color: 'var(--vd-ink-on-brand)', WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        <span style={{
-          position: 'relative', flex: 'none', width: 48, height: 48, borderRadius: radius.pill,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: wide ? 'transparent' : gradients.call,
-          border: wide ? 'none' : '1px solid var(--vd-glass-border)',
-          boxShadow: wide ? 'none' : 'var(--vd-shadow-cta), var(--vd-glass-hi)',
-        }}>
+      <div {...pressProps(orb.onClick, orb.label)} className={`${s.orbRow}${wide ? ' ' + s.orbRowWide : ''}`}>
+        <span className={`${s.orbDisc}${wide ? ' ' + s.orbDiscWide : ''}`}>
           <VoiceAura state={orb.voiceState ?? 'idle'} />
           <MiraOrb size={32} voiceState={orb.voiceState ?? 'idle'} />
         </span>
-        {wide && <span style={{ ...type.subheadD, fontWeight: 700 }}>{orb.label}</span>}
+        {wide && <span className={s.orbLabel}>{orb.label}</span>}
       </div>
     </nav>
   );
@@ -137,20 +105,11 @@ function RailItem({ item, active, wide, onSelect }: {
       {...pressProps(() => onSelect(item.key), item.label)}
       aria-current={active ? 'page' : undefined}
       title={wide ? undefined : item.label}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: wide ? 'flex-start' : 'center',
-        gap: space[4], alignSelf: wide ? 'stretch' : 'center',
-        width: wide ? undefined : 48, height: 48, padding: wide ? `0 ${space[4]}px` : 0,
-        borderRadius: wide ? radius.lg : radius.pill, cursor: 'pointer',
-        background: active ? 'var(--vd-selected-ring)' : 'transparent',
-        color: active ? navTone.active : navTone.idle,
-        WebkitTapHighlightColor: 'transparent',
-        transition: 'background var(--vd-dur-2) var(--vd-ease-spring)',
-      }}
+      className={[s.item, wide && s.itemWide, active && s.itemActive].filter(Boolean).join(' ')}
     >
       <Icon name={item.icon} size={22} />
       {wide && (
-        <span style={{ ...type.subheadD, fontWeight: active ? 700 : 600, whiteSpace: 'nowrap' }}>{item.label}</span>
+        <span className={`${s.itemLabel}${active ? ' ' + s.itemLabelActive : ''}`}>{item.label}</span>
       )}
     </div>
   );
@@ -163,30 +122,14 @@ function BottomBar({ items, active, onSelect, orb }: {
   orb: { label: string; onClick: () => void; voiceState?: VoiceState };
 }) {
   return (
-    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: z.nav, padding: '0 14px calc(16px + env(safe-area-inset-bottom))' }}>
-      <div style={{ position: 'relative', width: '100%', maxWidth: 372, margin: '0 auto' }}>
-        <nav
-          className="vd-glass"
-          aria-label="Primary"
-          style={{
-            height: 62, borderRadius: radius['2xl'], boxShadow: 'var(--vd-glass-hi), var(--vd-elev-4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${space[1]}px`,
-          }}
-        >
+    <div className={s.dock}>
+      <div className={s.dockInner}>
+        <nav className={`vd-glass ${s.bar}`} aria-label="Primary">
           {items.slice(0, 2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
-          {/* Clears the FAB's icon row; labels sit below its lower edge. */}
-          <div style={{ flex: 'none', width: 56 }} />
+          <div className={s.fabGap} />
           {items.slice(2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
         </nav>
-        <div
-          {...pressProps(orb.onClick, orb.label)}
-          style={{
-            position: 'absolute', left: '50%', top: -30, transform: 'translateX(-50%)',
-            width: 62, height: 62, borderRadius: radius.pill, cursor: 'pointer', background: gradients.call,
-            border: '1px solid var(--vd-glass-border)', boxShadow: 'var(--vd-shadow-cta), var(--vd-glass-hi)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
-          }}
-        >
+        <div {...pressProps(orb.onClick, orb.label)} className={s.fab}>
           <VoiceAura state={orb.voiceState ?? 'idle'} />
           <MiraOrb size={34} voiceState={orb.voiceState ?? 'idle'} />
         </div>
@@ -209,8 +152,8 @@ function VoiceAura({ state }: { state: VoiceState }) {
         <span
           key={i}
           aria-hidden="true"
+          className={s.aura}
           style={{
-            position: 'absolute', inset: 0, borderRadius: radius.pill, pointerEvents: 'none',
             border: `${idle ? 1 : 2}px solid ${STATE_RING[state]}`,
             opacity: idle ? 0.6 : 1,
             animation: `vd-ring ${dur} var(--vd-ease-out) infinite`,
@@ -227,20 +170,10 @@ function Tab({ item, active, onSelect }: { item: NavItem; active: boolean; onSel
     <div
       {...pressProps(() => onSelect(item.key), item.label)}
       aria-current={active ? 'page' : undefined}
-      style={{
-        flex: 1, minWidth: 0, minHeight: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-        cursor: 'pointer', padding: '8px 0', color: active ? navTone.active : navTone.idle,
-        WebkitTapHighlightColor: 'transparent',
-      }}
+      className={`${s.tab}${active ? ' ' + s.tabActive : ''}`}
     >
       <Icon name={item.icon} size={22} />
-      <div style={{
-        ...type.caption, fontSize: 10, letterSpacing: 0, fontWeight: active ? 700 : 600, maxWidth: '100%',
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        transition: 'color var(--vd-dur-2) var(--vd-ease-spring)',
-      }}>
-        {item.label}
-      </div>
+      <div className={`${s.tabLabel}${active ? ' ' + s.tabLabelActive : ''}`}>{item.label}</div>
     </div>
   );
 }

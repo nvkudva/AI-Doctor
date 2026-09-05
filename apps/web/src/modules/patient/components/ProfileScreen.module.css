@@ -1,0 +1,9 @@
+/* Patient profile: vitals, prescriptions, coverage, then settings. */
+.header { margin-bottom: var(--vd-space-4); }
+.rx { margin-bottom: 8px; }
+.rxName { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.rxMeta { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.tileLabel { composes: vd-t-micro from global; color: var(--vd-ink-3); }
+.tileValue { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); margin-top: 4px; }
+.tileMeta { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }

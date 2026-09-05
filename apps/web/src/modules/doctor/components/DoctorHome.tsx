@@ -2,12 +2,8 @@
 // next few cases waiting. Reads nothing the queue doesn't already carry.
 import { isReviewable, type CaseItem } from '../../../lib/core';
 import { Button, Card, EmptyState, MicroLabel } from '../../../lib/ui';
-import { ink, media, space, type } from '../../../lib/theme';
 import { QueueCard } from './QueueCard';
-
-export const doctorHomeCss = `
-.vd-home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-${media.tabletUp}{.vd-home-stats{gap:16px}}`;
+import s from './DoctorHome.module.css';
 
 const NEXT_UP = 3;
 
@@ -22,7 +18,7 @@ export function DoctorHome({ queue, onSelect, onSeeAll }: {
   const next = queue.filter(c => isReviewable(c.status)).slice(0, NEXT_UP);
   return (
     <>
-      <div className="vd-home-stats">
+      <div className={s.stats}>
         <Stat value={pending} label="Pending" tone="var(--vd-warn-fg)" />
         <Stat value={approved} label="Approved" tone="var(--vd-ok-fg)" />
         <Stat value={urgent} label="Urgent" tone="var(--vd-bad-fg)" />
@@ -48,9 +44,9 @@ export function DoctorHome({ queue, onSelect, onSeeAll }: {
 
 function Stat({ value, label, tone }: { value: number; label: string; tone: string }) {
   return (
-    <Card style={{ padding: `${space[4]}px ${space[3]}px`, textAlign: 'center' }}>
-      <div style={{ ...type.largeTitle, color: tone, lineHeight: 1 }}>{value}</div>
-      <div style={{ ...type.caption, color: ink.secondary, marginTop: space[2] }}>{label}</div>
+    <Card pad="12px 8px" className={s.stat}>
+      <div className={s.statValue} style={{ color: tone }}>{value}</div>
+      <div className={s.statLabel}>{label}</div>
     </Card>
   );
 }

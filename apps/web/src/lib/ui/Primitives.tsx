@@ -1,16 +1,22 @@
 // Generic presentational primitives: pills, labels, icons, disclosure,
 // tap-target helper. Props in, elements out — no app state.
 import { useState } from 'react';
-import { ink, pillStyle, space, statusPill, type } from '../theme';
+import { statusPill } from '../theme';
+import s from './Primitives.module.css';
 
 // theme.statusPill is the single label source — no local duplicate map.
 export function StatusPill({ status }: { status: string }) {
-  return <span className="vd-tag" style={pillStyle(status) as React.CSSProperties}>{statusPill[status]?.label || status}</span>;
+  const p = statusPill[status] || statusPill.pending;
+  return (
+    <span className={`vd-tag ${s.pill}`} style={{ backgroundColor: p.bg, color: p.fg }}>
+      {statusPill[status]?.label || status}
+    </span>
+  );
 }
 
 export function MicroLabel({ children, accent: acc = false }: { children: React.ReactNode; accent?: boolean }) {
   return (
-    <div className="vd-microlabel" style={{ ...type.micro, color: acc ? 'var(--vd-brand-1)' : ink.secondary }}>
+    <div className={s.microLabel} style={{ color: acc ? 'var(--vd-brand-1)' : 'var(--vd-ink-3)' }}>
       {children}
     </div>
   );
@@ -57,8 +63,9 @@ export function Disclosure({ title, defaultOpen, children }: {
 }) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   return (
-    <div style={{ marginBottom: 8 }}>
+    <div className={s.disclosure}>
       <div
+        className={s.summary}
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
         role="button"
@@ -69,14 +76,13 @@ export function Disclosure({ title, defaultOpen, children }: {
             setOpen(o => !o);
           }
         }}
-        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: space[2], ...type.footnote, fontWeight: 700, color: ink.secondary, padding: '6px 0', minHeight: 44 }}
       >
-        <span style={{ display: 'inline-flex', transition: 'transform var(--vd-dur-3) var(--vd-ease-spring)', transform: open ? 'none' : 'rotate(-90deg)' }}>
+        <span className={`${s.chev}${open ? '' : ' ' + s.chevClosed}`}>
           <Icon name="chevD" size={16} />
         </span>
         {title}
       </div>
-      {open && <div style={{ animation: 'vd-fade .25s ease both' }}>{children}</div>}
+      {open && <div className={s.body}>{children}</div>}
     </div>
   );
 }

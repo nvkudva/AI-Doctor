@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Card, Icon, MiraPresence } from '../../lib/ui';
-import { elevation, gradients, ink, lines, media, radius, surfaces, type } from '../../lib/theme';
 import { useAuth, type Role } from '../../shell/auth';
 import { useBreakpoint } from '../../shell/viewport';
+import s from './LoginPage.module.css';
 
 const TRUST = [
   'A licensed doctor reviews every plan',
@@ -42,54 +42,30 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
     if (!googleConfigured) nav('/patient');
   };
 
-  const brandName = mobile ? type.display : bp === 'tablet' ? type.displayT : type.displayD;
-  const callout = mobile ? type.callout : type.calloutT;
-
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', justifyContent: 'center', background: gradients.app }}>
-      <style>{`
-        ${media.tabletUp}{
-          .vd-login{width:min(900px,100%)!important;display:grid!important;grid-template-columns:minmax(0,1fr) 420px;gap:48px;align-items:center;text-align:left!important;padding:40px 32px!important}
-          .vd-login-brand{align-items:flex-start!important;text-align:left!important}
-          .vd-login-card{width:100%!important}
-        }
-        ${media.desktopUp}{
-          .vd-login{width:min(1080px,100%)!important;grid-template-columns:minmax(0,1fr) 440px;gap:64px}
-        }
-      `}</style>
-
-      <div className="vd-login" style={{ width: 'min(420px,100%)', margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px 40px', textAlign: 'center' }}>
-        <div className="vd-login-brand" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 22, marginBottom: 28 }}>
+    <div className={s.page}>
+      <div className={s.wrap}>
+        <div className={s.brand}>
           <MiraPresence size={mobile ? 138 : bp === 'tablet' ? 152 : 184} />
           <div>
-            <div style={{ ...brandName, color: ink.primary }}>{hospitalName}</div>
-            <div style={{ ...(mobile ? type.callout : type.bodyT), color: ink.soft, marginTop: 12, maxWidth: 320 }}>
+            <div className={s.name}>{hospitalName}</div>
+            <div className={s.lede}>
               A calm, private doctor's visit — whenever you need one. Sign in to begin.
             </div>
           </div>
           {bp === 'desktop' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {TRUST.map(t => (
-                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, ...type.calloutD, color: ink.body }}>
-                  <span style={{ flex: 'none', display: 'flex', color: 'var(--vd-ok-fg)' }}><Icon name="check" size={18} /></span>
-                  {t}
+            <div className={s.trust}>
+              {TRUST.map(line => (
+                <div key={line} className={s.trustRow}>
+                  <span className={s.trustIcon}><Icon name="check" size={18} /></span>
+                  {line}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <Card
-          className="vd-login-card"
-          level={mobile ? 0 : 3}
-          bordered={!mobile}
-          pad={mobile ? 0 : bp === 'tablet' ? 28 : 32}
-          style={{
-            width: '100%', textAlign: 'left',
-            background: mobile ? 'transparent' : surfaces.card,
-            borderRadius: radius.xl,
-          }}
-        >
+        <Card className={s.card}>
           <div
             onClick={() => { setAdultOk(a => !a); setErr(''); }}
             role="switch"
@@ -97,50 +73,45 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdultOk(a => !a); setErr(''); } }}
             aria-label="Confirm you are 18 or older"
-            style={{
-              cursor: 'pointer', width: '100%', height: 56, boxSizing: 'border-box', borderRadius: radius.md,
-              background: surfaces.card, border: `1.5px solid ${adultOk ? ink.primary : lines.strong}`,
-              display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px',
-              ...type.subhead, color: ink.primary, marginBottom: 12,
-            }}
+            className={`${s.gate}${adultOk ? ' ' + s.gateOn : ''}`}
           >
-            <span style={{ width: 38, height: 23, borderRadius: radius.pill, background: adultOk ? ink.primary : lines.strong, display: 'inline-flex', alignItems: 'center', padding: 2, justifyContent: adultOk ? 'flex-end' : 'flex-start', flex: 'none', transition: 'background var(--vd-dur-2) var(--vd-ease-spring)' }}>
-              <span style={{ width: 19, height: 19, borderRadius: '50%', background: surfaces.card }} />
+            <span className={`${s.track}${adultOk ? ' ' + s.trackOn : ''}`}>
+              <span className={s.knob} />
             </span>
             <span>I confirm I am 18 or older</span>
           </div>
 
-          {(err || authErr) && <div style={{ ...type.footnote, fontWeight: 600, color: 'var(--vd-bad-fg)', marginBottom: 10 }}>{err || authErr}</div>}
+          {(err || authErr) && <div className={s.error}>{err || authErr}</div>}
 
           <Button
             variant="secondary"
             fullWidth
             onClick={google}
             disabled={googlePending}
-            style={{ background: surfaces.card, border: `1px solid ${lines.hairline}`, boxShadow: elevation[2], gap: 11 }}
+            className={s.google}
           >
             <GoogleG />
             {googlePending ? 'Redirecting…' : 'Continue with Google'}
           </Button>
 
           {!googleConfigured && (
-            <div style={{ ...type.footnote, color: ink.soft, marginTop: 10 }}>
+            <div className={s.demoNote}>
               Demo mode — add Supabase keys to enable real Google sign-in.
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0 14px' }}>
-            <span style={{ flex: 1, height: 1, background: lines.strong }} />
-            <span style={{ ...type.micro, letterSpacing: '.06em', color: ink.soft }}>Demo accounts</span>
-            <span style={{ flex: 1, height: 1, background: lines.strong }} />
+          <div className={s.divider}>
+            <span className={s.rule} />
+            <span className={s.dividerLabel}>Demo accounts</span>
+            <span className={s.rule} />
           </div>
 
-          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+          <div className={s.demos}>
             <DemoCard onClick={() => demo('patient')} label="Fake patient" who="Alex Kumar" />
             <DemoCard onClick={() => demo('doctor')} label="Fake doctor" who="Dr. Whitfield" />
           </div>
 
-          <div style={{ ...callout, color: ink.soft, marginTop: 16 }}>
+          <div className={s.footnote}>
             One tap to sign in — your visits stay private and a licensed doctor reviews every plan.
           </div>
         </Card>
@@ -154,11 +125,11 @@ function DemoCard({ onClick, label, who }: { onClick: () => void; label: string;
     <Card
       onClick={onClick}
       pad="14px 10px"
-      style={{ flex: 1, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textAlign: 'center' }}
+      className={s.demoCard}
     >
-      <span style={{ display: 'flex', color: ink.primary }}><Icon name="person" size={22} /></span>
-      <span style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{label}</span>
-      <span style={{ ...type.footnote, color: ink.secondary }}>{who}</span>
+      <span className={s.demoIcon}><Icon name="person" size={22} /></span>
+      <span className={s.demoLabel}>{label}</span>
+      <span className={s.demoWho}>{who}</span>
     </Card>
   );
 }

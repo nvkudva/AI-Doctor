@@ -1,0 +1,73 @@
+/* Patient home dashboard (DESIGN §11.5): one column on mobile, two at tablet,
+   three at desktop. */
+.screen {
+  composes: vd-scroll from global;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 20px calc(110px + env(safe-area-inset-bottom));
+}
+@media (min-width: 800px) {
+  .screen { max-width: 900px; margin: 0 auto; width: 100%; padding: 20px 28px 32px; }
+}
+@media (min-width: 1160px) {
+  .screen { max-width: 1200px; padding: 24px 32px 32px; }
+}
+
+.header { margin-bottom: var(--vd-space-3); }
+
+.grid { display: flex; flex-direction: column; gap: 2px; }
+@media (min-width: 800px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 24px;
+    align-items: start;
+  }
+}
+@media (min-width: 1160px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; }
+}
+
+.section { min-width: 0; margin-bottom: var(--vd-space-4); }
+.sectionTitle {
+  composes: vd-t-subhead vd-w7 from global;
+  color: var(--vd-ink-1);
+  margin: var(--vd-space-3) 4px var(--vd-space-3);
+}
+
+.row { margin-bottom: 8px; }
+.rowInner { display: flex; gap: 12px; align-items: flex-start; }
+.rowIcon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--vd-radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vd-surface-chip);
+  color: var(--vd-ink-3);
+}
+.rowBody { flex: 1; min-width: 0; }
+.rowTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.rowDetail { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 1px; }
+.rowMeta { composes: vd-t-caption vd-w7 from global; color: var(--vd-ink-soft); margin-top: 4px; }
+.rowChev { flex: none; display: flex; color: var(--vd-ink-4); transform: rotate(-90deg); }
+
+.empty {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-3);
+  padding: var(--vd-space-4);
+  border: 1px dashed var(--vd-border);
+  border-radius: var(--vd-radius-lg);
+}
+
+.planRow { display: flex; align-items: center; gap: 8px; }
+.planMeta { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+.planTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); margin-top: 6px; }
+@media (min-width: 800px) { .planTitle { font-size: 15px; } }
+.ctaTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+@media (min-width: 800px) { .ctaTitle { font-size: 15px; } }
+.ctaBody { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }

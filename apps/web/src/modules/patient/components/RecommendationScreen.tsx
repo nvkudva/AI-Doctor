@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import type { Recommendation } from '../../../lib/core';
 import { Button, Card, MicroLabel, MiraPresence, StatusPill } from '../../../lib/ui';
-import { ink, lines, media, radius, space, surfaces, tints, type } from '../../../lib/theme';
+import { tints } from '../../../lib/theme';
 import { useBreakpoint } from '../../../shell/viewport';
+import s from './RecommendationScreen.module.css';
 
 const DOT: Record<'done' | 'active' | 'todo', string> = {
   done: 'var(--vd-ok-fg)',
@@ -31,7 +32,6 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
   const headline = approved
     ? `Dr. Whitfield reviewed your ${isRx ? 'prescription' : 'plan'} — here it is.`
     : 'Sent to Dr. Whitfield for a quick review.';
-  const callout = mobile ? type.callout : type.calloutT;
   const kind = isRx ? tints.rx : tints.investigation;
 
   const steps: { t: string; d: string; state: 'done' | 'active' | 'todo' }[] = [
@@ -44,39 +44,23 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
   ];
 
   return (
-    <div className="vd-scroll vd-plan" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 34px' }}>
-      <style>{`
-        ${media.tabletUp}{
-          .vd-plan{max-width:980px;margin:0 auto;width:100%;padding:24px 28px 34px!important}
-          .vd-plan-split{display:grid!important;grid-template-columns:minmax(0,1fr) 300px!important;gap:24px;align-items:start}
-          .vd-plan-rail{position:sticky;top:24px;display:flex;flex-direction:column;gap:12px}
-          .vd-plan-actions{max-width:560px;display:flex!important;flex-wrap:wrap;gap:8px;align-items:center}
-          .vd-plan-actions>*{margin-top:0!important}
-        }
-        ${media.desktopUp}{
-          .vd-plan{max-width:1320px;padding:28px 32px 34px!important}
-          .vd-plan-split{grid-template-columns:minmax(0,720px) 340px!important;gap:32px;justify-content:center}
-          .vd-plan-rail{top:28px}
-          .vd-plan-actions{position:sticky;bottom:0;max-width:none;min-height:72px;margin-top:24px!important;padding:0 20px;z-index:6}
-        }
-      `}</style>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <Button variant="secondary" icon="chevL" onClick={onBack} style={{ height: 44, padding: `0 ${space[5]}px` }}>Home</Button>
-        <div style={{ ...(mobile ? type.largeTitle : bp === 'tablet' ? type.largeTitleT : type.largeTitleD), color: ink.primary, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Your plan</div>
+    <div className={s.screen}>
+      <div className={s.topRow}>
+        <Button variant="secondary" icon="chevL" onClick={onBack} className={s.back}>Home</Button>
+        <div className={s.pageTitle}>Your plan</div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div className={s.hero}>
         <MiraPresence size={mobile ? 70 : bp === 'tablet' ? 88 : 96} />
-        <div style={{ ...(mobile ? type.headline : type.headlineT), color: ink.primary, textAlign: 'center' }}>{headline}</div>
+        <div className={s.heroLine}>{headline}</div>
       </div>
 
-      <div className="vd-plan-split">
-        <div style={{ minWidth: 0 }}>
-          <Card pad={mobile ? 14 : 18}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div className={s.split}>
+        <div className={s.col}>
+          <Card className={s.statusCard}>
+            <div className={s.statusRow}>
               <StatusPill status={reviewStatus === 'idle' ? 'pending' : reviewStatus} />
-              <div style={{ ...callout, color: ink.body }}>
+              <div className={s.statusText}>
                 {approved ? 'Your plan is confirmed and saved to your records.'
                   : rejected ? `Not approved — ${rejectReason || 'please visit in person.'}`
                   : expired ? 'No doctor picked this up in time — start a fresh consult below.'
@@ -85,20 +69,20 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
               </div>
             </div>
             {pending && (
-              <div style={{ marginTop: 10, ...callout, color: ink.secondary }}>
+              <div className={s.waitNote}>
                 Usual wait: under an hour. The confirmed plan appears here and in History.
               </div>
             )}
             {expired && (
-              <div style={{ marginTop: 12 }}>
+              <div className={s.ctaWrap}>
                 <Button onClick={onFollowUp}>Start a fresh consult</Button>
               </div>
             )}
             {rejected && (
-              <div style={{ marginTop: 12 }}>
-                <Button onClick={() => setShowCare(s => !s)} aria-expanded={showCare}>Find in-person care</Button>
+              <div className={s.ctaWrap}>
+                <Button onClick={() => setShowCare(c => !c)} aria-expanded={showCare}>Find in-person care</Button>
                 {showCare && (
-                  <div style={{ marginTop: 10, background: surfaces.panel, borderRadius: radius.sm, padding: '12px 14px', ...callout, color: ink.body }}>
+                  <div className={s.careNote}>
                     Dr. Whitfield feels this needs hands-on examination. Please visit your hospital’s front desk or nearest clinic soon — show them this consult on your phone so they have the full picture. If symptoms worsen (breathing difficulty, chest pain, high fever), seek urgent care right away.
                   </div>
                 )}
@@ -106,17 +90,17 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
             )}
           </Card>
 
-          <Card pad={mobile ? 20 : 24} style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ ...type.micro, padding: '5px 11px', borderRadius: radius.xs, background: kind.bg, color: kind.fg }}>
+          <Card className={s.planCard}>
+            <div className={s.badges}>
+              <span className={s.badge} style={{ background: kind.bg, color: kind.fg }}>
                 {isRx ? 'Prescription' : 'Investigation'}
               </span>
-              <span style={{ ...type.micro, padding: '5px 11px', borderRadius: radius.xs, background: rec.urgency === 'urgent' ? 'var(--vd-bad-bg)' : rec.urgency === 'soon' ? 'var(--vd-warn-bg)' : 'var(--vd-ok-bg)', color: rec.urgency === 'urgent' ? 'var(--vd-bad-fg)' : rec.urgency === 'soon' ? 'var(--vd-warn-fg)' : 'var(--vd-ok-fg)' }}>
+              <span className={s.badge} style={{ background: rec.urgency === 'urgent' ? 'var(--vd-bad-bg)' : rec.urgency === 'soon' ? 'var(--vd-warn-bg)' : 'var(--vd-ok-bg)', color: rec.urgency === 'urgent' ? 'var(--vd-bad-fg)' : rec.urgency === 'soon' ? 'var(--vd-warn-fg)' : 'var(--vd-ok-fg)' }}>
                 {rec.urgency === 'urgent' ? 'Urgent' : rec.urgency === 'soon' ? 'Soon' : 'Routine'}
               </span>
             </div>
-            <div style={{ ...(mobile ? type.headline : type.headlineT), color: ink.primary, marginBottom: 4 }}>{rec.title}</div>
-            <div style={{ ...callout, color: ink.secondary, marginBottom: 12, maxWidth: '68ch' }}>{rec.summary}</div>
+            <div className={s.planTitle}>{rec.title}</div>
+            <div className={s.planSummary}>{rec.summary}</div>
             {rx.length > 0 && (
               <>
                 <MicroLabel>Prescription</MicroLabel>
@@ -130,29 +114,29 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
               </>
             )}
             {rec.advice && (
-              <div style={{ background: tints.advice.bg, borderRadius: radius.sm, padding: '12px 15px', marginTop: 4 }}>
-                <div style={{ ...type.micro, letterSpacing: '.08em', color: tints.advice.fg, marginBottom: 5 }}>When to seek help</div>
-                <div style={{ ...callout, color: ink.body, maxWidth: '68ch' }}>{rec.advice}</div>
+              <div className={s.adviceBox}>
+                <div className={s.adviceLabel}>When to seek help</div>
+                <div className={s.adviceText}>{rec.advice}</div>
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: tints.safety.bg, borderRadius: radius.sm, padding: '11px 14px', marginTop: 10 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flex: 'none', color: tints.safety.fg }}>
+            <div className={s.safety}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={s.safetyIcon}>
                 <path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
                 <path d="M9 11.5l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <div style={{ ...type.footnote, fontWeight: 600, color: tints.safety.fg }}>
+              <div className={s.safetyText}>
                 Safety checks done — your Penicillin allergy was respected and drug interactions were reviewed.
               </div>
             </div>
           </Card>
 
-          <div className={bp === 'desktop' ? 'vd-plan-actions vd-glass-thin' : 'vd-plan-actions'} style={{ marginTop: 16 }}>
+          <div className={bp === 'desktop' ? `${s.actions} vd-glass-thin` : s.actions}>
             {approved && isRx && !ordered ? (
               <Button fullWidth={mobile} onClick={() => setOrdered(true)}>Order medicine</Button>
             ) : (
               <Button fullWidth={mobile} onClick={onFollowUp}>Ask a follow-up</Button>
             )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8, flex: 1, minWidth: 0 }}>
+            <div className={s.actionRow}>
               {approved && isRx && !ordered && (
                 <Button variant="tertiary" fullWidth onClick={onFollowUp}>Ask a follow-up</Button>
               )}
@@ -165,20 +149,20 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
           </div>
         </div>
 
-        <div className="vd-plan-rail">
-          <Card tone="panel" level={0} pad={mobile ? 16 : 18} style={{ marginTop: mobile ? 16 : 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-              <div style={{ position: 'relative', width: 42, height: 42, borderRadius: radius.pill, background: 'var(--vd-brand-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--vd-ink-on-brand)', ...type.headline, flex: 'none' }}>
+        <div className={s.rail}>
+          <Card tone="panel" level={0} className={s.sideCard}>
+            <div className={s.docRow}>
+              <div className={s.avatar}>
                 SW
-                <span style={{ position: 'absolute', bottom: -3, right: -3, width: 13, height: 13, borderRadius: '50%', background: approved ? 'var(--vd-ok-fg)' : 'var(--vd-warn-fg)', border: `2px solid ${surfaces.panel}` }} />
+                <span className={s.presenceDot} style={{ background: approved ? 'var(--vd-ok-fg)' : 'var(--vd-warn-fg)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ ...(mobile ? type.headline : type.headlineT), color: ink.primary }}>Dr. Sara Whitfield, MD</div>
-                <div style={{ ...type.footnote, color: ink.secondary, marginTop: 1 }}>General Physician · GMC-483920</div>
+                <div className={s.docName}>Dr. Sara Whitfield, MD</div>
+                <div className={s.docReg}>General Physician · GMC-483920</div>
               </div>
             </div>
-            <div style={{ ...callout, color: ink.body, marginTop: 10 }}>
-              <span style={{ fontWeight: 700 }}>
+            <div className={s.docNote}>
+              <span className={s.strong}>
                 {approved ? 'Approved' : reviewStatus === 'rejected' ? 'Declined' : reviewStatus === 'changes' ? 'Adjusting your plan' : 'Reviewing'}
               </span>
               {' — '}
@@ -186,14 +170,14 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
             </div>
           </Card>
 
-          <Card tone="panel" level={0} pad={mobile ? 16 : 18} style={{ marginTop: mobile ? 12 : 0 }}>
-            <div style={{ ...type.micro, letterSpacing: '.08em', color: ink.secondary, marginBottom: 12 }}>What happens next</div>
-            {steps.map((s, i) => (
-              <div key={i} style={{ display: 'flex', gap: 11, paddingBottom: 12 }}>
-                <div style={{ width: 11, height: 11, borderRadius: '50%', flex: 'none', marginTop: 3, background: DOT[s.state] }} />
+          <Card tone="panel" level={0} className={`${s.sideCard} ${s.sideCardTight}`}>
+            <div className={s.nextLabel}>What happens next</div>
+            {steps.map((step, i) => (
+              <div key={i} className={s.step}>
+                <div className={s.stepDot} style={{ background: DOT[step.state] }} />
                 <div>
-                  <div style={{ ...(mobile ? type.headline : type.headlineT), color: s.state === 'todo' ? ink.secondary : ink.primary }}>{s.t}</div>
-                  <div style={{ ...type.footnote, color: ink.secondary, marginTop: 1 }}>{s.d}</div>
+                  <div className={`${s.stepTitle}${step.state === 'todo' ? ' ' + s.stepTitleTodo : ''}`}>{step.t}</div>
+                  <div className={s.stepBody}>{step.d}</div>
                 </div>
               </div>
             ))}
@@ -206,23 +190,23 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, onFollow
 
 function PlanItem({ name, dosage, timing, notes, why, last }: { name: string; dosage: string; timing: string; notes: string; why: string; last?: boolean }) {
   return (
-    <div style={{ padding: '14px 4px', borderBottom: last ? 'none' : `1px solid ${lines.hairline}` }}>
-      <div style={{ ...type.headline, color: ink.primary }}>{name}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+    <div className={`${s.item}${last ? ' ' + s.itemLast : ''}`}>
+      <div className={s.itemName}>{name}</div>
+      <div className={s.itemMeta}>
         {!!dosage && <MetaChip label="Dosage" value={dosage} />}
         {!!timing && <MetaChip label="Timing" value={timing} />}
         {!!notes && <MetaChip label="Note" value={notes} />}
       </div>
-      {!!why && <div style={{ ...type.footnote, color: ink.secondary, marginTop: 8 }}><b>Why:</b> {why}</div>}
+      {!!why && <div className={s.why}><b>Why:</b> {why}</div>}
     </div>
   );
 }
 
 function MetaChip({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ flex: '1 1 120px', background: surfaces.panel, borderRadius: radius.sm, padding: '9px 11px' }}>
-      <div style={{ ...type.micro, color: ink.secondary }}>{label}</div>
-      <div style={{ ...type.footnote, fontWeight: 600, color: ink.body, marginTop: 2 }}>{value}</div>
+    <div className={s.chip}>
+      <div className={s.chipLabel}>{label}</div>
+      <div className={s.chipValue}>{value}</div>
     </div>
   );
 }

@@ -1326,10 +1326,11 @@ If a migration step requires editing a presentational component, the adapter is 
 7. **`needs_human` in the state machine.** AGENT-EXPERIENCE §5.6 introduces it and its own §7 question 4
    asks whether the pilot hospital accepts it. The enum in §3.2 includes it. If the pilot rejects it, the
    value comes out and refusals must route somewhere else.
-8. **Voice provider.** AGENT-EXPERIENCE §7 question 1 (Claude streaming vs Gemini Live) is unsettled and
-   contradicts PRD A-2/A-6 either way. `agent_invocations` (§2.13) is shaped to record both token and
-   audio-second cost so it survives the decision, but `voice-token` (#8/#27) cannot be built until it
-   lands.
+8. ~~**Voice provider.**~~ **Closed — decided: Gemini Live speech-to-speech.** AGENT-EXPERIENCE §7
+   question 1 is answered in its §2.5; PRD A-2/A-6 stand unamended. `voice-token` (#8/#27) is built:
+   it mints a single-use ephemeral Live token whose session config is bound server-side, and writes one
+   `agent_invocations` (§2.13) row per session carrying the authorized audio seconds — the shape that
+   survived the decision is now the shape that records it.
 9. **Patient-visible reviewer identity.** §3.6 lets a patient read the reviewing doctor's name and
    registration number (PRD UC-3.2 says the approved consult shows the doctor's name). Confirm the
    registration number is intended to be patient-visible, not just the name.

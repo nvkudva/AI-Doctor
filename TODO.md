@@ -17,7 +17,7 @@
 - [ ] P2: barge-in impossible — mic only opens in the TTS onDone callback (useConsult.ts:178)
 - [x] P2: doctor turn sends one message with no history (useReview.ts:119), so conversational edits cannot work
 - [x] P2: speakerOff makes say() return immediately, so an emergency instruction can be "delivered" silently
-- [ ] DECISION NEEDED: architect recommends Claude + separate STT/TTS; PRD A-2/A-6 mandates Gemini Live speech-to-speech
+- [x] DECIDED: Gemini Live speech-to-speech (matches PRD A-2/A-6); Claude+STT/TTS proposal rejected
 - [ ] DECISION NEEDED: PRD T-4 vs §3A.1 — if hospital data never crosses, Mira cannot see hospital A history at hospital B
 - [ ] DECISION NEEDED: medical-record retention period — no number exists in any doc, architect refused to invent one
 - [ ] DECISION NEEDED: is consult audio ever retained? PRD §7 says no; bucket provisioned default-off

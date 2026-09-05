@@ -42,6 +42,11 @@ this was written, so `supabase start` / `supabase db reset` / `supabase test db`
 and reviewed by hand; treat the first `supabase db reset` as the real compile step.
 No remote instance was contacted.
 
+The same applies to `voice-token`: it typechecks under `deno check`, but no session has
+ever been minted from it — Google's `auth_tokens` endpoint has not been called from this
+repo, and the first real mint is the real test. The API shapes it uses are cited under
+*Voice sessions* below.
+
 ### Demo users
 
 Seeded through `auth.users` with a bcrypt digest — no plaintext password is stored
@@ -64,11 +69,17 @@ Edge Functions read `SUPABASE_URL`, `SUPABASE_ANON_KEY` and
 | Variable | Default | Meaning |
 |---|---|---|
 | `AI_PROVIDER` | `stub` | Selects the `AiProvider` implementation. `stub` is deterministic and calls nothing. |
-| `VOICE_PROVIDER` | unset | Unset ⇒ `voice-token` returns `501 voice_provider_unconfigured`. |
+| `VOICE_PROVIDER` | `gemini` | The only implementation. Any other value ⇒ `501 voice_provider_unimplemented`. |
+| `GEMINI_API_KEY` | unset | **Required for voice.** The Gemini API key `voice-token` uses to mint session tokens. Unset ⇒ `501 voice_provider_unconfigured`. Never leaves the function. |
+| `GEMINI_LIVE_MODEL` | `gemini-2.5-flash-native-audio-preview-12-2025` | Live model for the session. Per-hospital `ai_config.voice_model` wins over it. |
+| `GEMINI_LIVE_VOICE` | `Kore` | Gemini prebuilt voice name. Per-hospital `ai_config.voice_name` wins over it. |
 
 No provider key is in this repo or in the database. `AI_PROVIDER` is the seam; a real
 provider implements `AiProvider` in `functions/_shared/ai.ts` and reads its key from
-the function environment.
+the function environment. `GEMINI_API_KEY` is read only inside
+`functions/voice-token/gemini-live.ts`; it is never returned, never logged and never
+written to Postgres — a key in the browser is the exact defect `voice-token` exists to
+close (ARCHITECTURE AP-3, PRD A-1/A-6).
 
 ## The §4 API, row by row
 
@@ -86,7 +97,7 @@ Kinds are the spec's own: **T** table access under RLS (no server code — the p
 | 5 | Consult state (poll) | T | `GET /rest/v1/consults?id=eq.<id>` (+ `my_current_draft`) | `consults_patient_read` |
 | 6 | Transcript | T | `GET /rest/v1/consult_messages?consult_id=eq.<id>&order=seq` | `consult_messages_patient_read` |
 | 7 | Send a turn | E | `POST /functions/v1/ai-consult` (SSE) | JWT + RLS read + `ai_record_turn` / `ai_submit_draft` |
-| 8 | Mint voice session token | E | `POST /functions/v1/voice-token` | JWT + `check_quota`; returns 501 until a provider is chosen |
+| 8 | Mint voice session token | E | `POST /functions/v1/voice-token` → a single-use Gemini Live ephemeral token | JWT + RLS read of the consult + `check_quota` + the daily audio budget; the Live session config is bound to the token server-side |
 | 9 | Upload consult photo | R+Storage | `POST /rest/v1/rpc/create_media_upload`, then a signed PUT | definer fn + `consult-media` storage policy |
 | 10 | My records | T | `GET /rest/v1/consults?patient_id=eq.<uid>&select=…,prescriptions(…)` | `consults_patient_read`, `prescriptions_patient_read` |
 | 11 | A prescription | T | `GET /rest/v1/prescriptions?id=eq.<id>&select=*,prescription_items(*),investigation_orders(*)` | three read policies |
@@ -110,7 +121,7 @@ Kinds are the spec's own: **T** table access under RLS (no server code — the p
 | 24 | Escalate → appointment | R | `POST /rest/v1/rpc/escalate_consult` | definer fn |
 | 25 | Patient record panel | T | `GET /rest/v1/patient_details?profile_id=eq.<p>` + labs + prior consults | `patient_details_read_treating` (`shares_consult_with`) |
 | 26 | Feedback to Mira | T | `POST /rest/v1/mira_feedback` | `mira_feedback_doctor_insert` |
-| 27 | Doctor voice token | E | `POST /functions/v1/voice-token` with `mode:"coordinator"` | as #8 |
+| 27 | Doctor voice token | E | `POST /functions/v1/voice-token` with `mode:"coordinator"` | as #8, with the coordinator persona and tool allowlist bound instead, and `pending_review`/`needs_human` as the allowed statuses |
 
 ### 4.3 Operator / shared
 
@@ -128,13 +139,8 @@ Kinds are the spec's own: **T** table access under RLS (no server code — the p
 implementation. The remaining 17 are 12 Postgres functions, 3 Edge Functions (#8 and
 #27 share one) and 1 Realtime publication.
 
-Two rows are implemented but **partial**, and both are called out again under
-Assumptions:
+One row is implemented but **partial**, and it is called out again under Assumptions:
 
-- **#8 / #27 `voice-token`** authorizes the caller, enforces the quota and pins and
-  hashes the session config, then returns `501 voice_provider_unconfigured`. §7
-  assumption 8 says the voice provider is unsettled; minting a session for a provider
-  nobody has chosen would be inventing the decision.
 - **#9 / #12 / #31** return `{bucket, path, expires_at}` rather than a materialized
   `upload_url`. A signed URL is minted by the Storage API, not by Postgres; the RPC
   does the validation the spec gives it (MIME, size, row state, id-only key) and the
@@ -148,6 +154,151 @@ RPCs raise SQLSTATEs of the form `PTnnn`, which PostgREST maps to HTTP status `n
 MESSAGE carries `code`, DETAIL carries `message`. The Edge Functions emit the §4
 envelope directly: `{ code, message, detail, retryable }`, and translate PostgREST
 errors into it (`fromPostgrest` in `functions/_shared/http.ts`).
+
+## Voice sessions — the Gemini Live token (#8 / #27)
+
+The voice leg is **one Gemini Live speech-to-speech session per consult, held directly
+between the browser and Google** (PRD A-2/A-6, ARCHITECTURE §5, AGENT-EXPERIENCE §2.5 —
+the decision is closed there and in DATA-MODEL §7.8). `voice-token` is in the *control*
+path, never the audio path: no audio transits an Edge Function.
+
+### How a session is obtained
+
+1. Client `POST /functions/v1/voice-token` with the user's JWT and
+   `{ consult_id, mode?: "coordinator" }`.
+2. The function reads the consult **as the caller** (RLS decides whether they may see
+   it), then checks ownership and status: patient mode needs `active`, coordinator mode
+   needs `pending_review` or `needs_human`.
+3. `check_quota` runs (per-hospital daily consults, per-consult turns). Then, if the
+   hospital declares `ai_config.quotas.audio_minutes_per_day`, today's `audio_seconds`
+   in `agent_invocations` are summed and a spent budget returns `402 quota_exhausted`.
+   With no such key configured there is no daily audio cap — no number is invented here.
+4. The session config is assembled server-side and hashed (see below).
+5. The function calls Google with `GEMINI_API_KEY` and returns the minted token.
+6. One `agent_invocations` row is written (§2.13): `agent_id='voice_session'`,
+   `stop_reason='session_authorized'`, `audio_seconds` = the ceiling the token
+   authorizes, `latency_ms` = the mint round-trip.
+
+Response (the §4.1 #8 contract, plus additive fields so the client needs no build-time
+knowledge of the provider):
+
+```jsonc
+{
+  "token": "auth_tokens/…",          // the ephemeral token; NOT an API key
+  "expires_at": "…Z",                 // session ceiling
+  "session_config_hash": "sha256:…",  // the pin
+  "ws_url": "wss://…BidiGenerateContentConstrained",
+  "model": "gemini-2.5-flash-native-audio-preview-12-2025",
+  "mode": "patient",
+  "start_by": "…Z",                   // the session must be *opened* before this
+  "start_window_seconds": 60,
+  "session_minutes": 12
+}
+```
+
+### Lifetime
+
+| Bound | Value | Set by |
+|---|---|---|
+| Time to *open* the session (`newSessionExpireTime`) | 60 s | ARCHITECTURE §5.1 ("TTL ≤ 60 s to start"); provider default is 1 min |
+| Session ceiling (`expireTime`) | `ai_config.quotas.session_minutes_per_consult`, default 12, clamped to ≤ 15 | Provider caps an audio-only session at 15 min without context compression |
+| Uses | `1` — one session per mint | `uses: 1`, the provider default |
+
+A `voice-token` call is cheap and idempotent in effect: pre-warming it on screen mount
+(ARCHITECTURE §10.4) costs one row in `agent_invocations` and one unused token.
+
+### What the client does with it
+
+Open **one** WebSocket to the `ws_url` returned, passing the token as the
+`access_token` query parameter (the provider also accepts an `Authorization` header
+with the `Token` scheme), then send the Live setup message. The client sends **no
+config it invents**: model, persona/system instruction, tool allowlist, voice and
+response modalities are locked into the token by `liveConnectConstraints`, so a client
+that tries to widen them fails rather than succeeds. Audio is 16 kHz 16-bit little-endian
+PCM in, 24 kHz PCM out. A connection lasts roughly 10 minutes and the session continues
+across connections via the resumption handle the server sends; the client must handle
+the `GoAway` warning without dropping the consult.
+
+Input and output transcriptions come back on the session, and the client persists each
+finalized turn to `consult_messages` through the ordinary RLS path — a voice consult
+produces exactly the same rows as a text one. The structured clinical draft is never
+taken from the audio session; it is produced server-side at conclude time.
+
+### What is bound server-side, and what the hash is for
+
+`liveConnectConstraints` carries the model and the config the token is locked to.
+`session_config_hash` is a SHA-256 over a **canonical** (recursively key-sorted) JSON of
+`{mode, model, persona_id, session_minutes, audio_retention_days, config}` — the same
+object that is sent as the constraint. It is a pin the client can echo and an operator
+can compare across sessions; it is not the security boundary. The boundary is that the
+provider itself refuses a session that departs from the constraint.
+
+The system instruction contains **no patient identity and no PHI** — the record arrives
+through the `get_patient_record` tool, resolved from the session, never from a
+model-supplied id (AGENT-EXPERIENCE §0.9, §4.3).
+
+### Errors
+
+| Status | `code` | When |
+|---|---|---|
+| 400 | `consult_id_required` | no `consult_id` |
+| 401 | `unauthenticated` | missing or invalid JWT |
+| 403 | `forbidden` | consult not visible under RLS, or not the caller's consult |
+| 409 | `consult_not_active` / `consult_not_reviewable` | wrong status for the mode |
+| 402 | `quota_exhausted` | `check_quota` (PT402), or the daily audio budget is spent |
+| 501 | `voice_provider_unconfigured` / `voice_provider_unimplemented` | `GEMINI_API_KEY` unset, or `VOICE_PROVIDER` names something else |
+| 503 | `voice_provider_unavailable` (`retryable: true`) | Google refused the mint; the consult degrades to the text channel (PRD P-3a), never to a scripted fallback |
+
+### Env vars a human must set
+
+`GEMINI_API_KEY` (required), and optionally `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_VOICE`,
+`VOICE_PROVIDER`. Set them on the function, never in this repo:
+
+```sh
+supabase secrets set GEMINI_API_KEY=…          # deployed
+echo 'GEMINI_API_KEY=…' >> supabase/.env       # local, git-ignored
+```
+
+Per-hospital overrides live in `hospitals.ai_config`: `voice_model`, `voice_name`,
+`voice_persona_id`, `quotas.session_minutes_per_consult`,
+`quotas.audio_minutes_per_day`, `audio_retention_days`. No key is ever stored there.
+
+### Sources
+
+The API surface above was verified on 2026-09-06 against Google's own documentation, not
+written from memory — this API is young and moves:
+
+- `https://ai.google.dev/gemini-api/docs/ephemeral-tokens` — `POST /v1beta/auth_tokens`,
+  the `x-goog-api-key` header, `uses` / `expireTime` / `newSessionExpireTime` /
+  `liveConnectConstraints{model,config}` / `lockAdditionalFields`, the token value being
+  the resource's `name`, the 30-min and 1-min defaults, and the `access_token` query
+  parameter vs the `Token` auth scheme. Ephemeral tokens are Live-API-only and v1beta-only.
+- `https://ai.google.dev/gemini-api/docs/live-api/get-started-websocket` — the
+  `…GenerativeService.BidiGenerateContentConstrained?access_token=` endpoint an ephemeral
+  token opens, and the `setup` message shape.
+- `https://ai.google.dev/gemini-api/docs/live-api/capabilities` and `.../tools` —
+  `responseModalities`, `speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName`,
+  `tools[].functionDeclarations`, `inputAudioTranscription` / `outputAudioTranscription`,
+  and the current model ids (`gemini-2.5-flash-native-audio-preview-12-2025`,
+  `gemini-3.1-flash-live-preview`).
+- `https://ai.google.dev/gemini-api/docs/live-api/session-management` — 15-min audio-only
+  session cap, ~10-min connection life, `sessionResumption`, `GoAway`.
+- `https://ai.google.dev/gemini-api/docs/live` — 16 kHz PCM in, 24 kHz PCM out.
+
+Three things in those docs that our specs did not assume:
+
+- **PRD A-2's `gemini-2.5-flash` is not a Live model.** The Live session needs a
+  native-audio or live-preview id; that is what `GEMINI_LIVE_MODEL` /
+  `ai_config.voice_model` carry, separately from the text model in `ai_config.model`.
+- **Both current Live models are previews**, so the default here will need re-pinning.
+- **`ai_config.voice_persona_id` is ours, not Google's.** The provider takes a prebuilt
+  voice name (`Kore`, …); the persona id stays in the hash as our own identifier.
+
+`agent_invocations.audio_seconds` for a voice row is an **authorization, not a
+measurement** — the audio never reaches our servers, so the ceiling the token permits is
+the honest upper bound, and `cost_usd` is left at 0 rather than multiplied by a price
+this repo has not verified. When the client reports session-end duration, that row is
+what a reconciliation would correct.
 
 ## What the database enforces, and what it cannot
 
@@ -230,9 +381,11 @@ From `docs/DATA-MODEL.md` §7, safest option chosen and implemented:
    (writes are `service_role`-only) and nothing is swept.
 7. **§7.7 — `needs_human` is in the enum**, reachable from `active` (AI refusal or a
    safety block) and from `pending_review` (system), and decidable by a doctor.
-8. **§7.8 — voice provider unsettled.** `voice-token` does everything
-   provider-independent and refuses with `501` rather than guessing. `agent_invocations`
-   records both token and audio-second cost so it survives either decision.
+8. **§7.8 — voice provider: closed, Gemini Live.** `voice-token` mints a single-use
+   ephemeral Live token with the session config bound to it (see *Voice sessions*
+   above) and writes the `agent_invocations` row the audio-second column was shaped
+   for. The one judgement taken beyond the docs: with no daily audio budget configured
+   there is no daily audio cap, because inventing a number is worse than not having one.
 9. **§7.9 — patient-visible reviewer identity.** The narrower reading is taken: a
    patient may read the profile and clinician details of a doctor who reviewed *their*
    consult, and no other clinician. Registration number is exposed through

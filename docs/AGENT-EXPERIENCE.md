@@ -183,7 +183,7 @@ Rules:
 
 Replace the fixed 1500 ms RMS timer (`google.ts:206`) with a three-signal endpointer:
 
-1. **Acoustic** — VAD silence, from the streaming STT provider, not hand-rolled RMS.
+1. **Acoustic** — VAD silence, from the Live session's own activity detection, not hand-rolled RMS.
 2. **Lexical** — the interim transcript ends on a syntactically complete clause vs. mid-phrase or on a
    filler ("and, um…", "it's kind of…").
 3. **Prosodic/contextual** — trailing rise, or an incomplete list ("it hurts here, and…").
@@ -291,9 +291,15 @@ doctor*, never *what to take* — see §6.3.
 
 ## 2. Model and API choice
 
+> **Settled: the voice leg is Gemini Live speech-to-speech (Option B, §2.5).** This section previously
+> recommended Claude behind an assembled STT/TTS pipeline; that option is **rejected**. PRD A-2/A-6 and
+> ARCHITECTURE §5 stand unamended, and `voice-token` (DATA-MODEL §4.1 #8 / §4.2 #27) is built against Gemini
+> Live. The rejected option and what it costs us are recorded in §2.5 rather than deleted, because the loss
+> is real and the next person deserves to see it.
+
 > The Claude API facts in this section (model IDs, pricing, parameter shapes, betas) were taken from the
 > `claude-api` skill, not from memory. They are cached values — re-verify against the skill before pinning
-> anything in code.
+> anything in code. They describe the **server-side clinical passes** (§2.6), never the spoken turn.
 
 ### 2.1 The one thing that decides the architecture
 
@@ -305,6 +311,11 @@ Everything else in this section follows from that sentence. A Claude-brained voi
 **pipeline**: streaming STT → Claude → streaming TTS, with a realtime orchestrator owning VAD, endpointing,
 barge-in and playback. The alternative is a **native-audio provider** owning the audio leg with Claude behind
 it. There is no third option where Claude speaks.
+
+**We take the second branch.** Gemini Live holds the audio leg and speaks. Claude does not touch audio in
+this product, and the §2.2–§2.3 material below is the reference for the server-side clinical passes only —
+it applies where a hospital selects Claude through the `AI_PROVIDER` / `LlmProvider` seam, whose default is
+PRD A-2's `gemini-2.5-flash`.
 
 ### 2.2 Claude models available
 
@@ -360,7 +371,7 @@ project default and it is hardcoded in browser-shipped code — replaced in Migr
 
 ### 2.4 The three candidate voice architectures
 
-**Option A — Claude + streaming STT/TTS pipeline (recommended).**
+**Option A — Claude + streaming STT/TTS pipeline. Rejected (§2.5).**
 
 ```
 mic ──▶ streaming STT ──▶ realtime orchestrator ──▶ Claude Opus 5 (stream)
@@ -383,7 +394,7 @@ Claude is the brain and only the brain.
   the voice, only read a flattened transcript. Interruption quality is our engineering problem, not a
   vendor's.
 
-**Option B — native-audio realtime provider, Claude as clinical director.**
+**Option B — native-audio realtime provider (Gemini Live), clinical passes on the server. Chosen.**
 
 The provider (Gemini Live, per the current PRD A-6) holds the speech-to-speech session and owns turn-taking
 and prosody. Claude never touches audio; it plans the consult and produces the clinical output.
@@ -404,37 +415,59 @@ mic ◀──── WebSocket ────▶ realtime audio model  ──tool c
 
 **Option C — Claude only, no audio.** Not possible. Listed to close it off.
 
-### 2.5 Recommendation, and the conflict this creates
+### 2.5 Decision: Option B, and what it costs
 
-**Adopt Option A.** The reasoning is that this product's differentiator is *clinical* quality — the
-questionnaire, the red-flag screen, the grounded coordinator answers — and every one of those is a tool-use
-and reasoning problem where Claude Opus 5 is the strongest tool available. Prosody is a real loss and it is
-the smaller loss. Option A also makes the safety architecture in §6 tractable, because the model that speaks
-is the model whose tool calls we gate.
+**Decided: Option B — one Gemini Live speech-to-speech session per consult.** Option A is rejected; there is
+no assembled STT/TTS pipeline in this product and no second voice adapter. PRD A-2, A-6 and ARCHITECTURE §5
+stand as written: one vendor, one seam, session credentials minted server-side, session config bound
+server-side. This document's earlier recommendation of Option A is superseded — the paragraphs below record
+why it was attractive and what rejecting it costs, so that the trade is visible rather than lost.
 
-**This conflicts with PRD A-2, A-6 and ARCHITECTURE §5**, which mandate `gemini-2.5-flash` and a single
-Gemini Live speech-to-speech session, and explicitly reject an assembled pipeline ("no STT vendor, no TTS
-vendor, no sentence splitter"). ARCHITECTURE §2 also states the LLM adapter ships exactly one implementation.
+**Why Option B wins.** The product's differentiator is a consult a patient will actually finish by voice
+(RA-2), and the conversational medium is what decides that. A native-audio model hears hesitation,
+interruption and tone; a pipeline reads a flattened transcript and reconstructs the rest in our code. PRD A-6
+is explicit that ease of use and conversational intelligence are the selection criteria and that a higher
+per-minute cost is accepted for them. Option B also removes three vendors, an orchestrator and every line of
+VAD/endpointing/barge-in code we would otherwise own and have to keep good.
 
-That conflict must be resolved by a human before any of §7 is built. Three honest outcomes:
+**What we lose, recorded honestly.** These were Option A's real advantages and they do not disappear by
+being outvoted:
 
-1. **Adopt Option A**, and amend PRD A-2/A-6 and ARCHITECTURE §5 accordingly. This is the recommendation.
-2. **Keep Option B**, and use Claude behind the live session as the clinical director via the ahead-of-turn
-   pattern (§5.2). Everything in §3, §4, §5.3–§5.6 and §6 of this document applies unchanged; only §5.2's
-   transport differs.
-3. **Run both** behind the existing `VoiceAgent` seam (`ARCHITECTURE.md` §5.3) and measure p50/p95 and
-   red-flag recall on real pilot devices. This costs a second adapter, which ARCHITECTURE §2/R-7 explicitly
-   rejects — but it is the only way to settle the prosody-vs-reasoning trade with evidence rather than
-   argument.
+- **The model that speaks is not the model we vetted for clinical reasoning.** Under Option A the same model
+  reasons, chooses words and calls tools, so gating its tool calls gates the whole turn. Under Option B, word
+  choice belongs to the audio model. This is the reason §5's safety architecture must be **structural** —
+  server-authoritative `check_drug_safety`, a deterministic red-flag path, the validator, and the approval
+  gate in Postgres — rather than prompt-level. A rule that lives only in the system instruction is now a
+  request, not a guarantee.
+- **Clinical reasoning depth on the spoken turn.** The in-turn brain is a fast live model, not Opus 5 at
+  `high` effort. Mitigation: the decisions that matter are pulled off the spoken turn entirely — the conclude
+  pass, the draft validator and the coordinator answers all run server-side from the persisted transcript
+  (ARCHITECTURE §5.1 step 6), where model choice is a per-hospital config, not a latency trade.
+- **Hop-by-hop measurability and swappability.** A pipeline lets us measure endpoint, STT, brain and TTS
+  separately and replace one. A single session is measured end to end and replaced whole. Latency
+  instrumentation (§6, Step 9) therefore reports session-level p50/p95 only.
+- **Vendor concentration.** Audio and the default text model are both Google. The `LlmProvider` /
+  `AI_PROVIDER` seam keeps the *text* passes portable; the audio leg has no fallback other than degrading to
+  the text channel (PRD P-3a), which is the documented behaviour and not a second-rate voice path.
+
+**Not revisited by this decision:** whether a hospital may point the server-side clinical passes at Claude
+through the existing seam. PRD A-2's default is `gemini-2.5-flash` with a per-hospital override; §2.2, §2.3,
+§2.6 and §2.7 are the reference for configuring Claude if that override is exercised.
 
 Note that §3–§6 of this document are **transport-independent**. The clinical state machine, the tool surface,
-the state model and every safety gate are identical under A and B. Only §5.2 changes.
+the state model and every safety gate read the same under either option; only the transport in §6 Step 5
+changed.
 
 ### 2.6 Model per role
 
+The spoken turn is the Live session. Every other row is a server-side pass over persisted text, run through
+the `LlmProvider` / `AI_PROVIDER` seam — PRD A-2's `gemini-2.5-flash` by default, with the Claude settings
+shown here applying when a hospital overrides the provider.
+
 | Role | Model | Effort | Thinking | Why |
 |---|---|---|---|---|
-| Patient consult director (in-turn) | `claude-opus-5` | `low` | adaptive | Latency-bound. Low effort with a warm cache is the fastest good turn. Evaluate fast mode here. |
+| Patient spoken turn (in-session) | Gemini Live native-audio model, pinned in `voice-token` | — | — | The audio leg. It hears and speaks; it calls server tools; it produces no clinical artefact. Model id is per-hospital config, never client-supplied — see `src/backend/README.md`. |
+| Patient consult director (text channel, in-turn) | `LlmProvider` default (PRD A-2) | `low` | adaptive | The P-3a text consult, and the fallback when voice is unavailable. Claude Opus 5 at low effort where a hospital overrides the provider. |
 | Conclude pass (draft the recommendation) | `claude-opus-5` | `high` | adaptive | Off the critical path (~3–8 s is fine). Highest-stakes output in the product. |
 | Red-flag pre-screen (interim transcript) | `claude-haiku-4-5` | — | off | Sub-200 ms, runs on every interim update, cheap enough to run continuously. Advisory only — never the sole gate (§6.2). |
 | Doctor coordinator | `claude-opus-5` | `medium` | adaptive | Grounded retrieval + citation; a peer clinician is the audience. |
@@ -690,35 +723,38 @@ allowlists. They do **not** share a system prompt or a stopping rule.
 
 ### 4.2 The loop
 
+The voice loop (§2.5, Option B). The browser holds one Live session; our server is reached only through
+tool calls and the transcript write.
+
 ```mermaid
 sequenceDiagram
     participant P as Patient
-    participant V as Voice orchestrator
+    participant B as Browser (voice seam)
+    participant G as Gemini Live session
     participant E as ai-consult (Edge)
-    participant C as Claude Opus 5
     participant DB as Postgres
 
-    P->>V: speech (continuous)
-    V-->>V: VAD + streaming STT (interim)
-    V->>E: interim transcript
+    Note over B,G: session opened with a voice-token ephemeral token; config locked server-side
+    P->>B: speech (continuous)
+    B->>G: PCM 16 kHz (continuous)
+    G-->>G: VAD, endpointing, barge-in (provider-owned)
+    G-->>B: input transcription (interim, then final)
+    B->>E: interim transcript
     E->>DB: red-flag phrase match (instant)
-    Note over E: Haiku pre-screen in parallel
-    V-->>V: endpoint detected (semantic, §1.3)
-    V->>P: backchannel "Okay." (≤250ms, rule-based)
-    V->>E: final utterance
-    E->>DB: append consult_messages
-    E->>DB: load slots + record + template
-    E->>C: stream(system[cached] + transcript + slots, tools[])
-    C-->>E: tool_use: record_slot × N (parallel)
-    E->>DB: apply slot updates
-    E-->>C: tool_result × N (ONE user message)
-    C-->>E: text stream (next question)
-    E-->>V: text chunks
-    V->>P: streaming TTS
-    P-->>V: (barge-in) → cancel stream, kill audio ≤120ms
+    Note over E: model pre-screen in parallel — advisory only (§5.2)
+    G-->>B: tool_call: record_slot / get_patient_record / raise_red_flag
+    B->>E: forward tool call (JWT-scoped)
+    E->>DB: apply slot updates / read record / write consult_events
+    E-->>B: tool result
+    B-->>G: tool response
+    G-->>P: audio 24 kHz (Mira speaks; interruptible mid-utterance)
+    G-->>B: output transcription (final)
+    B->>DB: append consult_messages (RLS path)
+    Note over E,DB: conclude pass runs server-side from the persisted transcript, never from the audio session
 ```
 
-The critical property: **the mic never closes.** `useConsult.ts:178` closes it today; the redesign does not.
+The critical property: **the mic never closes.** `useConsult.ts:178` closes it today; the redesign does not —
+and under Option B it is the provider, not our code, that keeps that promise.
 
 ### 4.3 Tools
 
@@ -977,9 +1013,12 @@ Ship first, on its own, this week.
 *Files: `useConsult.ts` (substantially rewritten), `useReview.ts` (edit). New: migrations, `ai-consult` turn
 handler.*
 
-### Step 3 — Claude turn on the server, with tools
+### Step 3 — The turn on the server, with tools
 
-- Implement the patient-mode turn as a Claude Opus 5 streaming tool-use call: `get_patient_record`,
+Governs the **text channel** (P-3a) and every server-side clinical pass; the spoken turn arrives in Step 5 as
+the Live session. Model per §2.6 — the `LlmProvider` default, or Claude where a hospital overrides it.
+
+- Implement the patient-mode turn as a streaming tool-use call: `get_patient_record`,
   `record_slot`, `load_protocol`, `end_consult`.
 - Real patient record replaces the hardcoded "Alex Kumar" (`useConsult.ts:28`, `mira.ts:87`,
   `useConsult.ts:216`).
@@ -999,22 +1038,34 @@ handler.*
 *Files: `useReview.ts` (rewritten around the shared session contract). New: `/consults/:id/decision`
 endpoint, `prescriptions` insert function + RLS policy.*
 
-### Step 5 — Streaming voice and barge-in
+### Step 5 — The Gemini Live session
 
 The experience step. Everything before it was plumbing.
 
-- Streaming STT with interim results, replacing the record-then-transcribe blob (`google.ts:142-174`).
-- Streaming TTS, replacing whole-file MP3 playback (`google.ts:47-87`).
-- Mic stays open during playback; remove the `say(..., () => listen())` coupling (`useConsult.ts:178`).
-- Barge-in with the false-positive guard (§1.5); truncation recorded in the transcript.
-- Semantic endpointing (§1.3) replaces the RMS timer (`google.ts:206`).
-- Single locale resolved from the hospital config; fixes the `en-IN` / `en-US` split (`google.ts:11,15`,
-  `index.ts:100`).
+- `voice-token` mints a single-use ephemeral Live token with the session config bound to it — persona, safety
+  instruction, tool allowlist, voice and modalities are server-side and unforgeable (PRD A-6, AP-3). **Done**:
+  `src/backend/functions/voice-token/`, documented in `src/backend/README.md`.
+- Client opens one WebSocket per consult straight to Google with that token, and deletes the
+  record-then-transcribe blob (`google.ts:142-174`) and whole-file MP3 playback (`google.ts:47-87`) with it.
+  No STT vendor, no TTS vendor, no sentence splitter, no `?key=` in a browser.
+- Endpointing, barge-in and prosody become the provider's responsibility: no RMS timer (`google.ts:206`), no
+  `say(..., () => listen())` coupling (`useConsult.ts:178`), no false-positive guard of our own. §1.3–§1.5
+  become acceptance criteria we measure, not code we write.
+- Input and output transcriptions come back on the session; each finalized turn is persisted to
+  `consult_messages` through the normal RLS path, so a voice consult produces the same rows as a text one.
+- Tool calls raised mid-session are executed server-side by `ai-consult` and audited into `consult_events`.
+  The structured clinical draft is never taken from the audio session (ARCHITECTURE §5.1 step 6).
+- Reconnection: a Live connection lives ~10 minutes and the session resumes across connections with the
+  provider's resumption handle; the client must handle the `GoAway` warning without dropping the consult.
+- Voice unavailable (no token, quota spent, provider 5xx) degrades to the text channel — never a scripted
+  fallback.
+- Single locale and voice resolved from hospital config, server-side; fixes the `en-IN` / `en-US` split
+  (`google.ts:11,15`, `index.ts:100`).
 - `acknowledging` and `interrupted` added to `VoiceState`; `interim` and `audioLevel` added to
-  `MiraSession`.
+  `MiraSession`, derived from session events rather than from our own VAD.
 
 *Files: `lib/voice/index.ts` **replaced** by the `VoiceAgent` seam. `lib/voice/google.ts` **replaced** by a
-streaming adapter. `MiraPanel.tsx` (edit, additive). `Mira.tsx` (edit, two new states).*
+`gemini-live.ts` session adapter. `MiraPanel.tsx` (edit, additive). `Mira.tsx` (edit, two new states).*
 
 ### Step 6 — Protocols and the slot policy
 
@@ -1038,7 +1089,9 @@ streaming adapter. `MiraPanel.tsx` (edit, additive). `Mira.tsx` (edit, two new s
 
 ### Step 8 — Draft validator and the conclude pass
 
-- Conclude pass on Claude Opus 5 at `effort: high` with structured outputs (`output_config.format`).
+- Conclude pass server-side from the persisted transcript — never from the audio session — under schema
+  validation; on the `LlmProvider` default, or Claude Opus 5 at `effort: high` with structured outputs
+  (`output_config.format`) where a hospital overrides the provider.
 - `check_drug_safety` with the versioned allergy-class map.
 - `propose_recommendation` rejected without clearance; validator re-checks independently (§5.2).
 - Validator-computed flags replace model-claimed flags.
@@ -1060,7 +1113,7 @@ status).*
 |---|---|
 | `apps/web/src/lib/api/ai.ts` | **Replaced** — becomes a thin typed client to `ai-consult`; the demo engine (`ai.ts:60-209`) is deleted |
 | `apps/web/src/lib/api/mira.ts` | **Replaced** — prompts and schemas move server-side into the agent registry |
-| `apps/web/src/lib/voice/google.ts` | **Replaced** — streaming adapter behind the `VoiceAgent` seam |
+| `apps/web/src/lib/voice/google.ts` | **Replaced** — Gemini Live session adapter (`gemini-live.ts`) behind the `VoiceAgent` seam; the STT/TTS REST calls go |
 | `apps/web/src/lib/voice/index.ts` | **Replaced** — becomes the seam; the Web Speech path goes (per `ARCHITECTURE.md` §5.3) |
 | `apps/web/src/modules/patient/useConsult.ts` | **Rewritten** — server-driven session; keeps the `MiraSession` shape |
 | `apps/web/src/modules/doctor/useReview.ts` | **Rewritten** — history, citations, no approve path |
@@ -1072,8 +1125,12 @@ status).*
 
 ## 7. Open decisions (need a human)
 
-1. **Option A vs B (§2.5).** Claude + streaming pipeline, or Gemini Live with Claude as director. This
-   contradicts PRD A-2/A-6 and ARCHITECTURE §5 either way it lands, and it must be settled before Step 5.
+1. ~~**Option A vs B (§2.5).**~~ **Decided: Option B, Gemini Live speech-to-speech.** Option A (Claude +
+   streaming STT/TTS) is rejected; PRD A-2/A-6 and ARCHITECTURE §5 stand unamended and need no change. What
+   the rejection costs — the speaking model is not the model we vetted, shallower in-turn reasoning,
+   end-to-end-only latency measurement, vendor concentration — is recorded in §2.5, and the mitigation is
+   that safety is structural (§5) rather than prompt-level. `voice-token` is built against this decision
+   (`src/backend/functions/voice-token/`); DATA-MODEL §7.8 is closed with it.
 2. **Who writes and signs off the protocol templates (§3.3)?** These are clinical artefacts. They need a
    named clinician owner and a review cadence, or they are just prompts in a different file format.
 3. **Who owns the allergy-class map (§5.2)?** Same question, higher stakes. A pharmacist-reviewed source is

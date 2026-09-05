@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "bun --cwd apps/web dev",
     "build": "bun --cwd apps/web build",
-    "typecheck": "bun --cwd apps/web typecheck"
+    "typecheck": "bun --cwd apps/web typecheck",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:functions": "supabase functions serve"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

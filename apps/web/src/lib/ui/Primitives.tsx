@@ -5,7 +5,7 @@ import { ink, pillStyle, space, statusPill, type } from '../theme';
 
 // theme.statusPill is the single label source — no local duplicate map.
 export function StatusPill({ status }: { status: string }) {
-  return <span style={pillStyle(status) as React.CSSProperties}>{statusPill[status]?.label || status}</span>;
+  return <span className="vd-tag" style={pillStyle(status) as React.CSSProperties}>{statusPill[status]?.label || status}</span>;
 }
 
 export function MicroLabel({ children, accent: acc = false }: { children: React.ReactNode; accent?: boolean }) {

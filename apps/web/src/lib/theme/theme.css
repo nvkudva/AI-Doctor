@@ -53,6 +53,9 @@
   --vd-glass-hi: inset 0 1px 1px rgba(255, 255, 255, 0.6);
   --vd-glass-lo: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   --vd-glass-solid: #ede7fa;
+  --vd-tag-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%);
+  --vd-tag-shadow: var(--vd-glass-hi), var(--vd-elev-1);
+  --vd-tag-border: 20%;
   --vd-border: rgba(30, 50, 90, 0.1);
   --vd-border-strong: rgba(30, 50, 90, 0.2);
   --vd-scrim: rgba(23, 19, 51, 0.45);
@@ -109,20 +112,29 @@
   --vd-nav-active: oklch(0.78 0.16 290);
   --vd-nav-idle: #9b94c7;
 
-  --vd-ok-bg: #123f2c; --vd-ok-fg: #7fe0b2;
-  --vd-warn-bg: #4a3a08; --vd-warn-fg: #ffd97a;
-  --vd-info-bg: #1e3260; --vd-info-fg: #a9c4ff;
-  --vd-bad-bg: #57202f; --vd-bad-fg: #ff9eb4;
+  --vd-ok-fg: #6ee7b0;
+  --vd-warn-fg: #ffd07a;
+  --vd-info-fg: #a9c4ff;
+  --vd-bad-fg: #ff9eb4;
+  --vd-ok-bg: color-mix(in oklab, var(--vd-ok-fg) 24%, var(--vd-surface-card));
+  --vd-warn-bg: color-mix(in oklab, var(--vd-warn-fg) 24%, var(--vd-surface-card));
+  --vd-info-bg: color-mix(in oklab, var(--vd-info-fg) 24%, var(--vd-surface-card));
+  --vd-bad-bg: color-mix(in oklab, var(--vd-bad-fg) 24%, var(--vd-surface-card));
   --vd-neutral-bg: #33334a; --vd-neutral-fg: #b9b9d0;
 
-  --vd-lab-ok-bg: #16382a; --vd-lab-ok-fg: #86e2b6;
-  --vd-lab-warn-bg: #3f2f0d; --vd-lab-warn-fg: #f2c281;
+  --vd-lab-ok-fg: #86e2b6;
+  --vd-lab-warn-fg: #f2c281;
+  --vd-lab-ok-bg: color-mix(in oklab, var(--vd-lab-ok-fg) 24%, var(--vd-surface-card));
+  --vd-lab-warn-bg: color-mix(in oklab, var(--vd-lab-warn-fg) 24%, var(--vd-surface-card));
   --vd-rx-bg: #332248; --vd-rx-fg: #d5b4f7;
   --vd-inv-bg: #182f3a; --vd-inv-fg: #a4d8ea;
   --vd-advice-bg: #17313c; --vd-advice-fg: #a8d9e8;
   --vd-safety-bg: #15342a; --vd-safety-fg: #8ee0bb;
   --vd-assessment-bg: #2b2340; --vd-assessment-bd: #3d3159;
 
+  --vd-tag-sheen: none;
+  --vd-tag-shadow: none;
+  --vd-tag-border: 32%;
   --vd-glass-bg: linear-gradient(180deg, oklch(0.35 0.06 295 / 0.55), oklch(0.3 0.06 295 / 0.45));
   --vd-glass-border: oklch(0.6 0.08 295 / 0.35);
   --vd-glass-hi: inset 0 1px 1px rgba(255, 255, 255, 0.18);
@@ -200,6 +212,17 @@
   --vd-dur-orb-think: calc(var(--vd-dur-3) * 25);
   --vd-dur-orb-spin: calc(var(--vd-dur-3) * 50);
   --vd-dur-orb-breathe: calc(var(--vd-dur-4) * 12.5);
+}
+
+/* Tinted label (status pills, suggestion pills). The bg/fg pair carries the
+   contrast; this carries the material. In light that is a specular sheen and a
+   lifted edge; in dark both are off, because a white sheen over a dark chip
+   reads as embossed plastic. The border tints itself from the label's own
+   colour, so it never outlines the chip in a foreign hue. */
+.vd-tag {
+  border: 1px solid color-mix(in oklab, currentColor var(--vd-tag-border), transparent);
+  background-image: var(--vd-tag-sheen);
+  box-shadow: var(--vd-tag-shadow);
 }
 
 /* Document base — moved out of index.html so font.family has one definition. */

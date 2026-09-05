@@ -200,7 +200,7 @@ export function PatientPanel({ ac }: { ac: CaseItem }) {
                 <div style={{ ...small, fontWeight: 600, color: ink.primary }}>{l.name}</div>
                 <div style={{ ...small, color: ink.secondary }}>{l.date}</div>
               </div>
-              <span style={{
+              <span className="vd-tag" style={{
                 ...type.caption, padding: '4px 10px', borderRadius: radius.pill, flex: 'none',
                 background: l.ok ? tints.labOk.bg : tints.labWarn.bg,
                 color: l.ok ? tints.labOk.fg : tints.labWarn.fg,

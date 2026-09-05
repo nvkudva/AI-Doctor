@@ -201,7 +201,7 @@ function LabRow({ name, date, result, ok }: { name: string; date: string; result
         <div style={{ ...type.callout, fontWeight: 700, color: ink.primary }}>{name}</div>
         <div style={{ ...type.footnote, color: ink.secondary }}>{date}</div>
       </div>
-      <span style={{ ...type.caption, fontWeight: 700, padding: '5px 11px', borderRadius: radius.pill, background: t.bg, color: t.fg, flex: 'none' }}>
+      <span className="vd-tag" style={{ ...type.caption, fontWeight: 700, padding: '5px 11px', borderRadius: radius.pill, background: t.bg, color: t.fg, flex: 'none' }}>
         {result}
       </span>
     </Card>

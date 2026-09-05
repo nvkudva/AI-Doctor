@@ -338,6 +338,7 @@ export function MiraPanel({
                   <button
                     key={sg.label}
                     type="button"
+                    className="vd-tag"
                     onClick={() => session.send(sg.label)}
                     style={{
                       ...type.caption, fontWeight: 700, flex: 'none', cursor: 'pointer',

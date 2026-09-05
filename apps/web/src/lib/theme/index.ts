@@ -219,17 +219,10 @@ const TONE_FG: Record<Tone, string> = {
   neutral: 'var(--vd-ink-2)',
 };
 
-// Liquid-glass skin for a small tinted label: the opaque token pair carries the
-// contrast (DESIGN §2.1 forbids alpha-only tints, which collapse in dark), and
-// a top-lit sheen, hairline border and inner highlight carry the material.
+// A tinted label's colour pair. The material — sheen, edge, lift — comes from
+// the .vd-tag class, which differs per theme; pair this with className="vd-tag".
 export function glassTint(bg: string, fg: string): Style {
-  return {
-    backgroundColor: bg,
-    backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,0) 62%)',
-    color: fg,
-    border: '1px solid var(--vd-glass-border)',
-    boxShadow: 'var(--vd-glass-hi), var(--vd-elev-1)',
-  };
+  return { backgroundColor: bg, color: fg };
 }
 
 export function toneStyle(tone: Tone): Style {

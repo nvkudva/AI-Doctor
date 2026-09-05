@@ -2,8 +2,10 @@
 // transcript, context pills, composer, call dock. Only the session behind it
 // differs — who Mira is talking to, and what the pills offer.
 //
-// It is always a phone-shaped card: an inset card over a scrim on mobile,
-// anchored beside the nav rail at ≥800 so the screen underneath stays put.
+// It is always a phone-shaped card, and it is not modal: no scrim, and the rest
+// of the app stays live behind it. It docks to the nav — sitting on the bottom
+// bar below 800, and against the rail's edge above it — so it reads as part of
+// the same component.
 import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton } from './Button';
 import { Card } from './Card';
@@ -111,7 +113,9 @@ export function MiraPanel({
     setInput('');
   };
 
-  const gap = mobile ? 16 : bp === 'tablet' ? 16 : 20;
+  // Matches the bar's own gutters below 800, and the rail's above it.
+  const gutter = mobile ? 14 : bp === 'tablet' ? 16 : 20;
+  const dockGap = 10;
   const statusLine =
     session.status === 'listening' ? 'Listening — speak naturally…'
       : session.status === 'thinking' ? 'Thinking…'
@@ -120,28 +124,28 @@ export function MiraPanel({
 
   return (
     <>
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        style={{ position: 'fixed', inset: 0, zIndex: z.sheet, background: 'var(--vd-scrim)' }}
-      />
-      {/* The positioner centres vertically and sits beside the rail; the card
-          itself carries the pop animation, which owns `transform`. */}
+      {/* Positioner only: it lets every pointer event through, so the app behind
+          stays usable. The card carries the pop animation, which owns
+          `transform`. */}
       <div
         style={{
-          position: 'fixed', inset: 0, zIndex: z.sheet + 1, pointerEvents: 'none',
-          display: 'flex', alignItems: 'center',
+          position: 'fixed', inset: 0, zIndex: z.nav + 1, pointerEvents: 'none',
+          display: 'flex',
+          alignItems: mobile ? 'flex-end' : 'flex-start',
           justifyContent: mobile ? 'center' : 'flex-start',
-          padding: gap, paddingLeft: mobile ? gap : railOffset + gap,
+          paddingTop: gutter,
+          paddingRight: gutter,
+          paddingLeft: mobile ? gutter : railOffset + dockGap,
+          // Clears the bar and the orb that overhangs its top edge.
+          paddingBottom: mobile ? `calc(${62 + 30 + 16 + dockGap}px + env(safe-area-inset-bottom))` : gutter,
         }}
       >
       <div
         role="dialog"
-        aria-modal="true"
         aria-label="Dr. Mira"
         style={{
           pointerEvents: 'auto',
-          width: `min(${PHONE_W}px, 100%)`,
+          width: mobile ? `min(372px, 100%)` : `min(${PHONE_W}px, 100%)`,
           aspectRatio: `${PHONE_W} / ${PHONE_H}`,
           maxHeight: '100%',
           display: 'flex',

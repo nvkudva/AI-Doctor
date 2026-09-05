@@ -14,6 +14,12 @@ export interface UserConsult {
 
 export interface UserRx {
   name: string; detail: string; date: string; user?: boolean;
+  /** When the next dose is due — drives the home dashboard's medication card. */
+  nextDose?: string;
+}
+
+export interface Appointment {
+  id: string; title: string; kind: string; when: string; where: string;
 }
 
 export interface Notice {

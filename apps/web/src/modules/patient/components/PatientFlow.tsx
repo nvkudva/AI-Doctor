@@ -8,7 +8,9 @@ import { useClinic } from '../../../store';
 import { seedLabs } from '../../../store/seeds';
 import { useConsult } from '../useConsult';
 import { ConsultView } from '../ConsultView';
-import { HomeScreen, RecordsScreen, RecommendationScreen, type RecordsTab } from '../screens';
+import { HomeScreen } from './HomeScreen';
+import { RecordsScreen, type RecordsTab } from './RecordsScreen';
+import { RecommendationScreen } from './RecommendationScreen';
 import { BottomNav, type NavTab } from '../nav';
 import { EmptyRecommendation } from './EmptyRecommendation';
 

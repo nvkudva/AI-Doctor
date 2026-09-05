@@ -1,8 +1,10 @@
 // Records: history · labs · profile, behind a segmented control.
 // Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
-import { AccountMenu, AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
-import { gradients, ink, lines, media, radius, surfaces, tints, type } from '../../../lib/theme';
+import { useNavigate } from 'react-router';
+import { AppHeader, Card, EmptyState, Icon, MenuRow, MicroLabel, StatusPill, bottomBarInset } from '../../../lib/ui';
+import { PatientNotify } from './PatientNotify';
+import { getTheme, gradients, ink, lines, media, radius, setTheme, surfaces, tints, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 import type { UserConsult, UserRx } from '../../../store';
@@ -23,7 +25,7 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
   const mobile = bp === 'mobile';
   const activeIdx = RECORD_TABS.indexOf(tab);
   return (
-    <div className="vd-scroll vd-records" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 20px 118px' }}>
+    <div className="vd-scroll vd-records" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', padding: `20px 20px ${bottomBarInset}` }}>
       <style>{`
         ${media.tabletUp}{
           .vd-records{max-width:860px;margin:0 auto;width:100%;padding:20px 28px 40px!important}
@@ -46,7 +48,7 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
       <AppHeader
         title="Records"
         sticky={false}
-        actions={mobile ? <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} /> : undefined}
+        actions={<PatientNotify />}
         style={{ marginBottom: 14 }}
       />
 
@@ -171,9 +173,35 @@ export function RecordsScreen({ consults, prescriptions, labs, tab, onTab }: {
               <div style={{ ...type.footnote, color: ink.secondary, marginTop: 2 }}>HDFC · Exp 09/28</div>
             </Card>
           </div>
+          <SectionTitle>Account</SectionTitle>
+          <AccountRows />
         </>
       )}
     </div>
+  );
+}
+
+// Theme, doctor view and sign-out — reachable only from here now that the
+// header avatar is gone and Profile leads the nav.
+function AccountRows() {
+  const { signOut } = useAuth();
+  const nav = useNavigate();
+  const [theme, setThemeState] = useState(() => getTheme());
+  return (
+    <Card level={1} pad={6}>
+      <MenuRow icon="person" onClick={() => nav('/doctor')}>Doctor view</MenuRow>
+      <MenuRow
+        icon={theme === 'light' ? 'moon' : 'sun'}
+        onClick={() => {
+          const next = theme === 'light' ? 'dark' : 'light';
+          setTheme(next);
+          setThemeState(next);
+        }}
+      >
+        {theme === 'light' ? 'Dark mode' : 'Light mode'}
+      </MenuRow>
+      <MenuRow icon="x" onClick={signOut}>Sign out</MenuRow>
+    </Card>
   );
 }
 

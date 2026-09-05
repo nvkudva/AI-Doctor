@@ -5,8 +5,7 @@ import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
 import { isOpenConsult } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
-import { AccountMenu, SideNav, type SideNavItem } from '../../../lib/ui';
-import { useAuth } from '../../../shell/auth';
+import { NavBar, type NavItem } from '../../../lib/ui';
 import { useIsMobile } from '../../../shell/viewport';
 import { seedLabs } from '../../../store/seeds';
 import { useConsult } from '../useConsult';
@@ -14,7 +13,6 @@ import { ConsultView } from '../ConsultView';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { RecommendationScreen } from './RecommendationScreen';
-import { BottomNav, type NavTab } from '../BottomNav';
 import { EmptyRecommendation } from './EmptyRecommendation';
 
 type Screen = 'home' | 'consult' | 'recommendation' | 'records';
@@ -22,8 +20,9 @@ type Screen = 'home' | 'consult' | 'recommendation' | 'records';
 const SCREENS: Screen[] = ['home', 'consult', 'recommendation', 'records'];
 const TABS: RecordsTab[] = ['history', 'labs', 'profile'];
 
-// The rail/sidebar at ≥800 carries the same four tabs as the bottom nav.
-const NAV_ITEMS: SideNavItem[] = [
+type NavTab = 'home' | 'history' | 'labs' | 'profile';
+
+const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'history', label: 'History', icon: 'clock' },
   { key: 'labs', label: 'Labs', icon: 'drop' },
@@ -32,7 +31,6 @@ const NAV_ITEMS: SideNavItem[] = [
 
 export function PatientFlow() {
   const clinic = useClinic();
-  const { user } = useAuth();
   const mobile = useIsMobile();
   const loc = useLocation();
   const nav = useNavigate();
@@ -143,22 +141,18 @@ export function PatientFlow() {
   }
 
   const goTab = (t: NavTab) => {
-    if (t === 'home') nav('/patient');
-    else {
-      setRecordsTab(t);
-      nav('/patient/records');
-    }
+    nav(t === 'home' ? '/patient' : `/patient/records?tab=${t}`);
   };
 
   return (
     <>
-      {!mobile && (
-        <SideNav
+      {(!mobile || screen === 'home' || screen === 'records') && (
+        <NavBar
           items={NAV_ITEMS}
           active={screen === 'home' ? 'home' : screen === 'records' ? recordsTab : ''}
           onSelect={k => goTab(k as NavTab)}
-          action={{ label: 'Start consultation', icon: 'phone', onClick: startConsult }}
-          account={<AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} />}
+          orb={{ label: 'Start consultation', onClick: startConsult }}
+          railTop="profile"
         />
       )}
       <div style={{ position: 'relative', flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -187,13 +181,6 @@ export function PatientFlow() {
           />
         )}
       </div>
-      {(screen === 'home' || screen === 'records') && (
-        <BottomNav
-          active={screen === 'home' ? 'home' : recordsTab === 'profile' ? 'profile' : recordsTab}
-          onTab={goTab}
-          onCall={startConsult}
-        />
-      )}
     </>
   );
 }

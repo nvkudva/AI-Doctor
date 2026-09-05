@@ -1,14 +1,10 @@
 // Patient home: greeting header, Mira hero, and a right rail at ≥800.
-import { AccountMenu, AppHeader, Button, Card, MiraPresence, StatusPill } from '../../../lib/ui';
+import { AppHeader, Button, Card, MiraPresence, StatusPill, bottomBarInset, greeting } from '../../../lib/ui';
+import { PatientNotify } from './PatientNotify';
 import { gradients, ink, media, radius, type } from '../../../lib/theme';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 import { useClinic } from '../../../store';
-
-function daypart(): string {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-}
 
 const STEPS = ['Talk with Dr. Mira — no forms', 'A doctor reviews your plan', 'Confirmed plan lands in History'];
 
@@ -17,11 +13,10 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
   const clinic = useClinic();
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  const first = (user?.name || 'Alex Kumar').replace(/^Dr\.\s*/, '').split(' ')[0] || 'there';
   const latest = clinic.queue.find(c => c.mine);
   const callout = mobile ? type.callout : type.calloutT;
   return (
-    <div className="vd-scroll vd-home" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: '20px 20px 118px' }}>
+    <div className="vd-scroll vd-home" style={{ position: 'relative', flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', padding: `20px 20px ${bottomBarInset}` }}>
       <style>{`
         ${media.tabletUp}{
           .vd-home{max-width:900px;margin:0 auto;width:100%;padding:20px 28px 32px!important}
@@ -37,9 +32,9 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
       `}</style>
 
       <AppHeader
-        title={`${daypart()}, ${first}`}
+        title={greeting(user?.name || 'Alex Kumar')}
         sticky={false}
-        actions={mobile ? <AccountMenu name={user?.name || 'Alex Kumar'} detail={user?.email || 'alex.kumar@gmail.com'} /> : undefined}
+        actions={<PatientNotify />}
       />
 
       <div className="vd-home-grid">

@@ -7,5 +7,5 @@ export * from './Chip';
 export * from './Card';
 export * from './Sheet';
 export * from './AppHeader';
-export * from './SideNav';
-export * from './AccountMenu';
+export * from './NavBar';
+export * from './Notifications';

@@ -4,6 +4,14 @@
 import { ink, lines, type, z } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 
+/** "Good evening, Sara" — the title both modules show on their landing screen. */
+export function greeting(name?: string): string {
+  const h = new Date().getHours();
+  const part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const first = (name || '').replace(/^Dr\.\s*/, '').split(' ')[0] || 'there';
+  return `${part}, ${first}`;
+}
+
 export function AppHeader({
   title, subtitle, badge, actions, sticky = true, style,
 }: {
@@ -11,7 +19,7 @@ export function AppHeader({
   subtitle?: React.ReactNode;
   /** Rendered beside the title — e.g. a pending-count pill. */
   badge?: React.ReactNode;
-  /** Action buttons, right-aligned. Put <AccountMenu> last. */
+  /** Action buttons, right-aligned. */
   actions?: React.ReactNode;
   sticky?: boolean;
   style?: React.CSSProperties;

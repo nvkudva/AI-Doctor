@@ -15,26 +15,11 @@ export function MiraFloat({ review, onEdit, open, onOpen, onClose }: {
 }) {
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  // Below 800 the bottom-nav FAB is the entry point, so no floating orb.
+  // The nav's orb is the only entry point at every width, so nothing floats.
   const edge = bp === 'tablet' ? 24 : 28;
   const panel = <ReviewPanel review={review} onEdit={onEdit} />;
   return (
     <>
-      {!mobile && !open && (
-        <>
-          <MiraPresence minimized voiceState={review.status} onMaximize={onOpen} />
-          {review.active && (
-            <span
-              aria-hidden="true"
-              style={{
-                position: 'fixed', zIndex: z.nav, right: edge + 2, bottom: `calc(${edge + 48}px + env(safe-area-inset-bottom))`,
-                width: 12, height: 12, borderRadius: radius.pill,
-                background: 'var(--vd-ok-fg)', border: `2px solid ${lines.glass}`,
-              }}
-            />
-          )}
-        </>
-      )}
       {open && (mobile ? (
         <Sheet open onClose={onClose} title="Dr. Mira" label="Dr. Mira">{panel}</Sheet>
       ) : (

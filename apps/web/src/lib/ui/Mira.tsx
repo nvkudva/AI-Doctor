@@ -5,7 +5,7 @@ import { radius, z } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 import { Icon } from './Primitives';
 
-type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
+export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 const STATE_RING: Record<VoiceState, string> = {
   idle: 'var(--vd-state-idle)',

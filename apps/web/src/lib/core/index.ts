@@ -67,3 +67,5 @@ export function tenantDisplayName(slug: string): string {
   const pretty = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return (pretty || 'Virtual Doctor') + ' · Virtual Doctor';
 }
+
+export * from './time';

@@ -1,8 +1,7 @@
 // One review-queue row: patient, complaint, wait time, status.
-import type { CaseItem } from '../../../lib/core';
+import { waitAge, waitTone, type CaseItem } from '../../../lib/core';
 import { Card, StatusPill } from '../../../lib/ui';
 import { ink, media, space, type } from '../../../lib/theme';
-import { waitAge, waitTone } from './relativeTime';
 
 // Injected once by DoctorApp — min-height per breakpoint plus the fine-pointer
 // hover lift (DESIGN §10.6).

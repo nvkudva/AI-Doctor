@@ -1,7 +1,7 @@
 // Shared viewport hook (shell-owned): JS mirror of media.tabletUp.
 // Modules must not define their own matchMedia breakpoints.
 import { useEffect, useState } from 'react';
-import { breakpoints } from '@vd/theme';
+import { breakpoints } from '../lib/theme';
 
 export function useIsMobile(bp = breakpoints.tablet): boolean {
   const [mobile, setMobile] = useState(

@@ -1,0 +1,42 @@
+// Clinic store record types shared by patient + doctor modules.
+import type { CaseItem, ConsultStatus, Recommendation } from '../lib/core';
+
+export interface ConsultDetail {
+  summary: string; evaluation: string; advice: string;
+  tests: { name: string; detail: string }[];
+  rx: { name: string; dosage: string; timing: string }[];
+}
+
+export interface UserConsult {
+  id: string; title: string; date: string; status: string; note: string; user?: boolean;
+  detail?: ConsultDetail;
+}
+
+export interface UserRx {
+  name: string; detail: string; date: string; user?: boolean;
+}
+
+export interface Notice {
+  t: string; d: string; kind: string; at?: number; caseId?: string;
+}
+
+export interface Clinic {
+  queue: CaseItem[];
+  consults: UserConsult[];
+  prescriptions: UserRx[];
+  notices: Notice[];
+  liveCaseId: string | null;
+  reviewStatus: string;
+  rejectReason: string;
+  addLiveCase: (c: CaseItem) => void;
+  setReview: (status: string, reason?: string) => void;
+  setLiveCaseId: (id: string | null) => void;
+  decide: (id: string, decision: 'approved' | 'changes' | 'rejected', opts?: { reason?: string }) => void;
+  updateRec: (id: string, rec: Recommendation) => void;
+  pushNotice: (n: Notice) => void;
+  dismissNotice: (index: number) => void;
+  addConsultRecord: (c: UserConsult) => void;
+  slaTick: () => void;
+}
+
+export type { CaseItem, ConsultStatus, Recommendation };

@@ -9,7 +9,7 @@
 - [x] Add per-hospital theming and tenant resolution
 - [x] Rebuild as React Vite Bun PWA monorepo per ARCH layout
 - [x] Port consult loop, review desk, timers, and gates to new modules
-- [ ] Remove legacy app/ Preact prototype after parity check
+- [x] Remove legacy app/ Preact prototype after parity check
 - [x] Survey PRD, architecture, and design mocks as implementation base
 - [x] Build single-file flow mock in mock/index.html
 - [x] Wire Google Cloud STT/TTS behind voice seam via vd_google_key

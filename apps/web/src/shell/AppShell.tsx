@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { pressProps } from '@vd/ui';
-import { z } from '@vd/theme';
+import { pressProps } from '../lib/ui';
+import { z } from '../lib/theme';
 
 // AppShell: chrome-less full-viewport wrapper + update toast. Renders the
 // active module edge-to-edge; each module owns its responsive layout.

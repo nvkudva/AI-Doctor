@@ -1,9 +1,9 @@
 // Doctor-desk review conversation: Mira presents the case, takes voice/text
 // commands, applies edits to the on-screen draft. Approval stays UI-only.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CaseItem } from '@vd/core';
-import { aiComplete, type ChatMessage } from '@vd/api';
-import { listenOnce, speak, stopAllVoice } from '@vd/voice';
+import type { CaseItem } from '../../lib/core';
+import { aiComplete, type ChatMessage } from '../../lib/api';
+import { listenOnce, speak, stopAllVoice } from '../../lib/voice';
 
 function parseAi(raw: string): any {
   if (!raw) return { reply: '', done: false, action: 'none' };

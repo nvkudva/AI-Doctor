@@ -1,9 +1,9 @@
 // Patient consult session: voice turns, AI turns, draft completion.
 // Owns the live conversation only; lifecycle + persistence live in the clinic store.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Confidence, Recommendation } from '@vd/core';
-import { aiComplete, concludeConsult, consultTurn, hasGemini, type ChatMessage, type SymptomSlots } from '@vd/api';
-import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '@vd/voice';
+import type { Confidence, Recommendation } from '../../lib/core';
+import { aiComplete, concludeConsult, consultTurn, hasGemini, type ChatMessage, type SymptomSlots } from '../../lib/api';
+import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '../../lib/voice';
 
 export interface Turn {
   role: 'user' | 'doctor';

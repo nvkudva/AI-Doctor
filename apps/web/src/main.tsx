@@ -1,9 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router';
 import { registerSW } from 'virtual:pwa-register';
-import '@vd/theme/theme.css';
-import { initTheme } from '@vd/theme';
-import { App } from './app';
+import './lib/theme/theme.css';
+import { initTheme } from './lib/theme';
+import { App } from './App';
 
 initTheme();
 
@@ -15,6 +16,8 @@ registerSW({
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </React.StrictMode>,
 );

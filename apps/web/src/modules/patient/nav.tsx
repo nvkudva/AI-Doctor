@@ -1,5 +1,5 @@
-import { Icon, pressProps } from '@vd/ui';
-import { gradients, nav, z } from '@vd/theme';
+import { Icon, pressProps } from '../../lib/ui';
+import { gradients, nav, z } from '../../lib/theme';
 
 export type NavTab = 'home' | 'history' | 'labs' | 'profile';
 

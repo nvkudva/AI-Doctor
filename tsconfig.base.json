@@ -10,15 +10,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "baseUrl": ".",
-    "paths": {
-      "@vd/core": ["./packages/core/src/index.ts"],
-      "@vd/theme": ["./packages/theme/src/index.ts"],
-      "@vd/ui": ["./packages/ui/src/index.tsx"],
-      "@vd/voice": ["./packages/voice/src/index.ts"],
-      "@vd/api": ["./packages/api/src/index.ts"],
-      "@vd/platform": ["./packages/platform/src/index.ts"]
-    }
+    "noEmit": true
   }
 }

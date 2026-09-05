@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { Icon, MiraPresence, pressProps } from '@vd/ui';
-import { gradients, ink, media, surfaces, z } from '@vd/theme';
+import { Icon, MiraPresence, pressProps } from '../../lib/ui';
+import { gradients, ink, media, surfaces, z } from '../../lib/theme';
 import type { useConsult } from './useConsult';
 
 type Consult = ReturnType<typeof useConsult>;

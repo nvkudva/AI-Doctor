@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import type { Recommendation } from '@vd/core';
-import { Icon, MicroLabel, MiraPresence, pressProps, StatusPill } from '@vd/ui';
-import { gradients, ink, media, surfaces, type } from '@vd/theme';
+import type { Recommendation } from '../../lib/core';
+import { AccountMenu, Icon, MicroLabel, MiraPresence, pressProps, StatusPill } from '../../lib/ui';
+import { gradients, ink, media, surfaces, type } from '../../lib/theme';
 import { useAuth } from '../../shell/auth';
-import { AccountMenu } from '../../shell/account';
-import type { RecordsTab } from '../../shell/routing';
-import type { UserConsult, UserRx } from '../../shell/store';
+export type RecordsTab = 'history' | 'labs' | 'profile';
+import type { UserConsult, UserRx } from '../../store';
 
 function daypart(): string {
   const h = new Date().getHours();

@@ -12,3 +12,7 @@
 - [ ] Remove legacy app/ Preact prototype after parity check
 - [x] Survey PRD, architecture, and design mocks as implementation base
 - [x] Build single-file flow mock in mock/index.html
+- [x] Wire Google Cloud STT/TTS behind voice seam via vd_google_key
+- [ ] Verify Google voice end-to-end in browser with a real key
+- [x] Wire Gemini history loop + conclusion pass for Dr. Mira
+- [ ] Clinician-review Gemini conclusions on real transcripts

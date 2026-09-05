@@ -2,7 +2,7 @@
 // Owns the live conversation only; lifecycle + persistence live in the clinic store.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Confidence, Recommendation } from '@vd/core';
-import { aiComplete, type ChatMessage } from '@vd/api';
+import { aiComplete, concludeConsult, consultTurn, hasGemini, type ChatMessage, type SymptomSlots } from '@vd/api';
 import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '@vd/voice';
 
 export interface Turn {
@@ -105,8 +105,25 @@ export function useConsult(opts: {
     setMessages(msgs);
     try {
       const api: ChatMessage[] = msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
-      const raw = await aiComplete({ system: SYS, messages: api, max_tokens: 800 });
-      const data = parseAi(raw);
+      let data: any;
+      if (hasGemini()) {
+        try {
+          const userCount = msgs.filter(m => m.role === 'user').length;
+          const turn = await consultTurn({ messages: api, slots: slotsRef.current, rush: userCount >= 8 });
+          slotsRef.current = turn.slots;
+          data = turn;
+          if (turn.done || turn.redFlag) {
+            const fin = await concludeConsult({ slots: turn.slots, messages: api, redFlag: turn.redFlag });
+            data = { ...turn, reply: fin.reply || turn.reply, note: fin.note, confidence: fin.confidence, flags: fin.flags, done: !!fin.recommendation, recommendation: fin.recommendation };
+          }
+        } catch (e) {
+          console.warn('[vd] Gemini consult failed, falling back to demo engine:', e);
+          data = parseAi(await aiComplete({ system: SYS, messages: api, max_tokens: 800 }));
+        }
+      } else {
+        const raw = await aiComplete({ system: SYS, messages: api, max_tokens: 800 });
+        data = parseAi(raw);
+      }
       const reply = data.reply || 'Let me think about that for a moment.';
       const next = [...msgs, { role: 'doctor' as const, text: reply, at: Date.now() }];
       messagesRef.current = next;
@@ -142,6 +159,7 @@ export function useConsult(opts: {
   }, [muted]);
 
   const messagesRef = useRef<Turn[]>([]);
+  const slotsRef = useRef<SymptomSlots>({});
   const notesRef = useRef<{ who: string; t: string }[]>([]);
   const handleUserRef = useRef(handleUser);
   handleUserRef.current = handleUser;
@@ -156,6 +174,7 @@ export function useConsult(opts: {
       "Hi Alex, I'm Dr. Mira, your AI doctor. Everything here is private, and a licensed doctor reviews my advice before it reaches you. So — how are you feeling today?";
     const init = [{ role: 'doctor' as const, text: greeting, at: Date.now() }];
     messagesRef.current = init;
+    slotsRef.current = {};
     setMessages(init);
     setNotes([]);
     setMicDenied(false);
@@ -169,6 +188,7 @@ export function useConsult(opts: {
     stopListening();
     stopAllVoice();
     messagesRef.current = [];
+    slotsRef.current = {};
     setMessages([]);
     setNotes([]);
     setFailed(false);

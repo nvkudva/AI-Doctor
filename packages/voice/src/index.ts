@@ -1,6 +1,8 @@
 // Voice engine: turn-taking states plus the WebSpeech dev adapter.
-// Remote adapters (Deepgram STT / Chirp TTS) plug in behind VoiceProvider
-// and activate only when vd_voice_endpoint is configured. Imports core only.
+// Google Cloud adapters (./google) activate when vd_google_key or
+// VITE_GOOGLE_CLOUD_KEY is set; vd_voice_endpoint forces remote too.
+
+import { googleKey, googleListenOnce, googleSpeak, stopGoogleAudio } from './google';
 
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -25,10 +27,9 @@ export interface ListenHandle {
 
 export function voiceBackend(): 'browser' | 'remote' {
   try {
-    return localStorage.getItem('vd_voice_endpoint') ? 'remote' : 'browser';
-  } catch {
-    return 'browser';
-  }
+    if (localStorage.getItem('vd_voice_endpoint') || googleKey()) return 'remote';
+  } catch { /* storage unavailable */ }
+  return 'browser';
 }
 
 export function pickVoice(voices: SpeechSynthesisVoice[] | undefined): SpeechSynthesisVoice | undefined {
@@ -49,6 +50,11 @@ function recognitionCtor(): (new () => SpeechRecognition) | null {
 }
 
 export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {
+  if (googleKey()) return googleSpeak(text, opts);
+  return browserSpeak(text, opts);
+}
+
+function browserSpeak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {
   const done = () => opts.onDone && opts.onDone();
   try {
     window.speechSynthesis.cancel();
@@ -68,6 +74,18 @@ export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
 }
 
 export function listenOnce(opts: {
+  onText: (text: string) => void;
+  onError?: (kind: 'denied' | 'other') => void;
+  onEnd?: () => void;
+}): ListenHandle | null {
+  if (googleKey()) {
+    const g = googleListenOnce(opts);
+    if (g) return g;
+  }
+  return browserListenOnce(opts);
+}
+
+function browserListenOnce(opts: {
   onText: (text: string) => void;
   onError?: (kind: 'denied' | 'other') => void;
   onEnd?: () => void;
@@ -106,4 +124,5 @@ export function stopAllVoice(): void {
   try {
     window.speechSynthesis.cancel();
   } catch { /* noop */ }
+  stopGoogleAudio();
 }

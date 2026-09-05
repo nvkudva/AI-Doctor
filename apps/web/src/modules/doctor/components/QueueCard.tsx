@@ -2,7 +2,7 @@
 import type { CaseItem } from '../../../lib/core';
 import { pressProps, StatusPill } from '../../../lib/ui';
 import { ink, surfaces, type } from '../../../lib/theme';
-import { waitAge, waitTone } from './time';
+import { waitAge, waitTone } from './relativeTime';
 
 export function QueueCard({ c, selected, onSelect }: { c: CaseItem; selected?: boolean; onSelect: () => void }) {
   return (

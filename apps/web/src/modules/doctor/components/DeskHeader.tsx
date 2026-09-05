@@ -2,7 +2,7 @@
 import { useClinic } from '../../../store';
 import { AccountMenu, DismissCatcher, Icon, pressProps, useDismiss } from '../../../lib/ui';
 import { ink, surfaces, type, z } from '../../../lib/theme';
-import { relAge } from './time';
+import { relAge } from './relativeTime';
 
 export function DeskHeader({ tenantName, pendingCount, mobile, showNotifs, onToggleNotifs, onCloseNotifs, onSelectCase }: {
   tenantName: string; pendingCount: number; mobile: boolean;

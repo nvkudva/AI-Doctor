@@ -11,7 +11,7 @@ import { ConsultView } from '../ConsultView';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { RecommendationScreen } from './RecommendationScreen';
-import { BottomNav, type NavTab } from '../nav';
+import { BottomNav, type NavTab } from '../BottomNav';
 import { EmptyRecommendation } from './EmptyRecommendation';
 
 type Screen = 'home' | 'consult' | 'recommendation' | 'records';

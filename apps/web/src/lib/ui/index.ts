@@ -1,5 +1,5 @@
 // Barrel: the shared component library's public surface.
-export * from './mira';
-export * from './primitives';
-export * from './dismiss';
+export * from './Mira';
+export * from './Primitives';
+export * from './Dismiss';
 export * from './AccountMenu';

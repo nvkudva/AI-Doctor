@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getTheme, gradients, ink, setTheme, surfaces, z, type Theme } from '../theme';
 import { useAuth } from '../../shell/auth';
-import { DismissCatcher, useDismiss } from './dismiss';
-import { pressProps } from './primitives';
+import { DismissCatcher, useDismiss } from './Dismiss';
+import { pressProps } from './Primitives';
 
 function initialsOf(name: string): string {
   const parts = name.replace(/^Dr\.\s*/, '').split(/\s+/).filter(Boolean);

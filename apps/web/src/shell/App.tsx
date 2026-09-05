@@ -4,7 +4,7 @@ import { resolveTenantSlug, tenantDisplayName } from '../lib/core';
 import { setDocumentTitle } from '../lib/platform';
 import { AppShell } from './AppShell';
 import { AuthProvider, useAuth } from './auth';
-import { SignedInRoutes, SignedOutRoutes } from './Routes';
+import { SignedInRoutes, SignedOutRoutes } from './routes';
 import { ink } from '../lib/theme';
 
 export function App() {

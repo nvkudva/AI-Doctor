@@ -5,7 +5,7 @@ import { Route, Routes, useLocation, useNavigate } from 'react-router';
 import { useBreakpoint } from '../../shell/viewport';
 import { useAuth } from '../../shell/auth';
 import { isReviewable, sortQueue, type CaseItem } from '../../lib/core';
-import { Button, Card, EmptyState, Icon, MenuRow, MicroLabel, NavBar, Sheet, bottomBarInset, pressProps, type NavItem } from '../../lib/ui';
+import { Button, Card, EmptyState, Icon, MicroLabel, MiraPanel, NavBar, bottomBarInset, pressProps, type NavItem } from '../../lib/ui';
 import { getTheme, gradients, ink, media, radius, setTheme, space, surfaces, type } from '../../lib/theme';
 import { ClinicProvider, useClinic } from '../../store';
 import { seedConsults, seedQueue, seedRx } from '../../store/seeds';
@@ -14,7 +14,6 @@ import { DeskHeader } from './components/DeskHeader';
 import { QueueCard, queueCardCss } from './components/QueueCard';
 import { CaseDetail, PatientPanel, caseDetailCss } from './components/CaseDetail';
 import { DeclineSheet } from './components/DeclineSheet';
-import { MiraFloat } from './components/MiraFloat';
 import { DoctorHome, doctorHomeCss } from './components/DoctorHome';
 import { ProfileScreen } from './components/ProfileScreen';
 
@@ -111,6 +110,10 @@ function Desk({ tenantName }: { tenantName: string }) {
     onApprove: () => ac && clinic.decide(ac.id, 'approved'),
   });
 
+  const openMira = () => {
+    setMiraOpen(true);
+    if (!review.active) setTimeout(() => review.start(), 0);
+  };
   const selectCase = (id: string) => {
     review.stop();
     nav(`/doctor/case/${id}`);
@@ -158,7 +161,7 @@ function Desk({ tenantName }: { tenantName: string }) {
           setTab(k as DeskTab);
           backToQueue();
         }}
-        orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: () => setMiraOpen(true) }}
+        orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: openMira }}
         railTop="profile"
       />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
@@ -249,12 +252,17 @@ function Desk({ tenantName }: { tenantName: string }) {
         />
       )}
 
-      <MiraFloat
-        review={review}
-        onEdit={paneCase ? (() => clinic.decide(paneCase.id, 'changes')) : null}
+      <MiraPanel
         open={miraOpen}
-        onOpen={() => setMiraOpen(true)}
         onClose={() => setMiraOpen(false)}
+        session={review}
+        youLabel="You"
+        placeholder="Type a command — e.g. add a CBC…"
+        draftKey="vd_review_draft"
+        endTitle="End this review session?"
+        endBody="The case is left exactly as it is — nothing is sent to the patient."
+        endConfirm="End session"
+        onEnd={() => { review.stop(); setMiraOpen(false); }}
       />
 
     </div>

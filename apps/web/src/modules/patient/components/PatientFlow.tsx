@@ -5,20 +5,19 @@ import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
 import { isOpenConsult } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
-import { NavBar, type NavItem } from '../../../lib/ui';
+import { MiraPanel, NavBar, type NavItem } from '../../../lib/ui';
 import { useIsMobile } from '../../../shell/viewport';
 import { seedLabs } from '../../../store/seeds';
 import { useConsult } from '../useConsult';
-import { ConsultView } from '../ConsultView';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { RecommendationScreen } from './RecommendationScreen';
 import { EmptyRecommendation } from './EmptyRecommendation';
 
-type Screen = 'home' | 'consult' | 'recommendation' | 'records' | 'profile';
+type Screen = 'home' | 'recommendation' | 'records' | 'profile';
 
-const SCREENS: Screen[] = ['home', 'consult', 'recommendation', 'records', 'profile'];
+const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile'];
 const TABS: RecordsTab[] = ['history', 'labs'];
 
 type NavTab = 'home' | 'history' | 'labs' | 'profile';
@@ -37,7 +36,8 @@ export function PatientFlow() {
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
 
-  // The URL owns the screen: /patient[/consult|recommendation|records].
+  // The URL owns the screen: /patient[/recommendation|records|profile]. The
+  // consult is not a screen — it overlays whatever you are on.
   const seg = loc.pathname.split('/')[2] ?? '';
   const screen: Screen = (SCREENS.includes(seg as Screen) ? seg : 'home') as Screen;
   const tabParam = params.get('tab');
@@ -51,6 +51,7 @@ export function PatientFlow() {
   };
 
   const [rec, setRec] = useState<Recommendation | null>(null);
+  const [miraOpen, setMiraOpen] = useState(false);
 
   const consult = useConsult({
     onDone: (r, ctx) => {
@@ -72,6 +73,7 @@ export function PatientFlow() {
       };
       setRec(r);
       clinic.addLiveCase(live);
+      setMiraOpen(false);
       nav('/patient/recommendation');
       const kind = r.type === 'prescription' ? 'prescription' : 'plan';
       setTimeout(() => speak(`Thanks, Alex. I've prepared your ${kind} and sent it to Dr. Whitfield for a quick review.`), 400);
@@ -94,21 +96,19 @@ export function PatientFlow() {
   // Timers: 30-min abandonment, review SLA sweep.
   useEffect(() => {
     const t = setInterval(() => {
-      if (screen === 'consult') {
-        if (consult.lastTurn && Date.now() - consult.lastTurn > 30 * 60 * 1000) {
-          consult.reset();
-          clinic.addConsultRecord({
-            id: `ab-${Date.now()}`, title: 'Visit ended early', date: 'Today', status: 'Unfinished',
-            note: 'No response for 30 minutes — closed automatically. You can start a fresh consult anytime.', user: true,
-          });
-          nav('/patient');
-        }
+      if (miraOpen && consult.lastTurn && Date.now() - consult.lastTurn > 30 * 60 * 1000) {
+        consult.reset();
+        setMiraOpen(false);
+        clinic.addConsultRecord({
+          id: `ab-${Date.now()}`, title: 'Visit ended early', date: 'Today', status: 'Unfinished',
+          note: 'No response for 30 minutes — closed automatically. You can start a fresh consult anytime.', user: true,
+        });
       }
       clinic.slaTick();
     }, 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, consult.lastTurn]);
+  }, [miraOpen, consult.lastTurn]);
 
   const startConsult = () => {
     // One open consult per patient: resume the one awaiting review.
@@ -122,7 +122,7 @@ export function PatientFlow() {
     }
     consult.reset();
     setRec(null);
-    nav('/patient/consult');
+    setMiraOpen(true);
     setTimeout(() => consult.start(), 0);
   };
 
@@ -134,7 +134,7 @@ export function PatientFlow() {
       });
     }
     consult.reset();
-    nav('/patient');
+    setMiraOpen(false);
   };
 
   if (seg && !SCREENS.includes(seg as Screen)) {
@@ -149,24 +149,36 @@ export function PatientFlow() {
 
   return (
     <>
-      {(!mobile || screen === 'home' || screen === 'records' || screen === 'profile') && (
+      {(!mobile || screen !== 'recommendation') && (
         <NavBar
           items={NAV_ITEMS}
           active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
           onSelect={k => goTab(k as NavTab)}
-          orb={{ label: 'Start consultation', onClick: startConsult }}
+          orb={{ label: 'Start consultation', voiceState: consult.status, onClick: startConsult }}
           railTop="profile"
         />
       )}
+
+      <MiraPanel
+        open={miraOpen}
+        onClose={() => setMiraOpen(false)}
+        session={consult}
+        youLabel="You"
+        placeholder="Type instead — e.g. fever 3 days…"
+        draftKey="vd_consult_draft"
+        endTitle="End this visit?"
+        endBody="Your notes are kept — you can start a fresh consult anytime."
+        endConfirm="End visit"
+        onEnd={endVisit}
+      />
       <div style={{ position: 'relative', flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         {screen === 'home' && <HomeScreen onStart={startConsult} />}
-        {screen === 'consult' && <ConsultView consult={consult} onEnd={endVisit} />}
         {screen === 'recommendation' && rec && (
           <RecommendationScreen
             rec={rec}
             reviewStatus={clinic.reviewStatus}
             rejectReason={clinic.rejectReason}
-            onFollowUp={() => nav('/patient/consult')}
+            onFollowUp={startConsult}
             onBack={() => nav('/patient')}
             onViewRecords={() => { setRecordsTab('history'); nav('/patient/records'); }}
           />

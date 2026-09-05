@@ -9,4 +9,5 @@ export * from './Profile';
 export * from './Sheet';
 export * from './AppHeader';
 export * from './NavBar';
+export * from './MiraPanel';
 export * from './Notifications';

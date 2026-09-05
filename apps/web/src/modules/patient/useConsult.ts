@@ -2,14 +2,15 @@
 // Owns the live conversation only; lifecycle + persistence live in the clinic store.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Confidence, Recommendation } from '../../lib/core';
+import type { MiraTurn } from '../../lib/ui';
 import { aiComplete, concludeConsult, consultTurn, hasGemini, type ChatMessage, type SymptomSlots } from '../../lib/api';
 import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '../../lib/voice';
 
-export interface Turn {
-  role: 'user' | 'doctor';
-  text: string;
-  at: number;
-}
+export type Turn = MiraTurn;
+
+// Openers while the conversation is young; follow-ups once it is running.
+const OPENERS = ['I have a fever', 'Bad headache', 'Stomach pain'];
+const FOLLOWUPS = ['Since yesterday', 'About a week', 'It comes and goes', 'That\u2019s all'];
 
 const SYS = `You are Dr. Mira, a warm, emotionally intelligent virtual general physician in the Virtual Doctor app. You speak, so your words are heard aloud — sound like a caring human clinician, never like a form.
 Patient on file: Alex Kumar, 34, male, blood group O+, allergic to Penicillin, history of mild asthma.
@@ -125,7 +126,7 @@ export function useConsult(opts: {
         data = parseAi(raw);
       }
       const reply = data.reply || 'Let me think about that for a moment.';
-      const next = [...msgs, { role: 'doctor' as const, text: reply, at: Date.now() }];
+      const next = [...msgs, { role: 'mira' as const, text: reply, at: Date.now() }];
       messagesRef.current = next;
       setMessages(next);
       setNotes(n => [...n, { who: 'You', t: (data.note as string) || text.slice(0, 48) }, { who: 'Dr. Mira', t: reply.slice(0, 64) }]);
@@ -172,7 +173,7 @@ export function useConsult(opts: {
   const start = useCallback(() => {
     const greeting =
       "Hi Alex, I'm Dr. Mira, your AI doctor. Everything here is private, and a licensed doctor reviews my advice before it reaches you. So — how are you feeling today?";
-    const init = [{ role: 'doctor' as const, text: greeting, at: Date.now() }];
+    const init = [{ role: 'mira' as const, text: greeting, at: Date.now() }];
     messagesRef.current = init;
     slotsRef.current = {};
     setMessages(init);
@@ -225,5 +226,6 @@ export function useConsult(opts: {
     thinking, muted, micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
     confidence, flags, start, reset, orbTap, send: (t: string) => handleUserRef.current(t),
     setMuted,
+    suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

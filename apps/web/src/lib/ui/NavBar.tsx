@@ -3,7 +3,7 @@
 //   tablet   — 76px vertical icon rail, orb pinned at the bottom
 //   desktop  — 248px labelled sidebar, collapsible back to the icon rail
 // In either vertical form the `railTop` item floats to the top of the rail.
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Icon, pressProps, type IconName } from './Primitives';
 import { MiraOrb, type VoiceState } from './Mira';
 import { gradients, ink, lines, nav as navTone, radius, space, type, z } from '../theme';
@@ -20,14 +20,35 @@ export const bottomBarInset = 'calc(110px + env(safe-area-inset-bottom))';
 
 const COLLAPSE_KEY = 'vd_nav_collapsed';
 
-function useCollapsed(): [boolean, (v: boolean) => void] {
-  const [collapsed, set] = useState(() => {
-    try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch { /* private mode */ }
-  }, [collapsed]);
-  return [collapsed, set];
+// Module-level so <MiraPanel> can anchor beside the rail at whatever width the
+// rail currently is, without the modules having to thread the state through.
+let collapsed = (() => {
+  try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
+})();
+const listeners = new Set<() => void>();
+
+function setCollapsed(v: boolean) {
+  collapsed = v;
+  try { localStorage.setItem(COLLAPSE_KEY, v ? '1' : '0'); } catch { /* private mode */ }
+  listeners.forEach(f => f());
+}
+
+function subscribe(f: () => void) {
+  listeners.add(f);
+  return () => { listeners.delete(f); };
+}
+
+function useCollapsed(): boolean {
+  return useSyncExternalStore(subscribe, () => collapsed, () => false);
+}
+
+/** Distance from the viewport's left edge to the rail's right edge. 0 on mobile. */
+export function useRailOffset(): number {
+  const bp = useBreakpoint();
+  const isCollapsed = useCollapsed();
+  if (bp === 'mobile') return 0;
+  const gutter = bp === 'desktop' ? 20 : 16;
+  return gutter + (bp === 'desktop' && !isCollapsed ? 248 : 76);
 }
 
 export function NavBar({ items, active, onSelect, orb, railTop }: {
@@ -41,7 +62,7 @@ export function NavBar({ items, active, onSelect, orb, railTop }: {
   railTop?: string;
 }) {
   const bp = useBreakpoint();
-  const [collapsed, setCollapsed] = useCollapsed();
+  const collapsed = useCollapsed();
   if (bp === 'mobile') return <BottomBar items={items} active={active} onSelect={onSelect} orb={orb} />;
   const wide = bp === 'desktop' && !collapsed;
   const ordered = railTop

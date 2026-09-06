@@ -6,3 +6,6 @@ dist/
 .env
 .env.local
 .tmp-tmpdir/
+
+# Edge Function secrets
+supabase/functions/.env

@@ -4,7 +4,7 @@
 // only place it exists; it is never returned to the caller, never logged, and never
 // written to Postgres.
 //
-// API surface verified 2026-09-06 against Google's own docs (see src/backend/README.md
+// API surface verified 2026-09-06 against Google's own docs (see supabase/README.md
 // "Voice sessions" for the citation list):
 //   - POST https://generativelanguage.googleapis.com/v1beta/auth_tokens
 //     headers: x-goog-api-key

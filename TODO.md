@@ -28,5 +28,5 @@
 - [x] P1: one completed consult creates two identical pending_review cases (UX-01)
 - [x] P1: doctor approve/decline does not survive reload; ClinicProvider persists only `mine` cases (UX-02)
 - [x] P1: patient can never re-read their own prescription — /patient/recommendation is empty on reload, History drops items/dosage (UX-03, UX-04)
-- [ ] Backend: Supabase implementation of DATA-MODEL §4 in src/backend — migrations, RLS policies, pg functions, Edge Functions, buckets (local artifacts only, nothing deployed)
-- [ ] Wire apps/web to the src/backend API (replaces localStorage store) — separate task, after QA fixes land
+- [ ] Backend: Supabase implementation of DATA-MODEL §4 in supabase — migrations, RLS policies, pg functions, Edge Functions, buckets (local artifacts only, nothing deployed)
+- [ ] Wire apps/web to the supabase API (replaces localStorage store) — separate task, after QA fixes land

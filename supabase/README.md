@@ -10,7 +10,7 @@ Everything here is a version-controlled artifact a human applies deliberately. N
 remote project is created, configured, or written to by anything in this repo.
 
 ```
-src/backend/
+supabase/
   migrations/   0001..0010, forward-only, each shipping its own RLS
   functions/    Deno Edge Functions: ai-consult, ai-review, voice-token, _shared/
   tests/        pgTAP suites (run by `supabase test db`)

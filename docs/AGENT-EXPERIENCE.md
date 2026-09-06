@@ -466,7 +466,7 @@ shown here applying when a hospital overrides the provider.
 
 | Role | Model | Effort | Thinking | Why |
 |---|---|---|---|---|
-| Patient spoken turn (in-session) | Gemini Live native-audio model, pinned in `voice-token` | — | — | The audio leg. It hears and speaks; it calls server tools; it produces no clinical artefact. Model id is per-hospital config, never client-supplied — see `src/backend/README.md`. |
+| Patient spoken turn (in-session) | Gemini Live native-audio model, pinned in `voice-token` | — | — | The audio leg. It hears and speaks; it calls server tools; it produces no clinical artefact. Model id is per-hospital config, never client-supplied — see `supabase/README.md`. |
 | Patient consult director (text channel, in-turn) | `LlmProvider` default (PRD A-2) | `low` | adaptive | The P-3a text consult, and the fallback when voice is unavailable. Claude Opus 5 at low effort where a hospital overrides the provider. |
 | Conclude pass (draft the recommendation) | `claude-opus-5` | `high` | adaptive | Off the critical path (~3–8 s is fine). Highest-stakes output in the product. |
 | Red-flag pre-screen (interim transcript) | `claude-haiku-4-5` | — | off | Sub-200 ms, runs on every interim update, cheap enough to run continuously. Advisory only — never the sole gate (§6.2). |
@@ -1044,7 +1044,7 @@ The experience step. Everything before it was plumbing.
 
 - `voice-token` mints a single-use ephemeral Live token with the session config bound to it — persona, safety
   instruction, tool allowlist, voice and modalities are server-side and unforgeable (PRD A-6, AP-3). **Done**:
-  `src/backend/functions/voice-token/`, documented in `src/backend/README.md`.
+  `supabase/functions/voice-token/`, documented in `supabase/README.md`.
 - Client opens one WebSocket per consult straight to Google with that token, and deletes the
   record-then-transcribe blob (`google.ts:142-174`) and whole-file MP3 playback (`google.ts:47-87`) with it.
   No STT vendor, no TTS vendor, no sentence splitter, no `?key=` in a browser.
@@ -1130,7 +1130,7 @@ status).*
    the rejection costs — the speaking model is not the model we vetted, shallower in-turn reasoning,
    end-to-end-only latency measurement, vendor concentration — is recorded in §2.5, and the mitigation is
    that safety is structural (§5) rather than prompt-level. `voice-token` is built against this decision
-   (`src/backend/functions/voice-token/`); DATA-MODEL §7.8 is closed with it.
+   (`supabase/functions/voice-token/`); DATA-MODEL §7.8 is closed with it.
 2. **Who writes and signs off the protocol templates (§3.3)?** These are clinical artefacts. They need a
    named clinician owner and a review cadence, or they are just prompts in a different file format.
 3. **Who owns the allergy-class map (§5.2)?** Same question, higher stakes. A pharmacist-reviewed source is

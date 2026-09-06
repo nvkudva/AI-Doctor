@@ -2,7 +2,7 @@
 // §2.6). The audio leg is a separate concern and lives in voice-token/.
 //
 // API surface verified 2026-09-06 against Google's own documentation, not written
-// from memory (citations in src/backend/README.md, "The server-side text passes"):
+// from memory (citations in supabase/README.md, "The server-side text passes"):
 //   POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
 //   header: x-goog-api-key
 //   body:   { contents[], systemInstruction{parts[]}, tools[]?,

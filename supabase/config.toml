@@ -1,7 +1,5 @@
-# Minimum config the Supabase CLI needs. The backend itself lives in src/backend;
-# `migrations/`, `functions/` and `tests/` here are symlinks into it, and the seed
-# is pointed at by path below. Nothing but this file and those three links belongs
-# in this directory.
+# Supabase CLI config. This directory is the backend: migrations/, functions/,
+# tests/ and seed.sql all live here, in the layout the CLI expects.
 
 project_id = "virtual-doctor"
 
@@ -19,7 +17,7 @@ major_version = 17
 
 [db.seed]
 enabled = true
-sql_paths = ["../src/backend/seed.sql"]
+sql_paths = ["./seed.sql"]
 
 [realtime]
 enabled = true

@@ -9,7 +9,7 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:functions": "supabase functions serve"
+    "db:functions": "supabase functions serve --env-file supabase/functions/.env"
   },
   "devDependencies": {
     "playwright": "^1.63.0"

@@ -34,15 +34,20 @@ begin
   on conflict (id) do nothing;
 
   -- ------------------------------------------------------- auth users (5)
+  -- GoTrue reads these four as NOT NULL text. Left NULL, every sign-in returns
+  -- 500 "Database error querying schema" — the seeded accounts look valid in
+  -- SQL and are unusable through the API.
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
                           email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                          confirmation_token, recovery_token,
+                          email_change, email_change_token_new,
                           created_at, updated_at)
   values
-   ('00000000-0000-0000-0000-000000000000', alex,  'authenticated','authenticated','alex.kumar.demo@example.com',      pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Alex Kumar","kind":"patient"}'::jsonb, now(), now()),
-   ('00000000-0000-0000-0000-000000000000', sara,  'authenticated','authenticated','sara.whitfield.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Dr. Sara Whitfield","kind":"clinician"}'::jsonb, now(), now()),
-   ('00000000-0000-0000-0000-000000000000', maria, 'authenticated','authenticated','maria.gonzalez.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Maria Gonzalez","kind":"patient"}'::jsonb, now(), now()),
-   ('00000000-0000-0000-0000-000000000000', james, 'authenticated','authenticated','james.okoro.demo@example.com',     pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"James Okoro","kind":"patient"}'::jsonb, now(), now()),
-   ('00000000-0000-0000-0000-000000000000', priya, 'authenticated','authenticated','priya.sharma.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Priya Sharma","kind":"patient"}'::jsonb, now(), now())
+   ('00000000-0000-0000-0000-000000000000', alex,  'authenticated','authenticated','alex.kumar.demo@example.com',      pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Alex Kumar","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', sara,  'authenticated','authenticated','sara.whitfield.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Dr. Sara Whitfield","kind":"clinician"}'::jsonb, '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', maria, 'authenticated','authenticated','maria.gonzalez.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Maria Gonzalez","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', james, 'authenticated','authenticated','james.okoro.demo@example.com',     pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"James Okoro","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', priya, 'authenticated','authenticated','priya.sharma.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Priya Sharma","kind":"patient"}'::jsonb, '', '', '', '', now(), now())
   on conflict (id) do nothing;
 
   insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)

@@ -94,6 +94,12 @@ export function toCaseItem(args: {
   const labs = (args.labs ?? []).map(toLabResult);
   const flags = (draft?.flags ?? []).map(f => f.text || f.code).filter(Boolean);
   const dx = (consult.working_dx ?? []).map(d => d.label).filter(Boolean);
+  // A closed consult that carries a review outcome reads as that outcome: the
+  // decision is what the patient and the desk care about, not the housekeeping
+  // status the timers left behind.
+  const status = args.outcome && (consult.status === 'closed' || consult.status === 'expired')
+    ? (args.outcome.action === 'approved' ? 'approved' as const : 'rejected' as const)
+    : toUiStatus(consult.status);
   return {
     id: consult.id,
     mine: args.mine,
@@ -102,7 +108,7 @@ export function toCaseItem(args: {
     demo: demo || 'No demographics on file',
     title: rec.title || consult.chief_complaint || 'Consult',
     meta: `${waitLabel(consult.submitted_at || consult.created_at)} · ${consult.urgency}`,
-    status: toUiStatus(consult.status),
+    status,
     summary: draft?.note || consult.chief_complaint || '',
     symptoms: args.transcript ?? [],
     history: allergies ? `Allergic to ${allergies}.` : 'No allergies or history on file for this patient.',

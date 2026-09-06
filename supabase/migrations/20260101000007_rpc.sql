@@ -278,7 +278,7 @@ begin
 
   insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, diff, idempotency_key)
   values (p_consult_id, auth.uid(), p_draft_id, p_draft_hash,
-          case when v_edited then 'edited_approved' else 'approved' end,
+          (case when v_edited then 'edited_approved' else 'approved' end)::public.review_action,
           v_diff, p_idempotency_key)
   returning id into v_review_id;
 
@@ -465,7 +465,7 @@ begin
   insert into public.consult_media (id, consult_id, hospital_id, uploaded_by, kind, storage_path,
                                     mime_type, bytes, sha256)
   values (v_id, p_consult_id, c.hospital_id, auth.uid(),
-          case when p_mime_type like 'video/%' then 'video' else 'image' end,
+          (case when p_mime_type like 'video/%' then 'video' else 'image' end)::public.media_kind,
           v_path, p_mime_type, p_bytes, p_sha256);
 
   insert into public.consult_events (consult_id, hospital_id, event_type, actor, actor_id, payload)

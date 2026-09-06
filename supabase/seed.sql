@@ -13,6 +13,7 @@ declare
   maria       uuid := 'a0010000-0000-4000-8000-000000000001';
   james       uuid := 'a0020000-0000-4000-8000-000000000002';
   priya       uuid := 'a0030000-0000-4000-8000-000000000003';
+  ops         uuid := '0b500000-0000-4000-8000-000000000001';
   pv_cough    uuid := 'b7d00000-0000-4000-8000-000000000001';
   pv_headache uuid := 'b7d00000-0000-4000-8000-000000000002';
   pv_rash     uuid := 'b7d00000-0000-4000-8000-000000000003';
@@ -47,7 +48,10 @@ begin
    ('00000000-0000-0000-0000-000000000000', sara,  'authenticated','authenticated','sara.whitfield.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Dr. Sara Whitfield","kind":"clinician"}'::jsonb, '', '', '', '', now(), now()),
    ('00000000-0000-0000-0000-000000000000', maria, 'authenticated','authenticated','maria.gonzalez.demo@example.com',  pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Maria Gonzalez","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
    ('00000000-0000-0000-0000-000000000000', james, 'authenticated','authenticated','james.okoro.demo@example.com',     pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"James Okoro","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
-   ('00000000-0000-0000-0000-000000000000', priya, 'authenticated','authenticated','priya.sharma.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Priya Sharma","kind":"patient"}'::jsonb, '', '', '', '', now(), now())
+   ('00000000-0000-0000-0000-000000000000', priya, 'authenticated','authenticated','priya.sharma.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Priya Sharma","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
+   -- Operator/admin. `kind` is the global nature of the account; the operative
+   -- role is the membership below (DATA-MODEL §2.2).
+   ('00000000-0000-0000-0000-000000000000', ops,   'authenticated','authenticated','ops.admin.demo@example.com',       pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Ops Admin","kind":"operator"}'::jsonb, '', '', '', '', now(), now())
   on conflict (id) do nothing;
 
   insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -55,13 +59,14 @@ begin
          jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
          'email', now(), now(), now()
     from auth.users u
-   where u.id in (alex, sara, maria, james, priya)
+   where u.id in (alex, sara, maria, james, priya, ops)
   on conflict do nothing;
 
   -- ---------------------------------------------------- memberships + details
   insert into public.memberships (profile_id, hospital_id, role) values
     (alex,  h_id, 'patient'), (sara,  h_id, 'doctor'),
-    (maria, h_id, 'patient'), (james, h_id, 'patient'), (priya, h_id, 'patient')
+    (maria, h_id, 'patient'), (james, h_id, 'patient'), (priya, h_id, 'patient'),
+    (ops,   h_id, 'admin')
   on conflict (profile_id, hospital_id) do nothing;
 
   insert into public.patient_details (profile_id, dob, sex, blood_group, allergies, conditions, medications) values

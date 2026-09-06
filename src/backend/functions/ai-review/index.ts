@@ -8,7 +8,8 @@
 // turn produces a *proposed* revision object and persists nothing clinical.
 
 import { ApiError, cors, errorResponse, fromPostgrest, requireUser, serviceClient, sse, tokenize } from '../_shared/http.ts';
-import { getProvider } from '../_shared/ai.ts';
+import { getProvider, type CoordinateResult } from '../_shared/ai.ts';
+import { coordinatorBlocks } from '../_shared/agent.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -32,18 +33,39 @@ Deno.serve(async (req) => {
     if (tErr) throw fromPostgrest(tErr);
 
     const { data: draft } = await supabase
-      .from('ai_drafts').select('id, recommendation').eq('consult_id', consultId).is('superseded_at', null).maybeSingle();
+      .from('ai_drafts').select('id, recommendation, protocol_label').eq('consult_id', consultId).is('superseded_at', null).maybeSingle();
+
+    // The whole coordinator conversation, not just this message — without it a
+    // follow-up like "and remove the other one" has nothing to resolve against.
+    const { data: priorRows, error: hErr } = await supabase
+      .from('review_messages').select('sender, content, created_at')
+      .eq('consult_id', consultId).order('created_at');
+    if (hErr) throw fromPostgrest(hErr);
+    const history = (priorRows ?? []).map((m) => ({
+      role: m.sender === 'ai' ? 'ai' as const : 'doctor' as const,
+      text: String(m.content ?? ''),
+    }));
 
     const admin = serviceClient();
     const provider = getProvider();
 
-    const run = () => provider.reviewTurn({
-      consultId, doctorText: text, mode,
+    // The doctor's own turn is part of the record whatever the model then does.
+    const { error: doctorErr } = await admin.rpc('ai_record_review_message', {
+      p_consult_id: consultId, p_doctor_id: user.id, p_sender: 'doctor',
+      p_content: text, p_citations: [], p_channel: 'text',
+    });
+    if (doctorErr) throw fromPostgrest(doctorErr);
+
+    const run = () => provider.coordinate({
+      systemBlocks: coordinatorBlocks(String(draft?.protocol_label ?? 'general')),
+      history,
+      doctorText: text,
+      mode,
       transcript: (transcript ?? []) as { id: string; sender: string; content: string }[],
-      draft: draft?.recommendation ?? undefined,
+      draft: draft?.recommendation ?? null,
     });
 
-    let turn;
+    let turn: CoordinateResult;
     try {
       turn = await run();
     } catch (_e) {
@@ -74,7 +96,7 @@ Deno.serve(async (req) => {
         p_model: provider.model, p_input_tokens: turn.usage.inputTokens,
         p_cached_input_tokens: turn.usage.cachedInputTokens, p_output_tokens: turn.usage.outputTokens,
         p_audio_seconds: 0, p_latency_ms: turn.usage.latencyMs,
-        p_stop_reason: turn.stopReason, p_cost_usd: turn.usage.costUsd,
+        p_stop_reason: turn.usage.stopReason, p_cost_usd: turn.usage.costUsd,
       });
 
       send('done', {

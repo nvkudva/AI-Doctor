@@ -4,11 +4,20 @@
 //           { message_id, slots_changed[], draft_id?, status }
 // Errors:   402 quota, 409 consult not active, 503 model unavailable.
 //
-// On a model failure the consult stays `active` and the patient is told the truth.
-// There is no scripted clinical fallback (AGENT-EXPERIENCE §5.6).
+// Orchestration only. Every clinical decision — which question comes next, what
+// counts as a red flag, whether a draft may exist — lives in _shared/agent.ts
+// and the modules it calls, so it is testable without an HTTP layer and cannot
+// be talked out of by a prompt (AGENT-EXPERIENCE §4.2).
+//
+// On a model failure the consult stays `active` and the patient is told the
+// truth. There is no scripted clinical fallback (AGENT-EXPERIENCE §5.6).
 
 import { ApiError, cors, errorResponse, fromPostgrest, requireUser, serviceClient, sse, tokenize } from '../_shared/http.ts';
 import { getProvider } from '../_shared/ai.ts';
+import { concludeStep, loadState, readBackText, runConclude, runPatientTurn } from '../_shared/agent.ts';
+
+/** Wrap-up caps. A consult that runs past these is closed out, not abandoned. */
+const CAPS = { maxTurns: 12, maxMinutes: 8 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -33,83 +42,92 @@ Deno.serve(async (req) => {
 
     const admin = serviceClient();
 
+    // Quota does not abort a live consult — it forces the wrap-up gate, so the
+    // patient still gets a read-back and a draft rather than a dead session.
+    let quotaExhausted = false;
     const { error: quotaErr } = await admin.rpc('check_quota', { p_consult_id: consultId });
-    if (quotaErr) throw fromPostgrest(quotaErr);
-
-    const [{ data: slots }, { data: msgs }, { data: details }] = await Promise.all([
-      admin.from('consult_slots').select('slot_id, status').eq('consult_id', consultId),
-      admin.from('consult_messages').select('id').eq('consult_id', consultId),
-      admin.from('patient_details').select('allergies').eq('profile_id', consult.patient_id).maybeSingle(),
-    ]);
+    if (quotaErr) {
+      if (String(quotaErr.code) === 'PT402') quotaExhausted = true;
+      else throw fromPostgrest(quotaErr);
+    }
 
     const provider = getProvider();
-    let turn;
+    const state = await loadState(admin, consultId);
+
+    let outcome;
     try {
-      turn = await provider.consultTurn({
-        consultId,
-        patientText: text,
-        filledSlots: (slots ?? []).filter((s) => s.status === 'filled').map((s) => s.slot_id),
-        turnIndex: (msgs ?? []).length,
-        // Injected server-side. The client cannot alter it (PRD A-3).
-        allergies: (details?.allergies ?? []) as { substance: string; class: string }[],
+      outcome = await runPatientTurn(admin, provider, {
+        state, text, channel, caps: { ...CAPS, quotaExhausted },
       });
     } catch (_e) {
       throw new ApiError(503, 'model_unavailable', 'the assistant is unreachable; your consult is saved', undefined, true);
     }
 
     return sse(async (send) => {
-      for (const token of tokenize(turn.reply)) send('token', { token });
+      for (const token of tokenize(outcome.reply)) send('token', { token });
 
-      if (turn.stopReason === 'refusal') {
-        const { error } = await admin.rpc('ai_escalate_to_human', {
-          p_consult_id: consultId, p_reason: 'model_refusal',
+      // An emergency or a refusal has already moved the consult; nothing further
+      // may be generated for it on this turn.
+      if (outcome.status !== 'active') {
+        send('done', {
+          message_id: outcome.messageId,
+          slots_changed: outcome.slotsChanged,
+          draft_id: outcome.draftId,
+          status: outcome.status,
+          emergency: outcome.emergency,
+          gate: outcome.gate,
         });
-        if (error) throw fromPostgrest(error);
-        send('done', { message_id: null, slots_changed: [], status: 'needs_human' });
         return;
       }
 
-      const { data: recorded, error: turnErr } = await admin.rpc('ai_record_turn', {
-        p_consult_id: consultId,
-        p_patient_text: text,
-        p_ai_text: turn.reply,
-        p_channel: channel,
-        p_slots: turn.slots,
-      });
-      if (turnErr) throw fromPostgrest(turnErr);
+      // The close is two beats: read the history back for correction, and only
+      // on the following turn produce the draft (AGENT-EXPERIENCE §1.8).
+      const step = concludeStep(state, CAPS);
 
-      let draftId: string | null = null;
-      let status = 'active';
-
-      if (turn.draft) {
-        const { data: submitted, error: draftErr } = await admin.rpc('ai_submit_draft', {
-          p_consult_id: consultId,
-          p_recommendation: turn.draft.recommendation,
-          p_note: turn.draft.note,
-          p_confidence: turn.draft.confidence,
-          p_unanswered: turn.draft.unanswered,
-          p_raw: turn as unknown as Record<string, unknown>,
-          p_model: provider.model,
-          p_prompt_version: 'mira-patient-v4',
+      if (step === 'read_back') {
+        const readBack = readBackText(state);
+        for (const token of tokenize(' ' + readBack)) send('token', { token });
+        const { error } = await admin.rpc('ai_record_turn', {
+          p_consult_id: consultId, p_patient_text: null, p_ai_text: readBack,
+          p_channel: channel, p_slots: [], p_screen: {},
+          p_working_dx: { ...state.workingDx, read_back: true },
+          p_protocol_version_id: state.protocolVersionId,
         });
-        if (draftErr) throw fromPostgrest(draftErr);
-        draftId = submitted?.draft_id ?? null;
-        status = submitted?.status ?? 'active';
+        if (error) throw fromPostgrest(error);
+        send('done', {
+          message_id: outcome.messageId, slots_changed: outcome.slotsChanged,
+          draft_id: null, status: 'active', gate: 'read_back',
+        });
+        return;
       }
 
-      await admin.rpc('ai_log_invocation', {
-        p_consult_id: consultId, p_agent_id: 'doctor_agent', p_mode: 'patient',
-        p_model: provider.model, p_input_tokens: turn.usage.inputTokens,
-        p_cached_input_tokens: turn.usage.cachedInputTokens, p_output_tokens: turn.usage.outputTokens,
-        p_audio_seconds: 0, p_latency_ms: turn.usage.latencyMs,
-        p_stop_reason: turn.stopReason, p_cost_usd: turn.usage.costUsd,
-      });
+      if (step === 'conclude') {
+        let concluded;
+        try {
+          concluded = await runConclude(admin, provider, state);
+        } catch (_e) {
+          // The history is safe; the draft simply is not made this turn.
+          send('done', {
+            message_id: outcome.messageId, slots_changed: outcome.slotsChanged,
+            draft_id: null, status: 'active', gate: 'conclude_failed',
+          });
+          return;
+        }
+        for (const token of tokenize(' ' + concluded.reply)) send('token', { token });
+        send('done', {
+          message_id: outcome.messageId, slots_changed: outcome.slotsChanged,
+          draft_id: concluded.draftId, status: concluded.status,
+          safety: concluded.safety, gate: 'conclude',
+        });
+        return;
+      }
 
       send('done', {
-        message_id: recorded?.message_id ?? null,
-        slots_changed: recorded?.slots_changed ?? [],
-        draft_id: draftId,
-        status,
+        message_id: outcome.messageId,
+        slots_changed: outcome.slotsChanged,
+        draft_id: outcome.draftId,
+        status: outcome.status,
+        gate: outcome.gate,
       });
     });
   } catch (e) {

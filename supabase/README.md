@@ -57,7 +57,7 @@ anywhere.
 | Alex Kumar | `alex.kumar.demo@example.com` | patient at CityCare |
 | Dr. Sara Whitfield | `sara.whitfield.demo@example.com` | doctor at CityCare |
 
-Password for every seeded account: `demo-password-2026`. The three queue patients
+Password for every seeded account: `1234`. The three queue patients
 (Maria Gonzalez, James Okoro, Priya Sharma) exist as real profiles so the doctor
 queue is real data rather than display strings.
 

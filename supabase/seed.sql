@@ -20,7 +20,7 @@ declare
   c1 uuid; c2 uuid; c3 uuid; h1 uuid; h2 uuid;
   d1 uuid; d2 uuid; d3 uuid; dh1 uuid; dh2 uuid;
   rv uuid; rx uuid; hash text;
-  pw text := crypt('demo-password-2026', gen_salt('bf'));
+  pw text := crypt('1234', gen_salt('bf'));
 begin
   -- ------------------------------------------------------------------ tenant
   insert into public.hospitals (id, slug, name, logo_url, theme, ai_config, admin_contact_email)

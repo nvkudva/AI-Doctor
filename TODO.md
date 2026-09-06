@@ -30,3 +30,6 @@
 - [x] P1: patient can never re-read their own prescription — /patient/recommendation is empty on reload, History drops items/dosage (UX-03, UX-04)
 - [ ] Backend: Supabase implementation of DATA-MODEL §4 in supabase — migrations, RLS policies, pg functions, Edge Functions, buckets (local artifacts only, nothing deployed)
 - [ ] Wire apps/web to the supabase API (replaces localStorage store) — separate task, after QA fixes land
+- [ ] Run supabase db reset + test db — first real execution of the SQL and the 35 pgTAP assertions
+- [ ] QA sweep against the DB-backed app (both modes: Supabase env set, and demo/localStorage)
+- [ ] Dev fixes the QA queue from that sweep

@@ -3,7 +3,7 @@
 -- grant. None of it is application code, so none of it can be routed around.
 
 begin;
-select plan(12);
+select plan(13);
 
 -- ------------------------------------------------------------------- fixture
 insert into public.hospitals (id, slug, name) values
@@ -58,8 +58,14 @@ select throws_ok(
     values ('77777777-7777-4777-8777-777777777777','11111111-1111-4111-8111-111111111111',
             '33333333-3333-4333-8333-333333333333','55555555-5555-4555-8555-555555555555',
             'prescription','no review')$$,
-  '23502', NULL,
-  'a prescription with no review row is rejected by NOT NULL');
+  '23514', NULL,
+  -- The gate trigger fires ahead of the NOT NULL check and says why, so the
+  -- SQLSTATE is a check violation. Both constraints are present; the structural
+  -- assertion below proves the column-level one independently.
+  'a prescription with no review row is refused by the gate');
+
+select col_not_null('public', 'prescriptions', 'review_id',
+  'prescriptions.review_id is NOT NULL, so no review means no row even without the trigger');
 
 -- --------------------------------------------- 2. a rejecting review is not a yes
 select throws_ok(

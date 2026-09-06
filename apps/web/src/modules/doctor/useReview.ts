@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
-import { aiComplete, type ChatMessage } from '../../lib/api';
+import { aiComplete, aiReview, hasSupabase, type ChatMessage } from '../../lib/api';
 import { listenOnce, speak, stopAllVoice } from '../../lib/voice';
 
 function parseAi(raw: string): any {
@@ -40,6 +40,14 @@ const REVIEW_PILLS: Suggestion[] = [
 const APPROVAL_HANDOFF =
   "I can't sign a prescription — that's yours to do. When you're happy with the draft, press \u201cApprove & send\u201d on the case and it goes to the patient.";
 const NO_CASE = 'Open a case from the queue and I\u2019ll take you through it.';
+
+// The doctor asking for a change is a `revise` turn; anything else is `qa`
+// (§4.2 row 20). The mode only tells the function what kind of turn this is —
+// nothing clinical is decided here.
+const REVISE = /\b(change|add|remove|replace|swap|increase|decrease|drop|dose|dosage|timing|advice)\b/i;
+// An approval is never routed through a model: the doctor's own press of
+// “Approve & send” is the only thing that signs one (UX-07/UX-08).
+const APPROVE_INTENT = /\b(approve|approved|looks good|sign it|send it|go ahead|happy with)\b/i;
 
 export function useReview(opts: {
   getCase: () => CaseItem | undefined;
@@ -129,6 +137,31 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 {"reply": string, "action": "approve"|"edit"|"none", "recommendation": <recommendation JSON> | null}`;
     try {
       setFailedCmd(null);
+      if (hasSupabase()) {
+        if (APPROVE_INTENT.test(text)) {
+          setStatus('idle');
+          setApprovalStaged(true);
+          setMessages(m => [...m, { role: 'mira', text: APPROVAL_HANDOFF, at: Date.now() }]);
+          say(APPROVAL_HANDOFF, typed ? undefined : () => listenRef.current());
+          return;
+        }
+        let streamed = '';
+        const turn = await aiReview(
+          { consultId: ac.id, text, mode: REVISE.test(text) ? 'revise' : 'qa' },
+          (t) => { streamed += t; },
+        );
+        setStatus('idle');
+        const spoken = streamed.trim() || 'Done. Anything else?';
+        setMessages(m => [...m, { role: 'mira', text: spoken, at: Date.now() }]);
+        if (turn.proposed_draft) {
+          // Rendered now; persisted only by the deliberate revise_draft call
+          // the store makes on our behalf (§4.2 row 21).
+          setApprovalStaged(false);
+          onEditRef.current(turn.proposed_draft);
+        }
+        say(spoken, typed ? undefined : () => listenRef.current());
+        return;
+      }
       // The whole exchange, not just the latest line: without it a follow-up
       // like "make that 5 mg instead" has nothing to refer back to.
       const history: ChatMessage[] = messagesRef.current.map(m => ({

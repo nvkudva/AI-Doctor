@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Confidence, Recommendation } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
-import { aiComplete, concludeConsult, consultTurn, hasGemini, persistLocal, type ChatMessage, type SymptomSlots } from '../../lib/api';
+import {
+  aiComplete, aiConsult, getConsult, hasSupabase, mintVoiceToken, persistLocal, resolveHospitalId,
+  startConsult, type ChatMessage,
+} from '../../lib/api';
 import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '../../lib/voice';
 
 export type Turn = MiraTurn;
@@ -153,6 +156,20 @@ export function useConsult(opts: {
     setStatus('listening');
   }, []);
 
+  // The server-side consult this session writes into (§4.1 row 4). Null in
+  // demo mode, where the whole visit lives in memory and localStorage.
+  const consultIdRef = useRef<string | null>(null);
+  const ensureConsult = useCallback(async (): Promise<string> => {
+    if (consultIdRef.current) return consultIdRef.current;
+    const hospital = await resolveHospitalId();
+    const started = await startConsult(hospital);
+    consultIdRef.current = started.consult_id;
+    // Pre-warm the voice credential (ARCHITECTURE §10.4): one ephemeral token,
+    // minted server-side, never a provider key in this bundle.
+    mintVoiceToken(started.consult_id).catch(() => { /* text channel still works */ });
+    return started.consult_id;
+  }, []);
+
   const handleUser = useCallback(async (text: string) => {
     text = (text || '').trim();
     if (!text || finishedRef.current) return;
@@ -170,24 +187,33 @@ export function useConsult(opts: {
     try {
       const api: ChatMessage[] = msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
       let data: any;
-      if (hasGemini()) {
-        try {
-          const userCount = msgs.filter(m => m.role === 'user').length;
-          const onFile = patientRef.current.facts;
-          const turn = await consultTurn({ messages: api, slots: slotsRef.current, rush: userCount >= 8, onFile });
-          slotsRef.current = turn.slots;
-          data = turn;
-          if (turn.done || turn.redFlag) {
-            const fin = await concludeConsult({ slots: turn.slots, messages: api, redFlag: turn.redFlag, onFile });
-            data = { ...turn, reply: fin.reply || turn.reply, note: fin.note, confidence: fin.confidence, flags: fin.flags, done: !!fin.recommendation, recommendation: fin.recommendation };
+      if (hasSupabase()) {
+        // §4.1 row 7. The model turn happens inside the Edge Function, which
+        // holds the provider key; the browser only streams tokens back.
+        // No silent fallback to the demo engine: its fixed real-drug drafts
+        // must never reach a doctor's queue as this patient's AI
+        // recommendation (TODO P1 SAFETY).
+        const consultId = await ensureConsult();
+        let streamed = '';
+        const turn = await aiConsult({ consultId, text, channel: 'text' }, (t) => { streamed += t; });
+        let recommendation: any = null;
+        let confidence = 'high';
+        let flags: string[] = [];
+        if (turn.draft_id) {
+          const { draft } = await getConsult(consultId);
+          if (draft) {
+            recommendation = draft.recommendation;
+            confidence = draft.confidence;
+            flags = (draft.flags || []).map(f => f.text || f.code).filter(Boolean);
           }
-        } catch (e) {
-          // No silent fallback: the demo engine emits fixed real-drug drafts,
-          // and those must never reach a doctor's queue labelled as this
-          // patient's AI recommendation (TODO P1 SAFETY).
-          console.warn('[vd] Gemini consult failed:', e);
-          throw e;
         }
+        data = {
+          reply: streamed.trim(),
+          note: text.slice(0, 48),
+          confidence, flags,
+          done: !!recommendation,
+          recommendation,
+        };
       } else {
         const raw = await aiComplete({ system: systemPrompt(patientRef.current), messages: api, max_tokens: 800 });
         data = parseAi(raw);
@@ -233,7 +259,6 @@ export function useConsult(opts: {
   }, []);
 
   const messagesRef = useRef<Turn[]>([]);
-  const slotsRef = useRef<SymptomSlots>({});
   const notesRef = useRef<{ who: string; t: string }[]>([]);
   const handleUserRef = useRef(handleUser);
   handleUserRef.current = handleUser;
@@ -249,7 +274,6 @@ export function useConsult(opts: {
       `Hi${first ? ' ' + first : ''}, I'm Dr. Mira, your AI doctor. Everything here is private, and a licensed doctor reviews my advice before it reaches you. So — how are you feeling today?`;
     const init = [{ role: 'mira' as const, text: greeting, at: Date.now() }];
     messagesRef.current = init;
-    slotsRef.current = {};
     setMessages(init);
     setNotes([]);
     setMicDenied(false);
@@ -257,6 +281,7 @@ export function useConsult(opts: {
     setStarted(true);
     setLastTurn(Date.now());
     finishedRef.current = false;
+    consultIdRef.current = null;
     say(greeting, () => listenRef2.current());
   }, [say]);
 
@@ -274,9 +299,9 @@ export function useConsult(opts: {
     stopListening();
     stopAllVoice();
     finishedRef.current = false;
+    consultIdRef.current = null;
     persistLocal({ draftConsult: null });
     messagesRef.current = [];
-    slotsRef.current = {};
     setMessages([]);
     setNotes([]);
     setFailed(false);

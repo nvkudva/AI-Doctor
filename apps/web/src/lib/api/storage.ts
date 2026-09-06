@@ -35,14 +35,6 @@ function lsGet(key: string): string | null {
   }
 }
 
-export function backendName(): 'supabase' | 'local' {
-  try {
-    return lsGet('vd_supabase_url') && lsGet('vd_supabase_key') ? 'supabase' : 'local';
-  } catch {
-    return 'local';
-  }
-}
-
 export function restoreLocal(): LocalSnapshot | null {
   try {
     const raw = lsGet(STATE_KEY);

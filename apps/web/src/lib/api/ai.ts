@@ -1,20 +1,11 @@
-// Typed client + demo AI engine. Resolution order: window.claude.helper,
-// stored Anthropic key, scripted demo engine (offline). Shapes match the
-// PRD contracts so the ai-consult Edge Function can replace the demo later.
+// The demo AI engine — the offline half of the app. Resolution order:
+// window.claude helper, then the scripted engine. There is deliberately no
+// provider-key path here: a real model turn goes through ai-consult /
+// ai-review, which hold the key server-side.
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-}
-
-const API_MODEL = 'claude-opus-4-8';
-
-function storageGet(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
 }
 
 export async function aiComplete(args: { system: string; messages: ChatMessage[]; max_tokens?: number }): Promise<string> {
@@ -22,39 +13,14 @@ export async function aiComplete(args: { system: string; messages: ChatMessage[]
   if (w.claude && typeof w.claude.complete === 'function') {
     return w.claude.complete({ system: args.system, messages: args.messages, max_tokens: args.max_tokens || 800 });
   }
-  const key = storageGet('vd_anthropic_key');
-  if (key) {
-    try {
-      return await apiComplete(args, key);
-    } catch (e) {
-      console.warn('[vd] Anthropic API call failed, falling back to demo engine:', e);
-    }
-  }
+  // No provider key path. A real model turn goes through the ai-consult /
+  // ai-review Edge Functions, which hold the key server-side (§4 #7, #20).
   return demoComplete(args);
 }
 
 export function aiBackendName(): string {
   const w = window as any;
-  if (w.claude && typeof w.claude.complete === 'function') return 'claude-helper';
-  if (storageGet('vd_anthropic_key')) return 'anthropic-api';
-  return 'demo';
-}
-
-async function apiComplete(args: { system: string; messages: ChatMessage[]; max_tokens?: number }, key: string): Promise<string> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({ model: API_MODEL, max_tokens: args.max_tokens || 800, system: args.system, messages: args.messages }),
-  });
-  if (!res.ok) throw new Error('Anthropic API error ' + res.status);
-  const data = await res.json();
-  if (data.stop_reason === 'refusal') throw new Error('Request was refused');
-  return (data.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
+  return w.claude && typeof w.claude.complete === 'function' ? 'claude-helper' : 'demo';
 }
 
 function demoComplete(args: { system: string; messages: ChatMessage[] }): Promise<string> {

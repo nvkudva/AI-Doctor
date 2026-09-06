@@ -1,8 +1,7 @@
-// Voice engine: turn-taking states plus the WebSpeech dev adapter.
-// Google Cloud adapters (./google) activate when vd_google_key or
-// VITE_GOOGLE_CLOUD_KEY is set; vd_voice_endpoint forces remote too.
-
-import { googleKey, googleListenOnce, googleSpeak, stopGoogleAudio } from './google';
+// Voice engine: turn-taking states over the browser's WebSpeech adapter.
+// A hosted voice session is a Gemini Live session whose credential is minted by
+// the voice-token Edge Function (§4.1 #8 / §4.2 #27) — never a provider key in
+// this bundle, which is why the direct Google Cloud STT/TTS adapter is gone.
 
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 
@@ -26,9 +25,6 @@ export interface ListenHandle {
 }
 
 export function voiceBackend(): 'browser' | 'remote' {
-  try {
-    if (localStorage.getItem('vd_voice_endpoint') || googleKey()) return 'remote';
-  } catch { /* storage unavailable */ }
   return 'browser';
 }
 
@@ -55,7 +51,6 @@ export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
   // interrupts, which used to file the same consult twice (UX-01).
   let fired = false;
   const once = { onDone: () => { if (fired) return; fired = true; opts.onDone && opts.onDone(); } };
-  if (googleKey()) return googleSpeak(text, once);
   return browserSpeak(text, once);
 }
 
@@ -83,10 +78,6 @@ export function listenOnce(opts: {
   onError?: (kind: 'denied' | 'other') => void;
   onEnd?: () => void;
 }): ListenHandle | null {
-  if (googleKey()) {
-    const g = googleListenOnce(opts);
-    if (g) return g;
-  }
   return browserListenOnce(opts);
 }
 
@@ -129,5 +120,4 @@ export function stopAllVoice(): void {
   try {
     window.speechSynthesis.cancel();
   } catch { /* noop */ }
-  stopGoogleAudio();
 }

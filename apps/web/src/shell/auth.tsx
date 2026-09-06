@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { clearLocal } from '../lib/api';
+import { clearLocal, forgetHospitalId, hasSupabase, supabase } from '../lib/api';
 
 export type Role = 'patient' | 'doctor';
 
@@ -35,15 +34,9 @@ const AUTH_KEY = 'vd_auth_v1';
 // The session gate must never hold the loading skeleton hostage: if the auth
 // host is slow or unreachable we fall back to the locally restored user.
 const SESSION_TIMEOUT_MS = 4000;
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-let client: SupabaseClient | null = null;
-function supabase(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  if (!client) client = createClient(SUPABASE_URL, SUPABASE_KEY);
-  return client;
-}
+// The seeded demo accounts (supabase/README.md). The password is never in this
+// source: with no VITE_DEMO_PASSWORD the demo buttons stay local-only.
+const DEMO_PASSWORD = (import.meta.env.VITE_DEMO_PASSWORD as string | undefined) || '';
 
 const DEMO_USERS: Record<Role, AuthUser> = {
   patient: { id: 'demo-patient', name: 'Alex Kumar', email: 'alex.kumar.demo@example.com', role: 'patient', provider: 'demo' },
@@ -71,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [googlePending, setGooglePending] = useState(false);
   const [authErr, setAuthErr] = useState('');
-  const configured = !!supabase();
+  const configured = hasSupabase();
 
   useEffect(() => {
     const sb = supabase();
@@ -143,14 +136,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) setAuthErr(error.message);
   };
 
+  // With a project configured the demo buttons sign in as the seeded accounts,
+  // so the app runs on real rows under real RLS. Without one they are exactly
+  // what they always were: a local user over the seeds.
   const signInDemo = (role: Role) => {
     setAuthErr('');
-    persist(DEMO_USERS[role]);
+    const sb = supabase();
+    if (!sb || !DEMO_PASSWORD) {
+      persist(DEMO_USERS[role]);
+      return;
+    }
+    setGooglePending(true);
+    sb.auth
+      .signInWithPassword({ email: DEMO_USERS[role].email, password: DEMO_PASSWORD })
+      .then(({ data, error }) => {
+        if (error || !data.user) {
+          setAuthErr(error?.message || 'Could not sign in to the demo account');
+          return;
+        }
+        const meta = { ...(data.user.user_metadata || {}), role } as Record<string, unknown>;
+        persist({ ...toUser(data.user.id, data.user.email || '', meta), role, provider: 'demo' });
+      })
+      .finally(() => setGooglePending(false));
   };
 
   const signOut = () => {
     setAuthErr('');
     clearLocal();
+    forgetHospitalId();
     persist(null);
     supabase()?.auth.signOut();
   };

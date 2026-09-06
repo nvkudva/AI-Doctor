@@ -31,6 +31,17 @@ export interface HealthProfile {
 
 export interface Notice {
   t: string; d: string; kind: string; at?: number; caseId?: string;
+  /** The `notifications` row this came from, when it came from one (§2.23). */
+  id?: string;
+}
+
+/** What a provider is seeded with when it runs on the demo data. */
+export interface ClinicSeeds {
+  seedQueue: CaseItem[];
+  seedConsults: UserConsult[];
+  seedRx: UserRx[];
+  /** What is genuinely on file for this account; blank fields when nothing is. */
+  seedProfile?: HealthProfile;
 }
 
 export interface Clinic {

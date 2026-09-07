@@ -1,4 +1,4 @@
-# Virtual Doctor — Product Requirements Document
+# AI Doctor — Product Requirements Document
 
 **Status:** Active — this document governs *what* to build. `docs/ARCHITECTURE.md` governs *how*.
 
@@ -10,7 +10,7 @@ Outpatient care at small and mid-size hospitals is bottlenecked by the first 10 
 
 Hospitals want a digital front door, but existing telemedicine platforms are either single-hospital custom builds (expensive, unmaintainable) or generic marketplaces that put the platform's brand — not the hospital's — in front of the patient.
 
-**Virtual Doctor** is **one PWA with two per-module entry points** (a patient module and a doctor module, each reached at its own URL path — future modules such as pharmacy plug in the same way). The two experiences below are modules of that single app sharing a configurable app shell and component library, not separate apps:
+**AI Doctor** is **one PWA with two per-module entry points** (a patient module and a doctor module, each reached at its own URL path — future modules such as pharmacy plug in the same way). The two experiences below are modules of that single app sharing a configurable app shell and component library, not separate apps:
 
 - **Patient App** (patient module) — a hospital-branded experience where a patient signs in and **speaks with _Dr. Mira_**, an empathetic AI physician, the way they would speak to a doctor on a phone call. Dr. Mira is the **primary doctor** in the experience: she greets the patient aloud, listens, asks questions one at a time in a natural, caring voice, and concludes with a recommended plan (prescription or investigations) — everything a real doctor would do on a first call. Voice is the primary medium; text chat is a secondary aid (typing a medicine name, answering when speaking isn't possible). The app clearly discloses that Dr. Mira is an AI, and the patient can view all past visits and prescriptions.
 - **Doctor App** (doctor module) — the experience for the hospital's doctors, showing a review queue of AI-drafted consults. Here Dr. Mira plays her second role: **case coordinator**. She _presents_ each case to the real doctor the way a junior doctor presents to a senior — speaking naturally through the same voice (later video-avatar) interface: the patient's story, her working diagnosis, her reasoning, and her recommendation. The doctor can interrupt and ask her anything about the patient — history, prior consults, labs, allergies — and she answers from full patient context. Because the case arrives pre-worked and well-presented, the doctor approves (or edits/rejects) in minimal time, and the patient instantly receives a doctor-signed prescription. Traditional visual review (transcript, structured draft, forms) remains fully available; the conversation is an accelerator, not a replacement.
@@ -107,7 +107,7 @@ This section defines each role precisely — what they do, what they expect, and
 - The doctor **observes carefully and correlates** — Mira connects current symptoms with history, prior prescriptions, and allergies, and shows that she's doing so.
 - The interaction feels like talking to a real, caring physician (voice-first, empathetic, one question at a time).
 
-### 3A.2 Dr. Mira — the Virtual Doctor
+### 3A.2 Dr. Mira — the AI Doctor
 
 Dr. Mira is a **super expert**: to the user she is one person, but behind the portrayal she can be a receptionist, a primary physician, or a background specialist — potentially **multiple AI agents orchestrated behind one consistent face, voice, and name**. The architecture must allow a multi-agent backend (e.g. an intake agent, a diagnosis agent, a research agent, a records agent) without ever breaking the single-persona illusion.
 

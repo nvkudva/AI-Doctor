@@ -25,6 +25,12 @@ export const statusPill: Record<string, { bg: string; fg: string; label: string 
   urgent: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Urgent' },
   soon: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Soon' },
   routine: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Routine' },
+  prescription: { bg: 'var(--vd-rx-bg)', fg: 'var(--vd-rx-fg)', label: 'Prescription' },
+  investigation: { bg: 'var(--vd-inv-bg)', fg: 'var(--vd-inv-fg)', label: 'Investigation' },
+  booked: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Booked' },
+  completed: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Completed' },
+  cancelled: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Cancelled' },
+  no_show: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'No-show' },
 };
 
 // Semantic bg/fg pairs for tinted blocks — never alpha-over-surface tints,

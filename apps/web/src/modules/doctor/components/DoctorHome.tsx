@@ -1,52 +1,167 @@
-// Doctor landing (mobile Home tab): three counts across the top, then the
-// next few cases waiting. Reads nothing the queue doesn't already carry.
-import { isReviewable, type CaseItem } from '../../../lib/core';
-import { Button, Card, EmptyState, MicroLabel } from '../../../lib/ui';
-import { QueueCard } from './QueueCard';
+// Doctor landing: the shift, not the queue. Five numbers a doctor acts on, then
+// the two lists that are genuinely urgent — cases past or near the review
+// target, and what is booked next. Everything here links out; nothing is
+// reviewed in place.
+import {
+  isReviewable, slaCountdown, waitAge, type CaseItem,
+} from '../../../lib/core';
+import { Button, Card, EmptyState, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
+import type { AppointmentSlot } from '../../../store/types';
 import s from './DoctorHome.module.css';
 
-const NEXT_UP = 3;
+const KIND_ICON: Record<AppointmentSlot['kind'], 'person' | 'video' | 'cal'> = {
+  in_person: 'person', video: 'video', imaging: 'cal', lab: 'cal',
+};
 
-export function DoctorHome({ queue, onSelect, onSeeAll }: {
+export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeReviews }: {
   queue: CaseItem[];
+  appointments: AppointmentSlot[];
   onSelect: (id: string) => void;
   onSeeAll: () => void;
+  onSeeReviews: () => void;
 }) {
-  const pending = queue.filter(c => isReviewable(c.status)).length;
-  const approved = queue.filter(c => c.status === 'approved').length;
-  const urgent = queue.filter(c => c.rec.urgency === 'urgent').length;
-  const next = queue.filter(c => isReviewable(c.status)).slice(0, NEXT_UP);
+  const waiting = queue.filter(c => isReviewable(c.status));
+  const urgent = waiting.filter(c => c.rec.urgency === 'urgent');
+  const decided = queue.filter(c => c.reviewedAt && isToday(c.reviewedAt));
+  const oldest = waiting
+    .filter(c => c.submittedAt)
+    .sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0))[0];
+  const breached = waiting.filter(c => c.submittedAt && slaCountdown(c.submittedAt).breached);
+  // Urgency first, then whatever has already passed the target.
+  const needsYou = [...urgent, ...breached.filter(c => c.rec.urgency !== 'urgent')].slice(0, 3);
+  const upcoming = appointments
+    .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
+    .sort((a, b) => a.startsAt - b.startsAt)
+    .slice(0, 3);
+
   return (
     <>
       <div className={s.stats}>
-        <Stat value={pending} label="Pending" tone="var(--vd-warn-fg)" />
-        <Stat value={approved} label="Approved" tone="var(--vd-ok-fg)" />
-        <Stat value={urgent} label="Urgent" tone="var(--vd-bad-fg)" />
+        <Stat value={String(waiting.length)} label="Waiting" tone="var(--vd-warn-fg)" sub="in the review queue" />
+        <Stat value={String(urgent.length)} label="Urgent" tone="var(--vd-bad-fg)" sub={urgent.length ? 'red flag raised' : 'none right now'} />
+        <Stat
+          value={oldest?.submittedAt ? waitAge(oldest.submittedAt) : '—'}
+          label="Longest wait"
+          tone={breached.length ? 'var(--vd-bad-fg)' : 'var(--vd-ink-2)'}
+          sub="target is 2h"
+        />
+        <Stat value={String(decided.length)} label="Decided today" tone="var(--vd-ok-fg)" sub={decidedSplit(decided)} />
+        <Stat value={String(appointments.filter(a => a.status === 'booked' && isToday(a.startsAt)).length)} label="Booked today" tone="var(--vd-ink-2)" sub="still to be seen" />
       </div>
 
-      <MicroLabel>Next up</MicroLabel>
-      {next.length > 0 ? (
+      {breached.length > 0 && (
+        <div className={s.banner} role="status">
+          <Icon name="alert" size={18} />
+          <span className={s.bannerText}>
+            {breached.length === 1 ? '1 case has' : `${breached.length} cases have`} passed the 2-hour review target.
+          </span>
+          <Button variant="tertiary" onClick={onSeeReviews}>Open the queue</Button>
+        </div>
+      )}
+
+      <MicroLabel>Needs you now</MicroLabel>
+      {needsYou.length > 0 ? needsYou.map(c => (
+        <AttnRow
+          key={c.id}
+          icon="alert"
+          tone={c.rec.urgency === 'urgent' ? 'bad' : 'warn'}
+          title={`${c.patient} · ${c.title}`}
+          line={c.flags.find(f => f.severity !== 'info')?.text || c.summary}
+          meta={c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}
+          tag={<StatusPill status={c.rec.urgency} />}
+          onClick={() => onSelect(c.id)}
+        />
+      )) : (
+        <EmptyState
+          icon="check"
+          title="Nothing urgent"
+          body="No case is flagged urgent or past its review target."
+          action={<Button variant="tertiary" onClick={onSeeReviews}>Open the queue</Button>}
+        />
+      )}
+
+      <MicroLabel>Next appointments</MicroLabel>
+      {upcoming.length > 0 ? (
         <>
-          {next.map(c => <QueueCard key={c.id} c={c} selected={false} onSelect={() => onSelect(c.id)} />)}
-          <Button variant="tertiary" onClick={onSeeAll}>See all appointments</Button>
+          {upcoming.map(a => (
+            <AttnRow
+              key={a.id}
+              icon={KIND_ICON[a.kind]}
+              tone="info"
+              title={a.patient}
+              line={a.location || 'No location on file'}
+              meta={whenLabel(a.startsAt)}
+              onClick={onSeeAll}
+            />
+          ))}
+          <Button variant="tertiary" onClick={onSeeAll}>See the whole book</Button>
         </>
       ) : (
         <EmptyState
-          icon="check"
-          title="Nothing waiting"
-          body="Every consult has been reviewed. New ones appear here as they arrive."
-          action={<Button variant="tertiary" onClick={onSeeAll}>See all appointments</Button>}
+          icon="clock"
+          title="Nothing booked"
+          body="Escalating a case from the review queue books a slot here."
+          action={<Button variant="tertiary" onClick={onSeeAll}>Open appointments</Button>}
         />
       )}
     </>
   );
 }
 
-function Stat({ value, label, tone }: { value: number; label: string; tone: string }) {
+function decidedSplit(decided: CaseItem[]): string {
+  if (!decided.length) return 'nothing signed yet';
+  const ok = decided.filter(c => c.decision === 'approved').length;
+  return `${ok} approved · ${decided.length - ok} other`;
+}
+
+function isToday(at: number): boolean {
+  const d = new Date(at);
+  const n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+
+export function whenLabel(at: number): string {
+  const d = new Date(at);
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const days = Math.round((startOfDay(at) - startOfDay(Date.now())) / 86400000);
+  if (days === 0) return time;
+  if (days === 1) return `Tomorrow ${time}`;
+  return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
+}
+
+function startOfDay(at: number): number {
+  const d = new Date(at);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function Stat({ value, label, tone, sub }: { value: string; label: string; tone: string; sub: string }) {
   return (
-    <Card pad="12px 8px" className={s.stat}>
+    <Card pad="14px 16px" level={1} className={s.stat}>
       <div className={s.statValue} style={{ color: tone }}>{value}</div>
       <div className={s.statLabel}>{label}</div>
+      <div className={s.statSub}>{sub}</div>
+    </Card>
+  );
+}
+
+function AttnRow({ icon, tone, title, line, meta, tag, onClick }: {
+  icon: 'alert' | 'person' | 'video' | 'cal';
+  tone: 'bad' | 'warn' | 'info';
+  title: string; line: string; meta: string;
+  tag?: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <Card pad="14px 16px" level={1} onClick={onClick} className={s.attn}>
+      <span className={`${s.attnIcon} ${s[tone]}`}><Icon name={icon} size={18} /></span>
+      <div className={s.attnBody}>
+        <div className={s.attnTitle}>{title}</div>
+        <div className={s.attnLine}>{line}</div>
+      </div>
+      <div className={s.attnMeta}>{meta}</div>
+      {tag}
+      <Icon name="chevR" size={16} />
     </Card>
   );
 }

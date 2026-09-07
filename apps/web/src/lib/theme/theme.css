@@ -1,4 +1,4 @@
-/* Virtual Doctor design system. :root = light, [data-theme="dark"] = dark.
+/* AI Doctor design system. :root = light, [data-theme="dark"] = dark.
    Components consume var(--vd-*) only — no color literals in app code.
    Metric + motion scales are theme-independent (second :root block); every
    colour token is defined in BOTH theme blocks. */

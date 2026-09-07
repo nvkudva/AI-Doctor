@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CaseItem, ConsultStatus } from '../lib/core';
 import { persistLocal, restoreLocal, type LocalSnapshot, type ReviewDecision } from '../lib/api';
 import { Ctx } from './context';
+import { buildSchedule, pendingCheckIn } from './doses';
+import { seedDoctorSlots, seedLabValues } from './seeds';
 import { slaSweep } from './sla';
-import type { Clinic, ClinicSeeds, ConsultDetail, HealthProfile, Notice, UserConsult, UserRx } from './types';
+import type { AppointmentSlot, Clinic, ClinicSeeds, ConsultDetail, HealthProfile, Notice, UserConsult, UserRx } from './types';
 
 // The full plan, in the shape History already knows how to expand (UX-04).
 function recDetail(c: CaseItem): ConsultDetail {
@@ -44,6 +46,11 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   const [profile, setProfileState] = useState<HealthProfile>(() =>
     (saved?.profile as HealthProfile) || seedProfile || { age: '', blood: '', allergies: '' },
   );
+  const [appointments, setAppointments] = useState<AppointmentSlot[]>(() => [
+    ...seedDoctorSlots, ...((saved?.booked as AppointmentSlot[]) || []),
+  ]);
+  const [taken, setTaken] = useState<Record<string, boolean>>(() => saved?.doses || {});
+  const [checkIns, setCheckIns] = useState<Record<string, string>>(() => saved?.checkIns || {});
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
   const [rejectReason, setRejectReason] = useState('');
@@ -51,6 +58,12 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   useEffect(() => {
     persistLocal({ liveQueue: queue.filter(c => c.mine) });
   }, [queue]);
+  useEffect(() => { persistLocal({ doses: taken }); }, [taken]);
+  useEffect(() => { persistLocal({ checkIns }); }, [checkIns]);
+  useEffect(() => { persistLocal({ booked: appointments.filter(a => a.id.startsWith('bk-')) }); }, [appointments]);
+
+  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
   useEffect(() => {
     persistLocal({ consultsAdd: consults.filter(c => c.user) });
   }, [consults]);
@@ -68,7 +81,8 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   }, [profile]);
 
   const value = useMemo<Clinic>(() => ({
-    queue, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    queue, appointments, labs: seedLabValues, doses, checkIn,
+    consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
 
     addLiveCase: (c) => {
       setQueue(q => [c, ...q]);
@@ -153,6 +167,38 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
 
     addConsultRecord: (c) => setConsults(s => [c, ...s]),
 
+    setSlotStatus: (id, status) => setAppointments(a => a.map(x => (x.id === id ? { ...x, status } : x))),
+
+    bookSlot: (title, startsAt, location) => setAppointments(a => [...a, {
+      id: `bk-${startsAt}`, patient: title, reason: title, kind: 'imaging',
+      startsAt, minutes: 15, location, status: 'booked',
+    }]),
+
+    setDoseTaken: (id, t) => setTaken(d => ({ ...d, [id]: t })),
+
+    answerCheckIn: (answer) => {
+      if (!checkIn) return;
+      setCheckIns(c => ({ ...c, [checkIn.consultId]: answer }));
+    },
+
+    // Escalation is a decision like any other: the case leaves the queue and a
+    // slot appears in the book carrying the consult with it.
+    escalateCase: (id, startsAt, kind, location) => {
+      const c = queue.find(x => x.id === id);
+      if (!c) return;
+      setAppointments(a => [...a, {
+        id: `esc-${id}`, patient: c.patient, consultId: id,
+        kind, startsAt, minutes: kind === 'video' ? 15 : 20, location, status: 'booked',
+      }]);
+      const stamp: ReviewDecision = {
+        status: 'rejected', decision: 'escalated',
+        reviewedBy: 'Dr. Whitfield', reviewedAt: Date.now(),
+        rejectReason: 'Escalated to an appointment.',
+      };
+      setQueue(q => q.map(x => (x.id === id ? { ...x, ...stamp } as CaseItem : x)));
+      setDecisions(d => ({ ...d, [id]: stamp }));
+    },
+
     setProfile: setProfileState,
 
     slaTick: () => {
@@ -163,7 +209,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
         setReviewStatus('expired');
       }
     },
-  }), [queue, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason]);
+  }), [queue, appointments, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

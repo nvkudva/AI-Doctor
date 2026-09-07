@@ -1,0 +1,53 @@
+/* One lab panel: value against range, plain-language line, trend. */
+.screen { display: flex; flex-direction: column; gap: var(--vd-space-4); }
+
+.top { display: flex; align-items: center; gap: var(--vd-space-4); }
+.back { height: 44px; padding: 0 var(--vd-space-5); }
+.pageTitle { composes: vd-t-largeTitle vd-truncate from global; color: var(--vd-ink-1); flex: 1; }
+
+.card { display: flex; flex-direction: column; }
+.head { display: flex; align-items: center; gap: var(--vd-space-3); margin-bottom: var(--vd-space-5); }
+.when { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
+
+.value { margin-bottom: var(--vd-space-6); }
+.value:last-child { margin-bottom: 0; }
+.valueHead { display: flex; align-items: baseline; gap: var(--vd-space-3); }
+.analyte { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); flex: 1; }
+.reading { composes: vd-t-headline from global; }
+
+/* The reference range is the middle half of the bar, so an out-of-range value
+   still lands on it instead of falling off the end. */
+.bar {
+  position: relative;
+  height: 8px;
+  border-radius: var(--vd-radius-pill);
+  margin: var(--vd-space-4) 0 var(--vd-space-2);
+  background: linear-gradient(90deg,
+    var(--vd-bad-bg) 0%, var(--vd-bad-bg) 22%,
+    var(--vd-ok-bg) 26%, var(--vd-ok-bg) 74%,
+    var(--vd-lab-warn-bg) 78%, var(--vd-lab-warn-bg) 100%);
+}
+.marker {
+  position: absolute; top: -4px; width: 4px; height: 16px;
+  border-radius: var(--vd-radius-pill); background: var(--vd-ink-1);
+  transform: translateX(-2px);
+}
+.scale { display: flex; justify-content: space-between; }
+.scale span { font-size: 12px; line-height: 1.45; color: var(--vd-ink-4); }
+.noRange { composes: vd-t-footnote from global; color: var(--vd-ink-4); margin: var(--vd-space-3) 0; }
+.explain { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }
+
+.means { background: var(--vd-advice-bg); }
+.meansText { composes: vd-t-callout from global; color: var(--vd-ink-2); }
+.meansFoot { composes: vd-t-footnote from global; color: var(--vd-ink-4); margin-top: var(--vd-space-3); }
+
+.trendCard { padding-bottom: var(--vd-space-3); }
+.trend { width: 100%; height: 84px; display: block; }
+.band { fill: var(--vd-lab-ok-bg); opacity: 0.5; }
+.line { fill: none; stroke: var(--vd-nav-active); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.dotOk { fill: var(--vd-ok-fg); }
+.dotWarn { fill: var(--vd-bad-fg); }
+.trendAxis { display: flex; justify-content: space-between; }
+.trendAxis span { font-size: 12px; line-height: 1.45; color: var(--vd-ink-4); }
+
+.actions { display: flex; gap: var(--vd-space-3); }

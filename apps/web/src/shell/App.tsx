@@ -26,7 +26,7 @@ function LoadingSkeleton() {
 
 function GatedApp() {
   const { user, ready } = useAuth();
-  const [tenantName, setTenantName] = useState('Virtual Doctor');
+  const [tenantName, setTenantName] = useState('AI Doctor');
 
   useEffect(() => {
     const slug = resolveTenantSlug(location.hostname, location.search);

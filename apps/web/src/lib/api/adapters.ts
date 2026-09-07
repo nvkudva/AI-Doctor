@@ -1,7 +1,7 @@
 // §6 M3 — adapters, not rewrites. Normalized §2 rows in, the view models the
 // screens already render out (CaseItem, UserConsult, UserRx, Notice, LabResult).
 // If a screen would have to change, the adapter is wrong, not the screen.
-import type { CaseItem, ConsultStatus, LabResult, PastConsult, Recommendation } from '../core';
+import type { CaseItem, ConsultStatus, LabResult, PastConsult, Recommendation, SafetyFlag } from '../core';
 import type {
   AiDraftRow, ConsultRow, DbConsultStatus, LabResultRow, NotificationRow,
   PatientDetailsRow, PrescriptionRow, ReviewOutcomeRow,
@@ -58,6 +58,23 @@ export function toLabResult(r: LabResultRow): LabResult {
   };
 }
 
+/** The full §2.21 row — value, unit and the range it is judged against. */
+export function toLabValue(r: LabResultRow) {
+  return {
+    id: r.id,
+    panel: r.panel,
+    analyte: r.analyte || r.panel,
+    value: r.value_num,
+    text: r.value_text,
+    unit: r.unit || '',
+    refLow: r.ref_low,
+    refHigh: r.ref_high,
+    abnormal: r.abnormal,
+    observedAt: new Date(r.observed_at).getTime(),
+    reportPath: r.report_path,
+  };
+}
+
 export function describeAllergies(d: PatientDetailsRow | null | undefined): string {
   return (d?.allergies ?? []).map(a => a.substance).filter(Boolean).join(', ');
 }
@@ -92,7 +109,16 @@ export function toCaseItem(args: {
   const age = ageFromDob(args.details?.dob);
   const demo = [age && `${age}`, args.details?.blood_group].filter(Boolean).join(' · ');
   const labs = (args.labs ?? []).map(toLabResult);
-  const flags = (draft?.flags ?? []).map(f => f.text || f.code).filter(Boolean);
+  // The severity is what makes a flag readable at a glance on the desk, so the
+  // validator's verdict is carried through whole rather than flattened to text.
+  const flags: SafetyFlag[] = (draft?.flags ?? [])
+    .filter(f => f.text || f.code)
+    .map(f => ({
+      code: f.code || 'check',
+      severity: (f.severity === 'block' || f.severity === 'warn' ? f.severity : 'info') as SafetyFlag['severity'],
+      text: f.text || f.code,
+      source: f.source || 'validator',
+    }));
   const dx = (consult.working_dx ?? []).map(d => d.label).filter(Boolean);
   // A closed consult that carries a review outcome reads as that outcome: the
   // decision is what the patient and the desk care about, not the housekeeping

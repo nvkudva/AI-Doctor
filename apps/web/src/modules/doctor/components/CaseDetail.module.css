@@ -145,3 +145,16 @@
   outline-offset: 3px;
   border-radius: var(--vd-radius-2xl);
 }
+
+/* Safety checks (PRD D-4): the validator's verdicts, severity first. */
+.safety { display: flex; flex-direction: column; }
+.check { display: flex; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--vd-border); }
+.checkLast { border-bottom: none; padding-bottom: 0; }
+.checkIcon {
+  width: 28px; height: 28px; border-radius: var(--vd-radius-pill); flex: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.checkBody { min-width: 0; }
+.checkHead { display: flex; align-items: center; gap: var(--vd-space-2); }
+.checkCode { composes: vd-t-micro from global; color: var(--vd-ink-4); }
+.checkText { composes: vd-t-footnote from global; color: var(--vd-ink-2); margin-top: 3px; }

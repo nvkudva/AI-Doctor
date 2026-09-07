@@ -258,8 +258,8 @@ begin
 
 
   select content_hash into hash from public.ai_drafts where id = dh1;
-  insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, idempotency_key)
-  values (h1, sara, dh1, hash, 'approved', 'seed-h1-approve') returning id into rv;
+  insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, idempotency_key, created_at)
+  values (h1, sara, dh1, hash, 'approved', 'seed-h1-approve', now() - interval '5 days') returning id into rv;
   insert into public.prescriptions (consult_id, hospital_id, patient_id, doctor_id, review_id, kind, advice, approved_at)
   values (h1, h_id, alex, sara, rv, 'prescription',
           'Start the antihistamine before symptoms peak.', '2026-03-04T10:00:00Z') returning id into rx;
@@ -298,8 +298,8 @@ begin
     '{}'::jsonb, 'claude-opus-5', 'mira-patient-v4')
   returning id into dh2;
   select content_hash into hash from public.ai_drafts where id = dh2;
-  insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, idempotency_key)
-  values (h2, sara, dh2, hash, 'approved', 'seed-h2-approve') returning id into rv;
+  insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, idempotency_key, created_at)
+  values (h2, sara, dh2, hash, 'approved', 'seed-h2-approve', now() - interval '40 days') returning id into rv;
   insert into public.prescriptions (consult_id, hospital_id, patient_id, doctor_id, review_id, kind, advice, approved_at)
   values (h2, h_id, alex, sara, rv, 'prescription',
           'Keep moving gently; seek care if pain spreads down the leg.', '2026-01-18T10:00:00Z') returning id into rx;
@@ -333,3 +333,525 @@ begin
   values (h_id, alex, 'appointment', 'Imaging appointment booked',
           'Chest X-ray (PA view) · Fri 12 Sep, 10:30 am · Apollo Diagnostics.', '/patient/records');
 end $$;
+
+
+-- ============================================================================
+-- Ten more demo patients, each with a real history.
+--
+-- Written through the same doors the app uses: a consult becomes a prescription
+-- only via an approving review bound to the exact draft hash (§3.4), and every
+-- status move goes through the transition allowlist under an explicit actor.
+-- Two helpers below exist only to keep that ceremony from being retyped 16 times.
+-- ============================================================================
+
+create or replace function pg_temp.seed_closed_case(
+  p_hospital uuid, p_patient uuid, p_doctor uuid,
+  p_complaint text, p_kind public.plan_kind, p_title text, p_summary text,
+  p_items jsonb, p_advice text, p_note text, p_conf public.confidence,
+  p_created timestamptz, p_approved timestamptz, p_closed timestamptz, p_key text
+) returns uuid language plpgsql as $fn$
+declare c uuid; d uuid; r uuid; rx uuid; hash text;
+begin
+  insert into public.consults (hospital_id, patient_id, status, chief_complaint, urgency,
+                               created_at, submitted_at, last_patient_turn_at)
+  values (p_hospital, p_patient, 'pending_review', p_complaint, 'routine',
+          p_created, p_created + interval '18 minutes', p_created + interval '16 minutes')
+  returning id into c;
+
+  insert into public.ai_drafts (consult_id, hospital_id, version, created_by, recommendation, note,
+                                confidence, flags, raw_response, model, prompt_version)
+  values (c, p_hospital, 1, 'doctor_agent',
+          jsonb_build_object('type', p_kind::text, 'title', p_title, 'summary', p_summary,
+                             'items', p_items, 'advice', p_advice, 'urgency', 'routine'),
+          p_note, p_conf, '[]'::jsonb, '{}'::jsonb, 'claude-opus-5', 'mira-patient-v4')
+  returning id into d;
+
+  select content_hash into hash from public.ai_drafts where id = d;
+  -- created_at is the decision time, not the moment the seed ran: everything
+  -- that ages off a review (history, the day-3 check-in) reads this column.
+  insert into public.reviews (consult_id, doctor_id, draft_id, draft_hash, action, idempotency_key, created_at)
+  values (c, p_doctor, d, hash, 'approved', p_key, p_approved) returning id into r;
+
+  insert into public.prescriptions (consult_id, hospital_id, patient_id, doctor_id, review_id,
+                                    kind, advice, approved_at)
+  values (c, p_hospital, p_patient, p_doctor, r, p_kind, p_advice, p_approved) returning id into rx;
+
+  insert into public.prescription_items (prescription_id, position, name, dosage, timing, notes, why, detail)
+  select rx, (ord - 1)::int, it->>'name', coalesce(it->>'dosage',''), it->>'timing',
+         coalesce(it->>'notes',''), coalesce(it->>'why',''), coalesce(it->>'detail','')
+    from jsonb_array_elements(p_items) with ordinality as t(it, ord);
+
+  perform set_config('vd.actor', 'doctor', true);
+  perform set_config('vd.actor_id', p_doctor::text, true);
+  update public.consults set status = 'approved', decided_at = p_approved where id = c;
+  perform set_config('vd.actor', 'system', true);
+  perform set_config('vd.actor_id', '', true);
+  update public.consults set status = 'communicated' where id = c;
+  update public.consults set status = 'closed', closed_at = p_closed where id = c;
+  return c;
+end $fn$;
+
+create or replace function pg_temp.seed_pending_case(
+  p_hospital uuid, p_patient uuid,
+  p_complaint text, p_urgency public.urgency, p_dx jsonb, p_protocol uuid,
+  p_kind public.plan_kind, p_title text, p_summary text,
+  p_items jsonb, p_advice text, p_note text, p_conf public.confidence,
+  p_flags jsonb, p_waited interval, p_turns jsonb, p_slots jsonb
+) returns uuid language plpgsql as $fn$
+declare c uuid;
+begin
+  insert into public.consults (hospital_id, patient_id, status, chief_complaint, urgency,
+                               working_dx, protocol_version_id,
+                               created_at, submitted_at, last_patient_turn_at)
+  values (p_hospital, p_patient, 'pending_review', p_complaint, p_urgency, p_dx, p_protocol,
+          now() - p_waited - interval '6 minutes', now() - p_waited, now() - p_waited - interval '1 minute')
+  returning id into c;
+
+  insert into public.consult_messages (consult_id, sender, channel, content, created_at)
+  select c, (it->>'sender')::public.message_sender, 'voice', it->>'text',
+         now() - p_waited - interval '6 minutes' + (ord * interval '1 minute')
+    from jsonb_array_elements(p_turns) with ordinality as t(it, ord);
+
+  insert into public.consult_slots (consult_id, slot_id, status, value, confidence, source)
+  select c, (it->>'slot')::public.slot_id, 'filled', it->>'value', (it->>'conf')::numeric, 'patient'
+    from jsonb_array_elements(p_slots) as t(it);
+
+  insert into public.ai_drafts (consult_id, hospital_id, version, created_by, recommendation, note,
+                                confidence, flags, raw_response, model, protocol_version_id, prompt_version)
+  values (c, p_hospital, 1, 'doctor_agent',
+          jsonb_build_object('type', p_kind::text, 'title', p_title, 'summary', p_summary,
+                             'items', p_items, 'advice', p_advice, 'urgency', p_urgency::text),
+          p_note, p_conf, p_flags, '{}'::jsonb, 'claude-opus-5', p_protocol, 'mira-patient-v4');
+  return c;
+end $fn$;
+
+do $$
+declare
+  h_id  uuid := '0e2c0000-0000-4000-8000-000000000001';
+  sara  uuid := '77b30000-0000-4000-8000-000000000001';
+  pv_cough    uuid := 'b7d00000-0000-4000-8000-000000000001';
+  pv_headache uuid := 'b7d00000-0000-4000-8000-000000000002';
+  pv_rash     uuid := 'b7d00000-0000-4000-8000-000000000003';
+
+  ravi   uuid := 'a0040000-0000-4000-8000-000000000004';
+  fatima uuid := 'a0050000-0000-4000-8000-000000000005';
+  daniel uuid := 'a0060000-0000-4000-8000-000000000006';
+  ling   uuid := 'a0070000-0000-4000-8000-000000000007';
+  aarav  uuid := 'a0080000-0000-4000-8000-000000000008';
+  sofia  uuid := 'a0090000-0000-4000-8000-000000000009';
+  thabo  uuid := 'a00a0000-0000-4000-8000-00000000000a';
+  emily  uuid := 'a00b0000-0000-4000-8000-00000000000b';
+  omar   uuid := 'a00c0000-0000-4000-8000-00000000000c';
+  grace  uuid := 'a00d0000-0000-4000-8000-00000000000d';
+
+  pw text := crypt('1234', gen_salt('bf'));
+  ignore uuid;
+begin
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password,
+                          email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                          confirmation_token, recovery_token, email_change, email_change_token_new,
+                          created_at, updated_at)
+  values
+   ('00000000-0000-0000-0000-000000000000', ravi,   'authenticated','authenticated','ravi.deshpande.demo@example.com', pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Ravi Deshpande","kind":"patient"}'::jsonb, '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', fatima, 'authenticated','authenticated','fatima.sheikh.demo@example.com',   pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Fatima Sheikh","kind":"patient"}'::jsonb,  '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', daniel, 'authenticated','authenticated','daniel.okafor.demo@example.com',   pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Daniel Okafor","kind":"patient"}'::jsonb,  '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', ling,   'authenticated','authenticated','ling.chen.demo@example.com',       pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Ling Wei Chen","kind":"patient"}'::jsonb,  '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', aarav,  'authenticated','authenticated','aarav.nair.demo@example.com',      pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Aarav Nair","kind":"patient"}'::jsonb,     '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', sofia,  'authenticated','authenticated','sofia.rossi.demo@example.com',     pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Sofia Rossi","kind":"patient"}'::jsonb,    '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', thabo,  'authenticated','authenticated','thabo.molefe.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Thabo Molefe","kind":"patient"}'::jsonb,   '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', emily,  'authenticated','authenticated','emily.watson.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Emily Watson","kind":"patient"}'::jsonb,   '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', omar,   'authenticated','authenticated','omar.haddad.demo@example.com',     pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Omar Haddad","kind":"patient"}'::jsonb,    '', '', '', '', now(), now()),
+   ('00000000-0000-0000-0000-000000000000', grace,  'authenticated','authenticated','grace.mensah.demo@example.com',    pw, now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"Grace Mensah","kind":"patient"}'::jsonb,   '', '', '', '', now(), now())
+  on conflict (id) do nothing;
+
+  insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  select u.id, u.id::text, u.id,
+         jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
+         'email', now(), now(), now()
+    from auth.users u
+   where u.id in (ravi, fatima, daniel, ling, aarav, sofia, thabo, emily, omar, grace)
+  on conflict do nothing;
+
+  insert into public.memberships (profile_id, hospital_id, role)
+  select p, h_id, 'patient'
+    from unnest(array[ravi, fatima, daniel, ling, aarav, sofia, thabo, emily, omar, grace]) as p
+  on conflict (profile_id, hospital_id) do nothing;
+
+  -- ------------------------------------------------------------ health profiles
+  insert into public.patient_details (profile_id, dob, sex, blood_group, allergies, conditions, medications) values
+    (ravi, '1968-11-02', 'male', 'B+', '[]'::jsonb,
+     '[{"name":"Type 2 diabetes","since":"2014","status":"active","source":"self_reported"},
+       {"name":"Hyperlipidaemia","since":"2019","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Metformin","dose":"1000 mg","frequency":"BD","source":"self_reported"},
+       {"name":"Atorvastatin","dose":"20 mg","frequency":"OD","source":"self_reported"}]'::jsonb),
+
+    (fatima, '1994-06-25', 'female', 'A-',
+     '[{"substance":"Sulfamethoxazole","class":"sulfonamide","severity":"moderate","reaction":"urticaria","source":"self_reported"}]'::jsonb,
+     '[{"name":"Migraine with aura","since":"2016","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Propranolol","dose":"40 mg","frequency":"BD","source":"self_reported"}]'::jsonb),
+
+    (daniel, '2001-02-17', 'male', 'O+',
+     '[{"substance":"Ibuprofen","class":"nsaid","severity":"moderate","reaction":"wheeze","source":"self_reported"}]'::jsonb,
+     '[{"name":"Asthma","since":"2009","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Beclometasone inhaler","dose":"200 mcg","frequency":"BD","source":"self_reported"},
+       {"name":"Salbutamol inhaler","dose":"100 mcg","frequency":"PRN","source":"self_reported"}]'::jsonb),
+
+    (ling, '1979-09-30', 'female', 'AB+', '[]'::jsonb,
+     '[{"name":"Hypothyroidism","since":"2018","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Levothyroxine","dose":"75 mcg","frequency":"OD","source":"self_reported"}]'::jsonb),
+
+    (aarav, '1988-04-08', 'male', 'O+', '[]'::jsonb,
+     '[{"name":"Gastro-oesophageal reflux","since":"2022","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Pantoprazole","dose":"40 mg","frequency":"OD","source":"self_reported"}]'::jsonb),
+
+    (sofia, '1963-12-12', 'female', 'A+', '[]'::jsonb,
+     '[{"name":"Osteoarthritis, both knees","since":"2020","status":"active","source":"self_reported"},
+       {"name":"Hypertension","since":"2017","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Ramipril","dose":"5 mg","frequency":"OD","source":"self_reported"},
+       {"name":"Paracetamol","dose":"1 g","frequency":"PRN","source":"self_reported"}]'::jsonb),
+
+    (thabo, '1996-07-19', 'male', 'B-', '[]'::jsonb, '[]'::jsonb, '[]'::jsonb),
+
+    (emily, '1990-01-05', 'female', 'O-', '[]'::jsonb,
+     '[{"name":"Iron-deficiency anaemia","since":"2025","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Ferrous fumarate","dose":"210 mg","frequency":"BD","source":"self_reported"}]'::jsonb),
+
+    (omar, '1975-03-22', 'male', 'A+',
+     '[{"substance":"Codeine","class":"opioid","severity":"moderate","reaction":"vomiting","source":"self_reported"}]'::jsonb,
+     '[{"name":"Chronic lower back pain","since":"2021","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Naproxen","dose":"250 mg","frequency":"PRN","source":"self_reported"}]'::jsonb),
+
+    (grace, '1983-10-14', 'female', 'AB-', '[]'::jsonb,
+     '[{"name":"Atopic eczema","since":"1998","status":"active","source":"self_reported"},
+       {"name":"Allergic rhinitis","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Emollient cream","dose":"","frequency":"PRN","source":"self_reported"}]'::jsonb)
+  on conflict (profile_id) do nothing;
+end $$;
+
+do $$
+declare
+  h_id  uuid := '0e2c0000-0000-4000-8000-000000000001';
+  sara  uuid := '77b30000-0000-4000-8000-000000000001';
+  pv_cough    uuid := 'b7d00000-0000-4000-8000-000000000001';
+  pv_headache uuid := 'b7d00000-0000-4000-8000-000000000002';
+  pv_rash     uuid := 'b7d00000-0000-4000-8000-000000000003';
+
+  ravi   uuid := 'a0040000-0000-4000-8000-000000000004';
+  fatima uuid := 'a0050000-0000-4000-8000-000000000005';
+  daniel uuid := 'a0060000-0000-4000-8000-000000000006';
+  ling   uuid := 'a0070000-0000-4000-8000-000000000007';
+  aarav  uuid := 'a0080000-0000-4000-8000-000000000008';
+  sofia  uuid := 'a0090000-0000-4000-8000-000000000009';
+  thabo  uuid := 'a00a0000-0000-4000-8000-00000000000a';
+  emily  uuid := 'a00b0000-0000-4000-8000-00000000000b';
+  omar   uuid := 'a00c0000-0000-4000-8000-00000000000c';
+  grace  uuid := 'a00d0000-0000-4000-8000-00000000000d';
+  x uuid;
+begin
+  -- ------------------------------------------------------------- Ravi Deshpande
+  x := pg_temp.seed_closed_case(h_id, ravi, sara,
+    'Numbness in both feet, months', 'investigation',
+    'Diabetic foot and control review',
+    'Long-standing type 2 diabetes with new bilateral foot numbness — screening for peripheral neuropathy.',
+    '[{"name":"HbA1c","timing":"Within 1 week","why":"Numbness with diabetes usually tracks long-term control.","detail":"Fasting not required."},
+      {"name":"Monofilament foot examination","timing":"At the diabetes clinic","why":"Confirms whether protective sensation is lost.","detail":"Book with the nurse-led foot clinic."}]'::jsonb,
+    'Inspect both feet daily and report any ulcer or colour change the same day.',
+    'Peripheral neuropathy screen', 'high',
+    '2025-11-12T09:00:00Z', '2025-11-12T10:10:00Z', '2025-11-14T10:00:00Z', 'seed-ravi-1');
+
+  x := pg_temp.seed_closed_case(h_id, ravi, sara,
+    'Statin review before annual check', 'prescription',
+    'Lipid control — continue statin',
+    'LDL still above target on atorvastatin 20 mg; dose stepped up before the annual review.',
+    '[{"name":"Atorvastatin","dosage":"40 mg","timing":"Once daily, at night","notes":"Report unexplained muscle pain.","why":"LDL remains above target at the current dose.","detail":"Step up from 20 mg to 40 mg."},
+      {"name":"Fasting lipid profile","dosage":"","timing":"In 12 weeks","notes":"","why":"To confirm the higher dose has worked.","detail":"Repeat before the annual review."}]'::jsonb,
+    'Keep taking metformin as before; book the repeat lipids for twelve weeks time.',
+    'Statin uptitration', 'high',
+    '2026-04-03T09:00:00Z', '2026-04-03T10:20:00Z', '2026-04-04T10:00:00Z', 'seed-ravi-2');
+
+  -- --------------------------------------------------------------- Fatima Sheikh
+  x := pg_temp.seed_closed_case(h_id, fatima, sara,
+    'Migraines becoming more frequent', 'prescription',
+    'Migraine prophylaxis review',
+    'Five attacks a month with aura, above the threshold for preventive treatment.',
+    '[{"name":"Propranolol","dosage":"40 mg","timing":"Twice daily","notes":"Not to be stopped abruptly.","why":"First-line prevention once attacks exceed four a month.","detail":"Review effect after 8 weeks."},
+      {"name":"Headache diary","dosage":"","timing":"Daily, 8 weeks","notes":"Record aura, duration and triggers.","why":"To measure whether prevention is working.","detail":"Bring the diary to the next review."}]'::jsonb,
+    'Seek urgent care for a sudden severe headache unlike your usual ones.',
+    'Migraine with aura, preventive start', 'high',
+    '2026-02-20T09:00:00Z', '2026-02-20T10:05:00Z', '2026-02-21T10:00:00Z', 'seed-fatima-1');
+
+  -- --------------------------------------------------------------- Daniel Okafor
+  x := pg_temp.seed_closed_case(h_id, daniel, sara,
+    'Using the blue inhaler most days', 'prescription',
+    'Asthma control and inhaler technique',
+    'Reliever use most days indicates poor control rather than a need for a stronger reliever.',
+    '[{"name":"Beclometasone inhaler","dosage":"200 mcg","timing":"Twice daily, every day","notes":"Rinse the mouth after each dose.","why":"Daily reliever use means the preventer is being missed, not that the reliever is failing.","detail":"Take it even on good days."},
+      {"name":"Spacer device","dosage":"","timing":"With every inhaler dose","notes":"Wash weekly in warm soapy water, air dry.","why":"More of the dose reaches the lungs and less the throat.","detail":"Issued at the pharmacy."}]'::jsonb,
+    'Avoid ibuprofen and other NSAIDs — they have triggered wheeze for you before.',
+    'Asthma, preventer adherence', 'high',
+    '2026-05-15T09:00:00Z', '2026-05-15T10:15:00Z', '2026-05-16T10:00:00Z', 'seed-daniel-1');
+
+  -- --------------------------------------------------------------- Ling Wei Chen
+  x := pg_temp.seed_closed_case(h_id, ling, sara,
+    'Tired all the time, feeling cold', 'investigation',
+    'Thyroid function recheck',
+    'Fatigue and cold intolerance on a stable levothyroxine dose — function needs rechecking.',
+    '[{"name":"TSH and free T4","timing":"Within 1 week","why":"Symptoms suggest the current dose is now too low.","detail":"Take the sample before the morning dose."}]'::jsonb,
+    'Keep taking levothyroxine as usual until the result is back.',
+    'Hypothyroidism, possible under-replacement', 'high',
+    '2026-01-30T09:00:00Z', '2026-01-30T10:10:00Z', '2026-01-31T10:00:00Z', 'seed-ling-1');
+
+  x := pg_temp.seed_closed_case(h_id, ling, sara,
+    'Thyroid result follow-up', 'prescription',
+    'Levothyroxine dose increase',
+    'TSH 7.8 mIU/L on 75 mcg; dose increased and a recheck booked.',
+    '[{"name":"Levothyroxine","dosage":"100 mcg","timing":"Once daily, before breakfast","notes":"Separate from iron or calcium by four hours.","why":"TSH above range means the current dose is too low.","detail":"Up from 75 mcg."},
+      {"name":"TSH recheck","dosage":"","timing":"In 8 weeks","notes":"","why":"Thyroid levels take about six weeks to settle after a change.","detail":"Book before leaving the clinic."}]'::jsonb,
+    'Tell us if you develop palpitations or feel persistently hot and anxious.',
+    'Hypothyroidism, dose adjusted', 'high',
+    '2026-06-10T09:00:00Z', '2026-06-10T10:20:00Z', '2026-06-11T10:00:00Z', 'seed-ling-2');
+
+  -- ------------------------------------------------------------------ Aarav Nair
+  x := pg_temp.seed_closed_case(h_id, aarav, sara,
+    'Burning chest at night, several weeks', 'prescription',
+    'Reflux — night-time symptom control',
+    'Night-time reflux despite a daily proton pump inhibitor taken after food.',
+    '[{"name":"Pantoprazole","dosage":"40 mg","timing":"Once daily, 30 minutes before breakfast","notes":"Timing matters more than the dose here.","why":"A PPI works best taken before the first meal, not after it.","detail":"Move the existing dose earlier."},
+      {"name":"Raise the head of the bed","dosage":"","timing":"Nightly","notes":"Blocks under the bed legs, not extra pillows.","why":"Gravity keeps acid down overnight.","detail":"About 15 cm is enough."}]'::jsonb,
+    'Come back sooner if swallowing becomes difficult or painful, or if you lose weight without trying.',
+    'GORD, optimise PPI timing', 'high',
+    '2026-03-22T09:00:00Z', '2026-03-22T10:05:00Z', '2026-03-23T10:00:00Z', 'seed-aarav-1');
+
+  -- ----------------------------------------------------------------- Sofia Rossi
+  x := pg_temp.seed_closed_case(h_id, sofia, sara,
+    'Both knees ache going up stairs', 'prescription',
+    'Knee osteoarthritis — first-line care',
+    'Bilateral knee pain on stairs, no locking or giving way; managed without imaging.',
+    '[{"name":"Paracetamol","dosage":"1 g","timing":"Up to four times daily as needed","notes":"Do not exceed 4 g in 24 hours.","why":"Safest first-line pain relief alongside your blood pressure treatment.","detail":"Regular dosing works better than waiting for pain."},
+      {"name":"Quadriceps strengthening","dosage":"","timing":"Daily, 12 weeks","notes":"Physiotherapy leaflet issued.","why":"Stronger thigh muscles reduce knee pain more reliably than medication.","detail":"Ten minutes a day."}]'::jsonb,
+    'Avoid anti-inflammatory tablets while you are on ramipril unless we agree it first.',
+    'Knee osteoarthritis', 'high',
+    '2025-12-05T09:00:00Z', '2025-12-05T10:10:00Z', '2025-12-06T10:00:00Z', 'seed-sofia-1');
+
+  x := pg_temp.seed_closed_case(h_id, sofia, sara,
+    'Blood pressure check', 'investigation',
+    'Home blood pressure confirmation',
+    'Clinic readings around 150/90 on ramipril; home readings needed before any change.',
+    '[{"name":"Home blood pressure log","timing":"Twice daily, 7 days","why":"Clinic readings run high; home readings decide whether the dose changes.","detail":"Morning and evening, seated, after five minutes rest."}]'::jsonb,
+    'Bring the log to the next review before any dose change is made.',
+    'Hypertension, home readings requested', 'medium',
+    '2026-05-02T09:00:00Z', '2026-05-02T10:15:00Z', '2026-05-03T10:00:00Z', 'seed-sofia-2');
+
+  -- ---------------------------------------------------------------- Thabo Molefe
+  x := pg_temp.seed_closed_case(h_id, thabo, sara,
+    'Twisted ankle playing football', 'prescription',
+    'Lateral ankle sprain',
+    'Inversion injury, able to weight-bear, no bony tenderness — no X-ray indicated.',
+    '[{"name":"Naproxen","dosage":"250 mg","timing":"Twice daily with food, 5 days","notes":"Stop if stomach pain develops.","why":"Reduces swelling in the first days after a sprain.","detail":"Short course only."},
+      {"name":"Ice, elevation and early movement","dosage":"","timing":"First 48 hours, then walk on it","notes":"","why":"Early gentle loading heals a sprain faster than rest.","detail":"20 minutes of ice, three times a day."}]'::jsonb,
+    'Return if you cannot put weight on it after three days, or if the foot becomes numb.',
+    'Ankle sprain, grade I', 'high',
+    '2026-04-18T09:00:00Z', '2026-04-18T09:50:00Z', '2026-04-19T10:00:00Z', 'seed-thabo-1');
+
+  -- ---------------------------------------------------------------- Emily Watson
+  x := pg_temp.seed_closed_case(h_id, emily, sara,
+    'Breathless climbing the stairs', 'investigation',
+    'Anaemia screen',
+    'New exertional breathlessness with heavy periods — anaemia is the first thing to exclude.',
+    '[{"name":"Full blood count","timing":"Within 3 days","why":"Breathlessness on exertion with heavy periods points to anaemia.","detail":"No preparation needed."},
+      {"name":"Serum ferritin","timing":"Same sample","why":"Separates iron deficiency from other causes of a low count.","detail":"Taken from the same blood draw."}]'::jsonb,
+    'Seek urgent care for chest pain, fainting, or breathlessness at rest.',
+    'Suspected iron-deficiency anaemia', 'high',
+    '2026-02-14T09:00:00Z', '2026-02-14T10:05:00Z', '2026-02-15T10:00:00Z', 'seed-emily-1');
+
+  x := pg_temp.seed_closed_case(h_id, emily, sara,
+    'Iron tablets follow-up', 'prescription',
+    'Iron replacement — continue and recheck',
+    'Haemoglobin recovered to 12.6 g/dL; ferritin still low, so treatment continues.',
+    '[{"name":"Ferrous fumarate","dosage":"210 mg","timing":"Twice daily, 3 more months","notes":"Take with orange juice, not tea.","why":"Stores take about three months to refill after the count recovers.","detail":"Continue past the point you feel better."},
+      {"name":"Ferritin recheck","dosage":"","timing":"In 3 months","notes":"","why":"Confirms the stores are full before stopping.","detail":"Book at the end of the course."}]'::jsonb,
+    'Dark stools are expected on iron; black tarry stools with pain are not — seek care.',
+    'Iron-deficiency anaemia, responding', 'high',
+    '2026-07-01T09:00:00Z', '2026-07-01T10:10:00Z', '2026-07-02T10:00:00Z', 'seed-emily-2');
+
+  -- ----------------------------------------------------------------- Omar Haddad
+  x := pg_temp.seed_closed_case(h_id, omar, sara,
+    'Back pain after lifting at work', 'prescription',
+    'Mechanical back pain — activity and physiotherapy',
+    'Lumbar strain after lifting, no red flags, no leg symptoms at the time.',
+    '[{"name":"Naproxen","dosage":"250 mg","timing":"Twice daily with food, 7 days","notes":"Avoid codeine — it has made you vomit before.","why":"A short anti-inflammatory course helps you keep moving.","detail":"Take with food."},
+      {"name":"Physiotherapy referral","dosage":"","timing":"Within 3 weeks","notes":"","why":"Guided movement prevents this becoming long-term pain.","detail":"The clinic will call to book."}]'::jsonb,
+    'Seek urgent care for numbness between the legs or loss of bladder control.',
+    'Mechanical lumbar strain', 'high',
+    '2025-10-09T09:00:00Z', '2025-10-09T10:15:00Z', '2025-10-10T10:00:00Z', 'seed-omar-1');
+
+  -- ---------------------------------------------------------------- Grace Mensah
+  x := pg_temp.seed_closed_case(h_id, grace, sara,
+    'Eczema flare on both hands', 'prescription',
+    'Atopic eczema flare',
+    'Dry cracked hands after a winter of frequent hand washing.',
+    '[{"name":"Betamethasone valerate 0.1% ointment","dosage":"Thin layer","timing":"Once daily, up to 14 days","notes":"Hands only; stop once the skin is smooth.","why":"A moderate steroid settles a flare faster than emollient alone.","detail":"Fingertip unit per hand."},
+      {"name":"Emollient","dosage":"Generous","timing":"At least four times daily, ongoing","notes":"Continue after the flare settles.","why":"Emollient prevents the next flare; the steroid only treats this one.","detail":"Apply after every hand wash."}]'::jsonb,
+    'Seek care if the skin becomes hot, weeping or crusted — that suggests infection.',
+    'Atopic eczema, hand flare', 'high',
+    '2026-01-25T09:00:00Z', '2026-01-25T10:10:00Z', '2026-01-26T10:00:00Z', 'seed-grace-1');
+
+  x := pg_temp.seed_closed_case(h_id, grace, sara,
+    'Sneezing and itchy eyes every morning', 'prescription',
+    'Allergic rhinitis',
+    'Seasonal sneezing, nasal itch and watery eyes, worse on waking.',
+    '[{"name":"Fexofenadine","dosage":"180 mg","timing":"Once daily in the morning, 8 weeks","notes":"Non-sedating.","why":"Blocks the histamine driving the sneezing and itch.","detail":"Through the pollen season."},
+      {"name":"Fluticasone nasal spray","dosage":"2 sprays each nostril","timing":"Once daily","notes":"Aim away from the septum.","why":"A nasal steroid controls congestion better than tablets alone.","detail":"Takes about a week to reach full effect."}]'::jsonb,
+    'Keep windows shut in the early morning when pollen counts peak.',
+    'Allergic rhinitis', 'high',
+    '2026-06-08T09:00:00Z', '2026-06-08T10:05:00Z', '2026-06-09T10:00:00Z', 'seed-grace-2');
+end $$;
+
+do $$
+declare
+  h_id  uuid := '0e2c0000-0000-4000-8000-000000000001';
+  sara  uuid := '77b30000-0000-4000-8000-000000000001';
+  pv_cough    uuid := 'b7d00000-0000-4000-8000-000000000001';
+  pv_headache uuid := 'b7d00000-0000-4000-8000-000000000002';
+
+  alex   uuid := 'c1a90000-0000-4000-8000-000000000001';
+  maria  uuid := 'a0010000-0000-4000-8000-000000000001';
+  james  uuid := 'a0020000-0000-4000-8000-000000000002';
+  priya  uuid := 'a0030000-0000-4000-8000-000000000003';
+  ravi   uuid := 'a0040000-0000-4000-8000-000000000004';
+  fatima uuid := 'a0050000-0000-4000-8000-000000000005';
+  daniel uuid := 'a0060000-0000-4000-8000-000000000006';
+  ling   uuid := 'a0070000-0000-4000-8000-000000000007';
+  aarav  uuid := 'a0080000-0000-4000-8000-000000000008';
+  sofia  uuid := 'a0090000-0000-4000-8000-000000000009';
+  thabo  uuid := 'a00a0000-0000-4000-8000-00000000000a';
+  emily  uuid := 'a00b0000-0000-4000-8000-00000000000b';
+  omar   uuid := 'a00c0000-0000-4000-8000-00000000000c';
+  grace  uuid := 'a00d0000-0000-4000-8000-00000000000d';
+  today  timestamptz;
+  x uuid;
+begin
+  -- ------------------------------------------------- four more waiting for review
+  x := pg_temp.seed_pending_case(h_id, omar,
+    'Back pain flare, now down the left leg', 'urgent',
+    '[{"label":"Lumbar radiculopathy","likelihood":0.7}]'::jsonb, null,
+    'investigation', 'Sciatica — same-day assessment',
+    'Known chronic back pain, now with pain radiating below the knee and calf weakness.',
+    '[{"name":"Same-day clinical examination","timing":"Today","why":"New leg weakness with back pain needs a nerve examination before anything else.","detail":"Straight-leg raise and power testing."},
+      {"name":"Hold naproxen until reviewed","timing":"Today","why":"Pain relief could mask a worsening deficit.","detail":"Paracetamol is fine meanwhile."}]'::jsonb,
+    'Go to emergency care immediately for numbness between the legs or bladder trouble.',
+    'Radicular pain with weakness', 'medium',
+    '[{"code":"red_flag","severity":"warn","text":"New motor weakness reported — clinician review same day.","source":"validator"},
+      {"code":"allergy_class","severity":"warn","text":"Codeine allergy on file — opioid analgesia avoided.","source":"validator"}]'::jsonb,
+    interval '9 minutes',
+    '[{"sender":"patient","text":"My back went again on Saturday and now the pain shoots down my left leg."},
+      {"sender":"ai","text":"Thank you for telling me. Is there any weakness in that leg, or numbness?"},
+      {"sender":"patient","text":"It feels weaker going up stairs. No numbness between my legs, and no bladder problems."}]'::jsonb,
+    '[{"slot":"presenting_complaint","value":"Back pain radiating down the left leg","conf":0.95},
+      {"slot":"duration_course","value":"Three days, worsening","conf":0.9},
+      {"slot":"severity","value":"8/10; disturbs sleep","conf":0.85},
+      {"slot":"red_flag_screen","value":"Leg weakness present; no saddle anaesthesia, no bladder change","conf":0.9}]'::jsonb);
+
+  x := pg_temp.seed_pending_case(h_id, daniel,
+    'Wheezing after football, twice this week', 'soon',
+    '[{"label":"Exercise-induced asthma, poor control","likelihood":0.75}]'::jsonb, null,
+    'prescription', 'Asthma control review',
+    'Reliever needed after exercise twice this week despite a daily preventer.',
+    '[{"name":"Salbutamol inhaler","dosage":"100 mcg, 2 puffs","timing":"15 minutes before exercise","notes":"Through the spacer.","why":"Pre-treatment prevents exercise-triggered narrowing.","detail":"In addition to the daily preventer."},
+      {"name":"Peak flow diary","dosage":"","timing":"Morning and evening, 2 weeks","notes":"Record best of three.","why":"Shows whether control is slipping generally or only with exercise.","detail":"Bring to the review."}]'::jsonb,
+    'Seek urgent care if the reliever stops working or you cannot finish a sentence.',
+    'Exercise-induced symptoms on preventer', 'high',
+    '[{"code":"allergy_class","severity":"info","text":"NSAID allergy on file — none in this draft.","source":"validator"}]'::jsonb,
+    interval '26 minutes',
+    '[{"sender":"patient","text":"I keep wheezing near the end of football, twice this week now."},
+      {"sender":"ai","text":"Are you taking the brown preventer inhaler every day, even on days you feel well?"},
+      {"sender":"patient","text":"Most days, yes. The blue one sorts it out within a few minutes."}]'::jsonb,
+    '[{"slot":"presenting_complaint","value":"Wheeze with exercise","conf":0.95},
+      {"slot":"duration_course","value":"Two episodes this week","conf":0.9},
+      {"slot":"severity","value":"5/10; settles with reliever","conf":0.8},
+      {"slot":"red_flag_screen","value":"No night waking, no speech difficulty, reliever effective","conf":0.9}]'::jsonb);
+
+  x := pg_temp.seed_pending_case(h_id, fatima,
+    'Aura lasting longer than usual', 'soon',
+    '[{"label":"Migraine with prolonged aura","likelihood":0.65}]'::jsonb, pv_headache,
+    'investigation', 'Prolonged aura — clinician review',
+    'Visual aura lasting about 90 minutes, well beyond her usual 20, on propranolol prophylaxis.',
+    '[{"name":"Clinician review before next dose","timing":"Within 24 hours","why":"An aura this long changes what is safe to prescribe.","detail":"Neurological examination."},
+      {"name":"Avoid triptans until reviewed","timing":"Now","why":"Prolonged aura needs assessment before a triptan is given.","detail":"Paracetamol may be used meanwhile."}]'::jsonb,
+    'Seek emergency care for weakness on one side, slurred speech or a sudden worst-ever headache.',
+    'Aura outside her usual pattern', 'medium',
+    '[{"code":"pattern_change","severity":"warn","text":"Aura duration well outside the patient baseline.","source":"validator"},
+      {"code":"allergy_class","severity":"info","text":"Sulfonamide allergy on file — none in this draft.","source":"validator"}]'::jsonb,
+    interval '54 minutes',
+    '[{"sender":"patient","text":"The zigzag lights lasted well over an hour this time. They are usually gone in twenty minutes."},
+      {"sender":"ai","text":"Did any weakness, numbness or difficulty speaking come with it?"},
+      {"sender":"patient","text":"No, just the lights and then the headache. But it frightened me."}]'::jsonb,
+    '[{"slot":"presenting_complaint","value":"Visual aura, prolonged","conf":0.95},
+      {"slot":"duration_course","value":"About 90 minutes, once, today","conf":0.9},
+      {"slot":"severity","value":"6/10 headache after the aura","conf":0.8},
+      {"slot":"red_flag_screen","value":"No focal weakness, no speech change, no thunderclap onset","conf":0.92}]'::jsonb);
+
+  x := pg_temp.seed_pending_case(h_id, thabo,
+    'Sore throat, four days', 'routine',
+    '[{"label":"Viral pharyngitis","likelihood":0.8}]'::jsonb, pv_cough,
+    'prescription', 'Sore throat — supportive care',
+    'Four days of sore throat with a cough and no fever; a viral pattern rather than a bacterial one.',
+    '[{"name":"Paracetamol","dosage":"1 g","timing":"Up to four times daily as needed","notes":"Maximum 4 g in 24 hours.","why":"Pain relief is the treatment; antibiotics do not shorten a viral sore throat.","detail":"Regular dosing for the first two days."},
+      {"name":"Salt-water gargle","dosage":"","timing":"Three times daily","notes":"Half a teaspoon in warm water.","why":"Eases the rawness while the infection clears.","detail":"Do not swallow."}]'::jsonb,
+    'Come back if you cannot swallow fluids, the voice muffles, or a fever starts.',
+    'Viral pharyngitis, no antibiotic', 'high',
+    '[{"code":"antibiotic_stewardship","severity":"info","text":"Centor 1 — no antibiotic indicated.","source":"validator"}]'::jsonb,
+    interval '2 hours 5 minutes',
+    '[{"sender":"patient","text":"Sore throat since Tuesday, and a bit of a cough with it."},
+      {"sender":"ai","text":"Any fever, or white patches at the back of the throat?"},
+      {"sender":"patient","text":"No fever. I had a look and it just seems red."}]'::jsonb,
+    '[{"slot":"presenting_complaint","value":"Sore throat with cough","conf":0.95},
+      {"slot":"duration_course","value":"Four days, steady","conf":0.9},
+      {"slot":"severity","value":"4/10; swallowing fine","conf":0.85},
+      {"slot":"red_flag_screen","value":"No fever, no drooling, no voice change, no neck swelling","conf":0.9}]'::jsonb);
+
+  -- ------------------------------------------------------------------- more labs
+  insert into public.lab_results (patient_id, hospital_id, panel, analyte, value_num, unit,
+                                  ref_low, ref_high, abnormal, observed_at, source) values
+    (ravi,  h_id, 'Diabetes panel',       'HbA1c',            8.1, '%',      4.0,  6.0, 'high',   '2025-11-15T00:00:00Z', 'integration'),
+    (ravi,  h_id, 'Lipid Profile',        'LDL cholesterol', 148.0, 'mg/dL',  0.0,100.0, 'high',   '2026-04-01T00:00:00Z', 'integration'),
+    (ling,  h_id, 'Thyroid function',     'TSH',              7.8, 'mIU/L',  0.4,  4.0, 'high',   '2026-02-04T00:00:00Z', 'integration'),
+    (ling,  h_id, 'Thyroid function',     'Free T4',         11.2, 'pmol/L', 9.0, 19.0, 'normal', '2026-02-04T00:00:00Z', 'integration'),
+    (emily, h_id, 'Complete Blood Count', 'Haemoglobin',     10.2, 'g/dL',  12.0, 15.0, 'low',    '2026-02-17T00:00:00Z', 'integration'),
+    (emily, h_id, 'Iron studies',         'Ferritin',         8.0, 'ng/mL', 15.0,200.0, 'low',    '2026-02-17T00:00:00Z', 'integration'),
+    (emily, h_id, 'Complete Blood Count', 'Haemoglobin',     12.6, 'g/dL',  12.0, 15.0, 'normal', '2026-06-28T00:00:00Z', 'integration'),
+    (sofia, h_id, 'Blood pressure log',   'Systolic (7d avg)',146.0,'mmHg',  90.0,130.0, 'high',   '2026-05-09T00:00:00Z', 'manual'),
+    (daniel,h_id, 'Lung function',        'Peak flow (best)', 410.0,'L/min',450.0,650.0, 'low',    '2026-05-14T00:00:00Z', 'manual'),
+    (grace, h_id, 'Immunology',           'IgE total',       340.0, 'IU/mL',  0.0,100.0, 'high',   '2026-01-20T00:00:00Z', 'upload');
+
+  -- --------------------------------------------- Dr. Whitfield's appointment book
+  -- Six already seen, four still to come.
+  -- Today's book, built off midnight in the hospital's own timezone (§2.1
+  -- clinic_hours) rather than the database's UTC, so 09:00 here is 09:00 on the
+  -- desk. Without this the whole morning session lands in the browser's evening.
+  today := date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata';
+  insert into public.appointments (hospital_id, patient_id, doctor_id, kind, starts_at,
+                                   duration_minutes, location, status) values
+    (h_id, ravi,   sara, 'in_person', today + interval '9 hours',                  20, 'CityCare · Diabetes clinic, Room 4',  'completed'),
+    (h_id, sofia,  sara, 'in_person', today + interval '9 hours 30 minutes',       20, 'CityCare · General practice, Room 2', 'completed'),
+    (h_id, grace,  sara, 'video',     today + interval '10 hours',                 15, 'Video consultation',                  'completed'),
+    (h_id, thabo,  sara, 'in_person', today + interval '11 hours',                 15, 'CityCare · Minor injuries',           'no_show'),
+    (h_id, emily,  sara, 'in_person', today + interval '11 hours 30 minutes',      20, 'CityCare · General practice, Room 2', 'completed'),
+    (h_id, omar,   sara, 'in_person', today + interval '16 hours 30 minutes',      20, 'CityCare · General practice, Room 2', 'booked'),
+    (h_id, aarav,  sara, 'video',     today + interval '17 hours',                 15, 'Video consultation',                  'cancelled'),
+    (h_id, ling,   sara, 'video',     today + interval '17 hours 30 minutes',      15, 'Video consultation',                  'booked'),
+    (h_id, fatima, sara, 'video',     today + interval '1 day 10 hours',           15, 'Video consultation',                  'booked'),
+    (h_id, daniel, sara, 'in_person', today + interval '3 days 11 hours 30 minutes', 20, 'CityCare · Respiratory clinic',     'booked'),
+    (h_id, ravi,   sara, 'in_person', today + interval '9 days 9 hours',           20, 'CityCare · Diabetes clinic, Room 4',  'booked');
+
+  insert into public.notifications (hospital_id, recipient_id, kind, title, body, deep_link) values
+    (h_id, omar,   'appointment', 'Same-day appointment booked',
+     'Dr. Whitfield · today · CityCare, Room 2.', '/patient/records'),
+    (h_id, fatima, 'appointment', 'Video appointment booked',
+     'Dr. Whitfield · tomorrow · video consultation.', '/patient/records');
+end $$;
+
+drop function if exists pg_temp.seed_closed_case(uuid, uuid, uuid, text, public.plan_kind, text, text,
+  jsonb, text, text, public.confidence, timestamptz, timestamptz, timestamptz, text);
+drop function if exists pg_temp.seed_pending_case(uuid, uuid, text, public.urgency, jsonb, uuid,
+  public.plan_kind, text, text, jsonb, text, text, public.confidence, jsonb, interval, jsonb, jsonb);

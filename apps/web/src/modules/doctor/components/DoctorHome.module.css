@@ -1,7 +1,34 @@
-/* Doctor landing: three counts across the top, then the next few cases. */
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-@media (min-width: 800px) { .stats { gap: 16px; } }
+/* Doctor landing: the shift at a glance, then what needs a person. */
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 800px)  { .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; } }
 
-.stat { text-align: center; }
+.stat { min-width: 0; }
 .statValue { composes: vd-t-largeTitle from global; line-height: 1; }
 .statLabel { composes: vd-t-caption from global; color: var(--vd-ink-3); margin-top: var(--vd-space-2); }
+.statSub { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-4); margin-top: 2px; }
+
+.banner {
+  display: flex; align-items: center; gap: var(--vd-space-4);
+  background: var(--vd-warn-bg); color: var(--vd-warn-fg);
+  border-radius: var(--vd-radius-lg); padding: var(--vd-space-4) var(--vd-space-5);
+  margin-top: var(--vd-space-5);
+}
+.bannerText { composes: vd-t-callout vd-w6 from global; flex: 1; }
+
+.attn { display: flex; align-items: center; gap: var(--vd-space-4); color: var(--vd-ink-4); }
+.attnIcon {
+  width: 36px; height: 36px; border-radius: var(--vd-radius-pill); flex: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.bad  { background: var(--vd-bad-bg);  color: var(--vd-bad-fg); }
+.warn { background: var(--vd-warn-bg); color: var(--vd-warn-fg); }
+.info { background: var(--vd-info-bg); color: var(--vd-info-fg); }
+
+.attnBody { flex: 1; min-width: 0; }
+.attnTitle { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
+.attnLine { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+.attnMeta { composes: vd-t-caption from global; font-weight: 400; color: var(--vd-ink-4); flex: none; }
+
+@media (max-width: 799px) {
+  .attnMeta { display: none; }
+}

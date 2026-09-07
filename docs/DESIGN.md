@@ -1,4 +1,4 @@
-# Virtual Doctor — Design System
+# AI Doctor — Design System
 
 **Status:** Binding. `docs/PRD.md` §5.0 (UI-1, UI-2) and §5.0.1 (MC-1…MC-7) govern *what*; this document governs *how it looks and measures*. Implementation checklist: `docs/DESIGN-TASKS.md`.
 

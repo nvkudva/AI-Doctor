@@ -3,20 +3,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router';
 import { useBreakpoint } from '../../shell/viewport';
-import { isReviewable, sortQueue, type CaseItem } from '../../lib/core';
+import { isReviewable, slaCountdown, sortQueue, type CaseItem } from '../../lib/core';
 import { Button, Card, EmptyState, Icon, MicroLabel, MiraPanel, NavBar, pressProps, type NavItem } from '../../lib/ui';
 import { ClinicProvider, useClinic } from '../../store';
 import { seedConsults, seedQueue, seedRx } from '../../store/seeds';
 import { useReview } from './useReview';
 import { DeskHeader } from './components/DeskHeader';
 import { QueueCard } from './components/QueueCard';
+import { ReviewRow } from './components/ReviewRow';
+import { AppointmentsScreen } from './components/AppointmentsScreen';
 import { CaseDetail, PatientPanel } from './components/CaseDetail';
 import { DeclineSheet } from './components/DeclineSheet';
 import { DoctorHome } from './components/DoctorHome';
 import { ProfileScreen } from './components/ProfileScreen';
 import s from './DoctorApp.module.css';
 
-type Filter = 'all' | 'pending' | 'urgent';
+type Filter = 'all' | 'urgent' | 'breached';
 type DeskTab = 'home' | 'appointments' | 'reviews';
 
 // Home · Appointments · [Mira] · Reviews · Profile (DESIGN §10.8).
@@ -53,7 +55,9 @@ function Desk({ tenantName }: { tenantName: string }) {
   const [miraOpen, setMiraOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
   // Each list is a route, so reload, Back and deep links all behave (UX-16).
-  const tab: DeskTab = /\/doctor\/reviews/.test(pathname) ? 'reviews'
+  // An open case belongs to Reviews, wherever the doctor came from — otherwise
+  // the desk draws the shift dashboard beside a case it has nothing to do with.
+  const tab: DeskTab = /\/doctor\/(reviews|case)/.test(pathname) ? 'reviews'
     : /\/doctor\/appointments/.test(pathname) ? 'appointments' : 'home';
   const tabPath = (t: DeskTab) => (t === 'home' ? '/doctor' : `/doctor/${t}`);
   // Refresh wait-time labels every minute.
@@ -77,24 +81,29 @@ function Desk({ tenantName }: { tenantName: string }) {
 
   const queue = useMemo(() => sortQueue(clinic.queue), [clinic.queue]);
   // The nav tab picks the list; the desktop filter narrows it further.
-  const visible = useMemo(() => queue.filter(c => {
-    if (tab === 'reviews' && !isReviewable(c.status)) return false;
-    if (filter === 'pending') return isReviewable(c.status);
+  // The review queue is only what still needs a decision — an approved case is
+  // in the patient's record, not on the desk (PRD D-2).
+  const reviewable = useMemo(() => queue.filter(c => isReviewable(c.status)), [queue]);
+  const visible = useMemo(() => reviewable.filter(c => {
     if (filter === 'urgent') return c.rec.urgency === 'urgent';
+    if (filter === 'breached') return !!c.submittedAt && slaCountdown(c.submittedAt).breached;
     return true;
-  }), [queue, tab, filter]);
+  }), [reviewable, filter]);
   const activeId = caseId && queue.some(c => c.id === caseId) ? caseId : null;
   // A stale or mistyped id must say so, not quietly show a different patient (UX-17).
   const missingCase = !!caseId && !activeId;
   const ac = activeId ? queue.find(c => c.id === activeId) : undefined;
   // Mira is bound to exactly the case drawn in the case pane — never to a
   // different first-in-queue case the doctor cannot see (UX-09).
-  const paneCase = missingCase ? undefined : ac || (mobile ? undefined : visible[0]);
-  const pendingCount = queue.filter(c => isReviewable(c.status)).length;
-  const filtered = visible.length !== queue.length;
-  const queueLabel = tab === 'appointments'
-    ? `Appointments · ${visible.length}${filtered ? ` of ${queue.length}` : ''}`
-    : `Review queue · ${pendingCount} pending`;
+  // No auto-selection: Reviews lands on the worklist and opens a case only when
+  // the doctor picks one, so the first row is never half-reviewed by accident.
+  const paneCase = missingCase ? undefined : ac;
+  const pendingCount = reviewable.length;
+  const breachedCount = reviewable.filter(c => c.submittedAt && slaCountdown(c.submittedAt).breached).length;
+  const urgentCount = reviewable.filter(c => c.rec.urgency === 'urgent').length;
+  const filtered = visible.length !== reviewable.length;
+  const queueLabel = `Awaiting a decision · ${pendingCount}`;
+  const counts: Record<Filter, number> = { all: pendingCount, urgent: urgentCount, breached: breachedCount };
 
   const review = useReview({
     getCase: () => paneCase,
@@ -138,10 +147,22 @@ function Desk({ tenantName }: { tenantName: string }) {
     setDeclineFor(id);
     setDeclining(true);
   };
+  // The one decision that books instead of signing. The next free half hour is
+  // a sensible default the doctor can move once the calendar is editable.
+  const escalate = (id: string) => {
+    const c = queue.find(x => x.id === id);
+    review.stop();
+    clinic.escalateCase(id, nextSlot(), 'in_person', 'CityCare · General practice');
+    announce(id, `${c?.patient || 'The patient'} booked in — the case is on your calendar.`);
+    nav('/doctor/appointments');
+  };
 
   const homeTab = tab === 'home';
+  // Home and the calendar are whole screens; the worklist only splits into
+  // queue + case + patient once a case is actually open.
+  const split = tab === 'reviews' && !!ac;
   const showQueue = !mobile || !ac;
-  const showCase = !mobile || !!ac;
+  const showCase = split && (!mobile || !!ac);
   const emptyQueue = missingCase ? (
     <EmptyState
       icon="doc"
@@ -186,18 +207,26 @@ function Desk({ tenantName }: { tenantName: string }) {
         onToggleNotifs={() => setShowNotifs(s => !s)}
         onCloseNotifs={() => setShowNotifs(false)}
         onSelectCase={selectCase}
-        filter={bp === 'desktop' && tab !== 'home' ? <QueueFilter value={filter} onChange={setFilter} /> : undefined}
+        filter={bp === 'desktop' && tab === 'reviews' ? <QueueFilter value={filter} onChange={setFilter} counts={counts} /> : undefined}
       />
 
       <div className={s.desk}>
-        <div className={s.panes}>
+        <div className={split ? s.panes : s.oneColumn}>
           {showQueue && (
             <section className={s.pane} aria-label="Review queue">
-              {homeTab ? (
-                <DoctorHome queue={queue} onSelect={selectCase} onSeeAll={() => nav('/doctor/appointments')} />
+              {tab === 'appointments' ? (
+                <AppointmentsScreen appointments={clinic.appointments} onSlotStatus={clinic.setSlotStatus} />
+              ) : homeTab ? (
+                <DoctorHome
+                  queue={queue}
+                  appointments={clinic.appointments}
+                  onSelect={selectCase}
+                  onSeeAll={() => nav('/doctor/appointments')}
+                  onSeeReviews={() => nav('/doctor/reviews')}
+                />
               ) : mobile ? (
                 <>
-                  <QueueFilter value={filter} onChange={setFilter} />
+                  <QueueFilter value={filter} onChange={setFilter} counts={counts} />
                   <MicroLabel>{queueLabel}</MicroLabel>
                   {visible.map(c => (
                     <QueueCard key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
@@ -206,14 +235,23 @@ function Desk({ tenantName }: { tenantName: string }) {
                 </>
               ) : (
                 <Card tone="panel" level={1} className={s.queueCard}>
-                  {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} />}
-                  <MicroLabel>{queueLabel}</MicroLabel>
+                  {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} counts={counts} />}
+                  <div className={s.queueHead}>
+                    <MicroLabel>{queueLabel}</MicroLabel>
+                    <span className={s.queueSort}>urgency, then longest waiting</span>
+                  </div>
+                  {breachedCount > 0 && (
+                    <div className={s.breachBanner} role="status">
+                      <Icon name="alert" size={16} />
+                      {breachedCount === 1 ? '1 case has' : `${breachedCount} cases have`} passed the 2-hour review target.
+                    </div>
+                  )}
                   {visible.map(c => (
-                    <QueueCard key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
+                    <ReviewRow key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
                   ))}
                   {visible.length === 0 && (
                     <div className={s.queueEmpty}>
-                      {filtered && queue.length > 0 ? 'No cases match this filter.' : 'Nothing in this list.'}
+                      {filtered && reviewable.length > 0 ? 'No cases match this filter.' : 'Nothing awaiting a decision.'}
                     </div>
                   )}
                 </Card>
@@ -240,14 +278,17 @@ function Desk({ tenantName }: { tenantName: string }) {
                   onApprove={() => approveId(paneCase.id)}
                   onDecline={() => askDecline(paneCase.id)}
                   onEdit={() => clinic.decide(paneCase.id, 'changes')}
+                  onEscalate={() => escalate(paneCase.id)}
                 />
               ) : !mobile ? emptyQueue : null}
             </section>
           )}
 
-          <aside className={s.side} aria-label="Patient">
-            {paneCase && <PatientPanel ac={paneCase} />}
-          </aside>
+          {split && (
+            <aside className={s.side} aria-label="Patient">
+              {paneCase && <PatientPanel ac={paneCase} />}
+            </aside>
+          )}
         </div>
       </div>
       </>}
@@ -288,10 +329,21 @@ function Desk({ tenantName }: { tenantName: string }) {
   );
 }
 
-// All / Pending / Urgent segmented control — desktop header only (PRD D-2).
-function QueueFilter({ value, onChange }: { value: Filter; onChange: (f: Filter) => void }) {
+// The next half-hour boundary at least 30 minutes out.
+function nextSlot(): number {
+  const d = new Date(Date.now() + 30 * 60000);
+  d.setMinutes(d.getMinutes() > 30 ? 60 : 30, 0, 0);
+  return d.getTime();
+}
+
+// All / Urgent / Breached — the three cuts of a review queue that matter.
+function QueueFilter({ value, onChange, counts }: {
+  value: Filter; onChange: (f: Filter) => void; counts: Record<Filter, number>;
+}) {
   const opts: { k: Filter; label: string }[] = [
-    { k: 'all', label: 'All' }, { k: 'pending', label: 'Pending' }, { k: 'urgent', label: 'Urgent' },
+    { k: 'all', label: `All ${counts.all}` },
+    { k: 'urgent', label: `Urgent ${counts.urgent}` },
+    { k: 'breached', label: `Breached ${counts.breached}` },
   ];
   return (
     <div role="tablist" aria-label="Filter queue" className={s.filter}>

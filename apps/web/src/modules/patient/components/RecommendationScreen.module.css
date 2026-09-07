@@ -171,3 +171,10 @@
 }
 .chipLabel { composes: vd-t-micro from global; color: var(--vd-ink-3); }
 .chipValue { composes: vd-t-footnote vd-w6 from global; color: var(--vd-ink-2); margin-top: 2px; }
+
+/* An ordered test the patient can act on from the plan itself. */
+.book { margin-top: var(--vd-space-4); }
+.booked {
+  composes: vd-t-footnote vd-w6 from global;
+  color: var(--vd-ok-fg); margin-top: var(--vd-space-3);
+}

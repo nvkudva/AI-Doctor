@@ -1,4 +1,4 @@
-# Virtual Doctor — QA sweep findings
+# AI Doctor — QA sweep findings
 
 Functional / UI / a11y / console sweep of the running app, complementing the
 flow-level audit in `docs/UX-FINDINGS.md`. Findings already recorded there

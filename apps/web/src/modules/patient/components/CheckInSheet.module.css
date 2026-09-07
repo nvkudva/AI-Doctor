@@ -1,0 +1,30 @@
+/* Day-3 check-in (patient-todo P1 #20). Care, not a survey. */
+.screen { display: flex; flex-direction: column; gap: var(--vd-space-4); align-items: stretch; }
+.orb { display: flex; justify-content: center; margin: var(--vd-space-4) 0; }
+.title { composes: vd-t-largeTitle from global; color: var(--vd-ink-1); text-align: center; }
+.lede {
+  composes: vd-t-callout from global; color: var(--vd-ink-soft);
+  text-align: center; margin: 0 var(--vd-space-6) var(--vd-space-4);
+}
+
+.choices { display: flex; flex-direction: column; gap: var(--vd-space-3); }
+.choice { display: flex; align-items: center; gap: var(--vd-space-4); border-width: 2px; }
+.choiceOn { border-color: var(--vd-ink-1); outline: 2px solid var(--vd-ink-1); outline-offset: -2px; }
+.badge {
+  width: 42px; height: 42px; border-radius: var(--vd-radius-pill); flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700;
+}
+.choiceBody { min-width: 0; }
+.choiceLabel { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.choiceSub { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.note { display: flex; gap: var(--vd-space-4); background: var(--vd-advice-bg); }
+.noteIcon { color: var(--vd-advice-fg); display: flex; flex: none; padding-top: 1px; }
+.noteText { composes: vd-t-footnote from global; color: var(--vd-ink-2); }
+
+.later {
+  composes: vd-t-footnote from global;
+  background: none; border: none; cursor: pointer;
+  color: var(--vd-ink-4); padding: var(--vd-space-3);
+}

@@ -1,4 +1,4 @@
-# Virtual Doctor — backend
+# AI Doctor — backend
 
 The Supabase implementation of `docs/DATA-MODEL.md`. Postgres is the authorization
 layer: the §3.6 matrix is `CREATE POLICY`, the §3.4 gate is a constraint plus a

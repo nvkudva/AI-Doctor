@@ -7,17 +7,40 @@ import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
 import { persistLocal, restoreLocal } from '../../../lib/api';
 import { MiraPanel, NavBar, type NavItem } from '../../../lib/ui';
-import { seedLabs } from '../../../store/seeds';
+import { formatValue, toPanels } from '../../../store/labs';
+import type { LabValue } from '../../../store/types';
 import { useAuth } from '../../../shell/auth';
 import { useConsult, type PatientProfile } from '../useConsult';
 import { HomeScreen } from './HomeScreen';
 import { RecordsScreen, type RecordsTab } from './RecordsScreen';
 import { ProfileScreen } from './ProfileScreen';
 import { RecommendationScreen } from './RecommendationScreen';
+import { LabPanelScreen } from './LabPanelScreen';
+import { BookTestScreen } from './BookTestScreen';
+import { MedicinesScreen } from './MedicinesScreen';
+import { CheckInSheet } from './CheckInSheet';
 import { EmptyRecommendation } from './EmptyRecommendation';
 import s from './PatientFlow.module.css';
 
-type Screen = 'home' | 'recommendation' | 'records' | 'profile';
+type Screen = 'home' | 'recommendation' | 'records' | 'profile' | 'labs' | 'book' | 'medicines' | 'checkin';
+
+// The doctor's case pane shows a result as one line, not a range bar.
+function toLabRow(v: LabValue) {
+  return {
+    name: v.analyte,
+    date: new Date(v.observedAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }),
+    result: formatValue(v),
+    ok: v.abnormal === 'normal',
+  };
+}
+
+// What the check-in answer says to Mira, so the follow-up starts from what the
+// patient already told the app rather than asking them to repeat it.
+const CHECK_IN_LINE: Record<'better' | 'same' | 'worse', string> = {
+  better: 'The plan is working — I am feeling better.',
+  same: 'It has been a few days and I am about the same — no better, no worse.',
+  worse: 'It has got worse since the plan was approved.',
+};
 
 // Shown when the orb is tapped while a plan is already with the doctor: the
 // panel always opens, and it says what can be done from here (UX-11, UX-12).
@@ -28,7 +51,7 @@ function statusToReview(s: string): string {
   return s === 'approved' ? 'approved' : s === 'rejected' ? 'rejected' : s === 'changes' ? 'changes' : 'pending';
 }
 
-const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile'];
+const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin'];
 const TABS: RecordsTab[] = ['history', 'labs'];
 
 type NavTab = 'home' | 'history' | 'labs' | 'profile';
@@ -49,7 +72,11 @@ export function PatientFlow() {
 
   // The URL owns the screen: /patient[/recommendation|records|profile]. The
   // consult is not a screen — it overlays whatever you are on.
-  const seg = loc.pathname.split('/')[2] ?? '';
+  const parts = loc.pathname.split('/');
+  const seg = parts[2] ?? '';
+  // /patient/labs/:panel and /patient/book/:test carry their subject in the URL,
+  // so a reload or a deep link lands on the same result or the same test.
+  const subject = parts[3] ? decodeURIComponent(parts[3]) : '';
   const screen: Screen = (SCREENS.includes(seg as Screen) ? seg : 'home') as Screen;
   const tabParam = params.get('tab');
   const recordsTab: RecordsTab = (TABS.includes(tabParam as RecordsTab) ? tabParam : 'history') as RecordsTab;
@@ -70,6 +97,20 @@ export function PatientFlow() {
     }, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, tabParam]);
+
+  const panels = useMemo(() => toPanels(clinic.labs), [clinic.labs]);
+  const panel = screen === 'labs' ? panels.find(p => p.panel === subject) : undefined;
+  // What the doctor already said about this result, when a plan covers it.
+  const labNote = useMemo(() => {
+    if (!panel) return undefined;
+    const mine = clinic.queue.find(c => c.mine && c.status === 'approved');
+    return mine?.rec.advice || undefined;
+  }, [panel, clinic.queue]);
+  const bookNote = useMemo(() => {
+    const mine = clinic.queue.find(c => c.mine && c.status === 'approved');
+    const item = mine?.rec.items.find(i => i.name === subject);
+    return item ? [item.why, item.timing].filter(Boolean).join(' · ') : 'Ordered by your doctor';
+  }, [clinic.queue, subject]);
 
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [miraOpen, setMiraOpen] = useState(false);
@@ -102,13 +143,15 @@ export function PatientFlow() {
         symptoms: users,
         history: hp.allergies ? `Allergic to ${hp.allergies}.` : 'No allergies or history on file for this patient.',
         confidence: ctx.confidence as Confidence,
-        flags: ctx.flags,
+        // Mira only raises a flag for a concern she actually found, so each one
+        // reaches the desk as a warning rather than an attestation.
+        flags: ctx.flags.map(text => ({ code: 'mira', severity: 'warn' as const, text, source: 'mira' })),
         stated: ctx.notes.length ? ctx.notes : users,
         inferred: [r.title],
         observation: 'No acute distress noted during the call.',
         rec: r,
-        relevantLabs: seedLabs.map(l => ({ ...l })),
-        pastLabs: seedLabs.map(l => ({ ...l })),
+        relevantLabs: clinic.labs.map(toLabRow),
+        pastLabs: clinic.labs.map(toLabRow),
         pastConsults: clinic.consults.map(c => ({ title: c.title, date: c.date, note: c.note })),
       };
       setRec(r);
@@ -250,7 +293,39 @@ export function PatientFlow() {
         draftKey="vd_consult_draft"
       />
       <div className={s.screen}>
-        {screen === 'home' && <HomeScreen onStart={startConsult} />}
+        {screen === 'home' && (
+          <HomeScreen onStart={startConsult} onCheckIn={() => nav('/patient/checkin')} />
+        )}
+        {screen === 'labs' && (
+          panel
+            ? <LabPanelScreen panel={panel} doctorNote={labNote} onBack={() => { setRecordsTab('labs'); nav('/patient/records?tab=labs'); }} />
+            : <EmptyRecommendation onHome={() => nav('/patient')} />
+        )}
+        {screen === 'book' && (
+          <BookTestScreen
+            title={subject || 'Your test'}
+            note={bookNote}
+            booked={clinic.appointments.find(a => a.patient === subject && a.status === 'booked')}
+            onConfirm={(at, where) => { clinic.bookSlot(subject, at, where); nav('/patient'); }}
+            onBack={() => nav('/patient/recommendation')}
+          />
+        )}
+        {screen === 'medicines' && (
+          <MedicinesScreen doses={clinic.doses} onTaken={clinic.setDoseTaken} />
+        )}
+        {screen === 'checkin' && (
+          clinic.checkIn
+            ? <CheckInSheet
+                title={clinic.checkIn.title}
+                onAnswer={(a, followUp) => {
+                  clinic.answerCheckIn(a);
+                  nav('/patient');
+                  if (followUp) setTimeout(() => { setMiraOpen(true); consult.send(CHECK_IN_LINE[a]); }, 0);
+                }}
+                onDismiss={() => nav('/patient')}
+              />
+            : <EmptyRecommendation onHome={() => nav('/patient')} />
+        )}
         {screen === 'recommendation' && rec && (
           <RecommendationScreen
             rec={rec}
@@ -260,6 +335,11 @@ export function PatientFlow() {
             onFollowUp={openMira}
             onBack={() => nav('/patient')}
             onViewRecords={() => { setRecordsTab('history'); nav('/patient/records'); }}
+            onBook={(test) => nav(`/patient/book/${encodeURIComponent(test)}`)}
+            bookedFor={(test) => {
+              const a = clinic.appointments.find(x => x.patient === test && x.status === 'booked');
+              return a ? new Date(a.startsAt).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : undefined;
+            }}
           />
         )}
         {screen === 'recommendation' && !rec && (
@@ -269,7 +349,8 @@ export function PatientFlow() {
         {screen === 'records' && (
           <RecordsScreen
             consults={clinic.consults}
-            labs={seedLabs}
+            panels={panels}
+            onPanel={(p) => nav(`/patient/labs/${encodeURIComponent(p)}`)}
             tab={recordsTab}
             onTab={setRecordsTab}
           />

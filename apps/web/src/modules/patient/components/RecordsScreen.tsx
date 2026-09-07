@@ -2,6 +2,7 @@
 // Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
 import { AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill, ThemeToggle } from '../../../lib/ui';
+import type { LabPanel } from '../../../store/labs';
 import { PatientNotify } from './PatientNotify';
 import { tints } from '../../../lib/theme';
 import type { UserConsult } from '../../../store';
@@ -11,9 +12,10 @@ export type RecordsTab = 'history' | 'labs';
 
 const RECORD_TABS: RecordsTab[] = ['history', 'labs'];
 
-export function RecordsScreen({ consults, labs, tab, onTab }: {
+export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
   consults: UserConsult[];
-  labs: { name: string; date: string; result: string; ok: boolean }[];
+  panels: LabPanel[];
+  onPanel: (panel: string) => void;
   tab: RecordsTab;
   onTab: (t: RecordsTab) => void;
 }) {
@@ -75,21 +77,9 @@ export function RecordsScreen({ consults, labs, tab, onTab }: {
         <>
           <SectionTitle>Lab tests</SectionTitle>
           <SectionSub>Results from your previous blood work &amp; tests</SectionSub>
-          {labs.length === 0
+          {panels.length === 0
             ? <EmptyState icon="drop" title="No lab results yet" body="Results ordered through a consult land here." />
-            : <div className={s.grid}>{labs.map((l, i) => <LabRow key={i} name={l.name} date={l.date} result={l.result} ok={l.ok} />)}</div>}
-          <SectionTitle>Documents</SectionTitle>
-          <div className={s.grid}>
-            {[['Chest X-ray report.pdf', 'Mar 2026'], ['CBC results.pdf', 'Feb 2026']].map(([n, d]) => (
-              <Card key={n} level={1} pad="13px 15px" className={s.doc}>
-                <span className={s.docIcon}><Icon name="doc" size={19} /></span>
-                <div>
-                  <div className={s.docName}>{n}</div>
-                  <div className={s.docDate}>{d}</div>
-                </div>
-              </Card>
-            ))}
-          </div>
+            : <div className={s.grid}>{panels.map(p => <PanelRow key={p.panel} p={p} onOpen={() => onPanel(p.panel)} />)}</div>}
         </>
       )}
 
@@ -155,16 +145,22 @@ function ConsultCard({ c }: { c: UserConsult }) {
   );
 }
 
-function LabRow({ name, date, result, ok }: { name: string; date: string; result: string; ok: boolean }) {
+// A panel, not a value: the detail screen is where individual analytes get
+// their range, their explanation and their history.
+function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
+  const ok = p.worst === 'normal';
   const t = ok ? tints.labOk : tints.labWarn;
   return (
-    <Card level={1} pad="13px 15px" className={s.lab}>
+    <Card level={1} pad="13px 15px" className={s.lab} onClick={onOpen} aria-label={`Open ${p.panel}`}>
       <div style={{ minWidth: 0 }}>
-        <div className={s.labName}>{name}</div>
-        <div className={s.labDate}>{date}</div>
+        <div className={s.labName}>{p.panel}</div>
+        <div className={s.labDate}>
+          {new Date(p.observedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+          {' · '}{p.values.map(v => v.analyte).join(', ')}
+        </div>
       </div>
       <span className={`vd-tag ${s.labResult}`} style={{ background: t.bg, color: t.fg }}>
-        {result}
+        {ok ? 'In range' : 'Needs a look'}
       </span>
     </Card>
   );

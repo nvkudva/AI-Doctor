@@ -1,0 +1,36 @@
+/* Review worklist row (PRD D-2). Wide and flat: one decision per line. */
+.row { display: flex; align-items: center; gap: var(--vd-space-5); color: var(--vd-ink-4); }
+.urgent { --card-elev: var(--vd-elev-2), var(--vd-urgent-glow); }
+.breached { border-color: var(--vd-bad-bg); }
+
+@media (pointer: fine) {
+  .row { transition: box-shadow var(--vd-dur-2) var(--vd-ease-spring), border-color var(--vd-dur-2) var(--vd-ease-spring); }
+  .row:hover:not(.urgent) { --card-elev: var(--vd-elev-3); }
+}
+
+.confidence { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+.who { width: 172px; flex: none; min-width: 0; }
+.patient { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.dx { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-4); }
+
+.plan { flex: 1; min-width: 0; }
+.title { composes: vd-t-callout vd-truncate from global; color: var(--vd-ink-2); }
+.tags { display: flex; gap: var(--vd-space-2); align-items: center; margin-top: var(--vd-space-2); flex-wrap: wrap; }
+
+.concerns {
+  composes: vd-t-caption from global;
+  display: inline-flex; align-items: center; gap: var(--vd-space-1);
+  background: var(--vd-warn-bg); color: var(--vd-warn-fg);
+  border-radius: var(--vd-radius-pill); padding: 3px 9px;
+}
+
+.wait { width: 156px; flex: none; text-align: right; }
+.waited { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.sla { composes: vd-t-caption from global; font-weight: 700; margin-top: 2px; }
+
+@media (max-width: 799px) {
+  .row { gap: var(--vd-space-3); }
+  .who { width: 132px; }
+  .wait { width: 108px; }
+}

@@ -13,11 +13,15 @@ const DOT: Record<'done' | 'active' | 'todo', string> = {
   todo: 'var(--vd-ink-4)',
 };
 
-export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergies, onFollowUp, onBack, onViewRecords }: {
+export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergies, onFollowUp, onBack, onViewRecords, onBook, bookedFor }: {
   rec: Recommendation; reviewStatus: string; rejectReason: string;
   /** What the patient's record actually lists, so the plan asserts nothing more. */
   allergies?: string;
   onFollowUp: () => void; onBack: () => void; onViewRecords?: () => void;
+  /** Open the booking screen for one ordered test. Only meaningful once approved. */
+  onBook?: (test: string) => void;
+  /** When this test already has a slot, the line to show instead of the button. */
+  bookedFor?: (test: string) => string | undefined;
 }) {
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
@@ -112,7 +116,19 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
             {tests.length > 0 && (
               <>
                 <MicroLabel>Tests</MicroLabel>
-                {tests.map((it, i) => <PlanItem key={i} last={i === tests.length - 1} name={it.name} dosage={it.dosage} timing={it.timing} notes={it.notes} why={it.why} />)}
+                {tests.map((it, i) => (
+                  <PlanItem
+                    key={i}
+                    last={i === tests.length - 1}
+                    name={it.name}
+                    dosage={it.dosage}
+                    timing={it.timing}
+                    notes={it.notes}
+                    why={it.why}
+                    booked={bookedFor?.(it.name)}
+                    onBook={approved && onBook ? () => onBook(it.name) : undefined}
+                  />
+                ))}
               </>
             )}
             {rec.advice && (
@@ -193,7 +209,13 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
   );
 }
 
-function PlanItem({ name, dosage, timing, notes, why, last }: { name: string; dosage: string; timing: string; notes: string; why: string; last?: boolean }) {
+function PlanItem({ name, dosage, timing, notes, why, last, booked, onBook }: {
+  name: string; dosage: string; timing: string; notes: string; why: string; last?: boolean;
+  /** When set, the test has a slot already and the row says when. */
+  booked?: string;
+  /** Present only on an ordered test the patient may book right now. */
+  onBook?: () => void;
+}) {
   return (
     <div className={`${s.item}${last ? ' ' + s.itemLast : ''}`}>
       <div className={s.itemName}>{name}</div>
@@ -203,6 +225,10 @@ function PlanItem({ name, dosage, timing, notes, why, last }: { name: string; do
         {!!notes && <MetaChip label="Note" value={notes} />}
       </div>
       {!!why && <div className={s.why}><b>Why:</b> {why}</div>}
+      {booked && <div className={s.booked}>Booked for {booked}</div>}
+      {onBook && !booked && (
+        <Button variant="secondary" icon="clock" onClick={onBook} className={s.book}>Book this test</Button>
+      )}
     </div>
   );
 }

@@ -1,0 +1,47 @@
+/* The doctor's book (PRD D-5): a day on a time axis, not a list of cards. */
+.dayBar { display: flex; align-items: center; gap: var(--vd-space-4); flex-wrap: wrap; }
+.stepper { display: flex; align-items: center; gap: var(--vd-space-1); }
+.step {
+  width: 32px; height: 32px; border-radius: var(--vd-radius-pill);
+  border: 1px solid var(--vd-border-strong); background: transparent;
+  color: var(--vd-ink-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dayName { composes: vd-t-title from global; color: var(--vd-ink-1); padding: 0 var(--vd-space-3); }
+.daySummary { composes: vd-t-footnote from global; color: var(--vd-ink-soft); flex: 1; }
+
+.band { display: flex; align-items: center; gap: var(--vd-space-4); margin-top: var(--vd-space-5); }
+.bandHours { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
+.bandRule { flex: 1; height: 1px; background: var(--vd-border); }
+
+.slots { display: flex; flex-direction: column; gap: var(--vd-space-3); }
+
+.slot { display: flex; gap: var(--vd-space-4); align-items: stretch; }
+.time {
+  composes: vd-t-caption from global;
+  width: 56px; flex: none; text-align: right; font-weight: 400;
+  color: var(--vd-ink-4); padding-top: 15px;
+}
+.card { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--vd-space-4); }
+.dim { opacity: 0.6; }
+
+.kind { color: var(--vd-ink-4); display: flex; flex: none; }
+.body { flex: 1; min-width: 0; }
+.patient { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
+.struck { text-decoration: line-through; }
+.where { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+
+.actions { display: flex; gap: var(--vd-space-2); flex: none; }
+.markOk, .markBad, .undo {
+  composes: vd-t-caption from global;
+  border-radius: var(--vd-radius-pill); padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--vd-border-strong); color: var(--vd-ink-2);
+  white-space: nowrap;
+}
+.markOk { border-color: var(--vd-ok-bg); color: var(--vd-ok-fg); }
+.markBad { border-color: var(--vd-bad-bg); color: var(--vd-bad-fg); }
+
+@media (max-width: 799px) {
+  .actions { display: none; }
+  .time { width: 46px; }
+}

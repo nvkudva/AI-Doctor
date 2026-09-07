@@ -1,4 +1,4 @@
-# Virtual Doctor — Architecture Document (Source of Truth)
+# AI Doctor — Architecture Document (Source of Truth)
 
 **Status:** Active — this document governs all implementation work.
 **Companion:** `docs/PRD.md` (product requirements). Where this document and the PRD conflict on *how* to build, this document wins; on *what* to build, the PRD wins.
@@ -7,7 +7,7 @@
 
 ## 0. How to use this document (read first, every agent)
 
-This document is the **single source of truth** for every agent (human or AI) building Virtual Doctor. Rules of engagement:
+This document is the **single source of truth** for every agent (human or AI) building AI Doctor. Rules of engagement:
 
 1. **Do not invent architecture.** If something you need is not specified here, it is either (a) intentionally deferred — check the §11 phase plan and its "do not build yet" lists — or (b) a gap. For gaps, propose an addition to this document *before* writing code that depends on it.
 2. **Do not duplicate.** Before creating any component, hook, utility, type, or schema, search `src/lib/*` for an existing one (§9 lists the canonical inventory). Extending an existing shared unit is always preferred over creating a parallel one.
@@ -102,7 +102,7 @@ Everything else follows YAGNI. Specifically **not** abstracted in MVP: no reposi
 ## 3. Repository Layout (authoritative)
 
 ```
-virtual-doctor/
+ai-doctor/
 ├── apps/
 │   └── web/                      # the single PWA — one Vite build, one deploy.
 │       ├── src/

@@ -9,15 +9,19 @@ import { useLocation } from 'react-router';
 import type { CaseItem, ConsultStatus, Recommendation } from '../lib/core';
 import { resolveTenantSlug } from '../lib/core';
 import {
-  approveConsult, getMyCurrentDrafts, getMyLabs, getMyRecords, getMyReviewOutcomes,
-  getNotifications, getPatientDetails, getProfiles, getReviewQueue, markNotificationRead,
-  openConsult, rejectConsult, resolveHospitalId, reviseDraft, savePatientDetails, shortDate,
-  subscribeQueue, toCaseItem, toNotice, toUserConsult, toUserRx, ageFromDob, describeAllergies,
-  type AiDraftRow, type ConsultRow, type DbConsultStatus, type PrescriptionRow, type ReviewOutcomeRow,
+  approveConsult, escalateConsult, getDoctorAppointments, getMyAppointments, getMyCurrentDrafts, getMyLabs,
+  persistLocal, restoreLocal,
+  getMyRecords, getMyReviewOutcomes, getNotifications, getPatientDetails, getProfiles,
+  getReviewQueue, markNotificationRead, openConsult, rejectConsult, resolveHospitalId,
+  reviseDraft, savePatientDetails, setAppointmentStatus, shortDate,
+  subscribeQueue, toCaseItem, toLabValue, toNotice, toUserConsult, toUserRx, ageFromDob, describeAllergies,
+  type AiDraftRow, type AppointmentRow, type ConsultRow, type DbConsultStatus,
+  type PrescriptionRow, type ReviewOutcomeRow,
 } from '../lib/api';
 import { useAuth } from '../shell/auth';
 import { Ctx } from './context';
-import type { Clinic, ClinicSeeds, HealthProfile, Notice, UserConsult, UserRx } from './types';
+import { buildSchedule, pendingCheckIn } from './doses';
+import type { AppointmentSlot, Clinic, ClinicSeeds, HealthProfile, LabValue, Notice, UserConsult, UserRx } from './types';
 
 /** §4.2 row 18: the documented fallback when the channel cannot be held. */
 const QUEUE_POLL_MS = 30_000;
@@ -45,6 +49,12 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const [profile, setProfileState] = useState<HealthProfile>(
     seedProfile || { age: '', blood: '', allergies: '' },
   );
+  const [appointments, setAppointments] = useState<AppointmentSlot[]>([]);
+  const [labs, setLabs] = useState<LabValue[]>([]);
+  // No schema records a swallowed dose or a check-in answer, so both stay on
+  // this device until one does (see store/doses.ts).
+  const [taken, setTaken] = useState<Record<string, boolean>>(() => restoreLocal()?.doses || {});
+  const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
   const [rejectReason, setRejectReason] = useState('');
@@ -58,6 +68,24 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const decided = useRef<CaseItem[]>([]);
 
   // ------------------------------------------------------------------ doctor
+
+
+  const refreshAppointments = useCallback(async (id: string, asDoctor: boolean) => {
+    const rows = asDoctor ? await getDoctorAppointments(id) : await getMyAppointments(id);
+    const names = await getProfiles([...new Set(rows.map(r => r.patient_id))]);
+    const nameOf = new Map(names.map(p => [p.id, p.full_name || 'Patient']));
+    setAppointments(rows.map((r: AppointmentRow) => ({
+      id: r.id,
+      patient: nameOf.get(r.patient_id) || 'Patient',
+      patientId: r.patient_id,
+      consultId: r.consult_id,
+      kind: r.kind,
+      startsAt: new Date(r.starts_at).getTime(),
+      minutes: r.duration_minutes,
+      location: r.location || '',
+      status: r.status,
+    })));
+  }, []);
 
   const refreshQueue = useCallback(async () => {
     const hospitalId = await resolveHospitalId(resolveTenantSlug(location.hostname, location.search));
@@ -136,6 +164,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     setConsults(rows.map(r => toUserConsult(r, draftOf.get(r.id) || null, outcomeOf.get(r.id) || null)) as UserConsult[]);
     setPrescriptions(rows.flatMap(r => (r.prescriptions || []).flatMap((p: PrescriptionRow) => toUserRx(p))) as UserRx[]);
     setNotices(notifications.map(toNotice) as Notice[]);
+    setLabs(labRows.map(toLabValue));
     if (details) {
       setProfileState({
         age: ageFromDob(details.dob),
@@ -156,7 +185,8 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const refresh = useCallback(() => {
     const run = isDoctor ? refreshQueue : refreshPatient;
     run().catch(e => console.warn('[vd] clinic refresh failed:', e));
-  }, [isDoctor, refreshQueue, refreshPatient]);
+    if (uid) refreshAppointments(uid, isDoctor).catch(e => console.warn('[vd] appointments failed:', e));
+  }, [isDoctor, uid, refreshQueue, refreshPatient, refreshAppointments]);
 
   useEffect(() => {
     if (!uid) return;
@@ -197,8 +227,11 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     return () => clearInterval(t);
   }, [uid, isDoctor, queue, refresh]);
 
+  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
+
   const value = useMemo<Clinic>(() => ({
-    queue, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
 
     // The consult already exists server-side — `start_consult` opened it and
     // `ai-consult` wrote the draft. All this does is show it and pull the real
@@ -298,6 +331,65 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // records abandonment through `run_consult_timers`, not from the client.
     addConsultRecord: (c) => setConsults(s => [c, ...s]),
 
+    // Attendance is a plain column update — RLS decides whether it lands.
+    // Booking has no availability table yet: the slot the patient picks is
+    // written straight in as a booked appointment (patient-todo.md).
+    bookSlot: (title, startsAt, location) => setAppointments(a => [...a, {
+      id: `bk-${startsAt}`, patient: title, reason: title, kind: 'imaging',
+      startsAt, minutes: 15, location, status: 'booked',
+    }]),
+
+    setDoseTaken: (id, t) => setTaken(d => {
+      const next = { ...d, [id]: t };
+      persistLocal({ doses: next });
+      return next;
+    }),
+
+    answerCheckIn: (answer) => {
+      if (!checkIn) return;
+      setCheckIns(c => {
+        const next = { ...c, [checkIn.consultId]: answer };
+        persistLocal({ checkIns: next });
+        return next;
+      });
+    },
+
+    setSlotStatus: (id, status) => {
+      setAppointments(a => a.map(x => (x.id === id ? { ...x, status } : x)));
+      setAppointmentStatus(id, status).catch((e) => {
+        console.warn('[vd] attendance refused:', e);
+        if (uid) refreshAppointments(uid, isDoctor).catch(() => { /* left as it was */ });
+      });
+    },
+
+    // §4.2 row 24 — the one decision that books instead of signing. The RPC
+    // writes the review, the appointment and the state change in one place.
+    escalateCase: (id, startsAt, kind, location) => {
+      const c = queue.find(x => x.id === id);
+      const signed = drafts.current[id];
+      if (c) {
+        const stamped = {
+          ...c, status: 'rejected' as ConsultStatus, decision: 'escalated',
+          reviewedBy: user?.name || 'Your doctor', reviewedAt: Date.now(),
+          rejectReason: 'Escalated to an appointment.',
+        } as CaseItem;
+        decided.current = [stamped, ...decided.current.filter(x => x.id !== id)];
+        setQueue(q => q.map(x => (x.id === id ? stamped : x)));
+      }
+      if (!c || !signed) return;
+      escalateConsult({
+        consultId: id, draftId: signed.id, draftHash: signed.hash,
+        reason: 'Needs to be seen in person.',
+        appointment: { starts_at: new Date(startsAt).toISOString(), kind, location },
+        idempotencyKey: `escalate:${id}:${signed.id}`,
+      })
+        .then(() => { if (uid) return refreshAppointments(uid, true); })
+        .catch((e) => {
+          console.warn('[vd] escalation refused:', e);
+          refresh();
+        });
+    },
+
     // §4.1 row 3 — the 18+ check is a database trigger; a bad age is refused there.
     setProfile: (p) => {
       setProfileState(p);
@@ -318,7 +410,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // SLA warning, expiry and abandonment are `run_consult_timers()` on the
     // server (§4.3 row 33). The client does not sweep its own queue.
     slaTick: () => {},
-  }), [queue, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, uid, user?.name, refresh]);
+  }), [queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, uid, user?.name, refresh, refreshAppointments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

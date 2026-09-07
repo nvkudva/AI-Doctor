@@ -181,6 +181,21 @@ export interface LabResultRow {
   report_path: string | null;
 }
 
+/** §2.22 — a booked slot in a doctor's day. */
+export interface AppointmentRow {
+  id: string;
+  hospital_id: string;
+  patient_id: string;
+  doctor_id: string | null;
+  consult_id: string | null;
+  kind: 'in_person' | 'video' | 'imaging' | 'lab';
+  starts_at: string;
+  duration_minutes: number;
+  location: string | null;
+  status: 'booked' | 'cancelled' | 'completed' | 'no_show';
+  created_at: string;
+}
+
 /** §2.23 */
 export interface NotificationRow {
   id: string;

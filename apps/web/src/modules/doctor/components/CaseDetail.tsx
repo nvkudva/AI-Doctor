@@ -1,6 +1,6 @@
 // Full case view: AI consult summary, decision actions, patient side panel.
 import { useState } from 'react';
-import type { CaseItem } from '../../../lib/core';
+import type { CaseItem, SafetyFlag } from '../../../lib/core';
 import { Button, Card, Disclosure, Icon, MenuRow, MicroLabel, Popover, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
 import { tints } from '../../../lib/theme';
@@ -12,13 +12,15 @@ const DECISION_LABEL: Record<string, string> = {
   changes: 'Sent back for changes',
 };
 
-export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, onDecline, onEdit }: {
+export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, onDecline, onEdit, onEscalate }: {
   ac: CaseItem; actionable: boolean;
   /** Desktop: history + test history live in the third pane instead (D-3). */
   asideInPanel?: boolean;
   /** Mira has proposed an approval; the doctor still has to press it (UX-07). */
   staged?: boolean;
   onApprove: () => void; onDecline: () => void; onEdit: () => void;
+  /** Book the patient in instead of signing the plan (§4.2 row 24). */
+  onEscalate: () => void;
 }) {
   const mobile = useBreakpoint() === 'mobile';
   const [menu, setMenu] = useState(false);
@@ -27,6 +29,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
 
   const decisions = (
     <>
+      <MenuRow icon="clock" onClick={() => { setMenu(false); onEscalate(); }}>Escalate to appointment…</MenuRow>
       <MenuRow icon="doc" onClick={() => { setMenu(false); onEdit(); }}>Send back for changes</MenuRow>
       <MenuRow icon="x" danger onClick={() => { setMenu(false); onDecline(); }}>Decline…</MenuRow>
     </>
@@ -69,7 +72,6 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
         <Disclosure title="What the patient said" defaultOpen={false}>
           <ul className={s.said}>
             {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
-            {ac.flags.map((f, i) => <li key={`f${i}`}><b>Flag:</b> {f}</li>)}
           </ul>
         </Disclosure>
         <div className={s.assessment}>
@@ -139,11 +141,49 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
   );
 }
 
+// Every validator verdict on the draft, severity first. A doctor should never
+// have to open a transcript to find out the AI avoided an allergy — the checks
+// that ran are as much a part of the decision as the plan itself.
+const VERDICT: Record<SafetyFlag['severity'], { label: string; bg: string; fg: string; icon: 'alert' | 'x' | 'check' }> = {
+  block: { label: 'Blocked', bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', icon: 'x' },
+  warn: { label: 'Check', bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', icon: 'alert' },
+  info: { label: 'Clear', bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', icon: 'check' },
+};
+const RANK: Record<SafetyFlag['severity'], number> = { block: 0, warn: 1, info: 2 };
+
+export function SafetyChecks({ flags }: { flags: SafetyFlag[] }) {
+  if (!flags.length) return null;
+  const sorted = [...flags].sort((a, b) => RANK[a.severity] - RANK[b.severity]);
+  return (
+    <Card level={2} className={s.safety}>
+      <MicroLabel>Safety checks</MicroLabel>
+      {sorted.map((f, i) => {
+        const v = VERDICT[f.severity];
+        return (
+          <div key={`${f.code}${i}`} className={`${s.check}${i === sorted.length - 1 ? ' ' + s.checkLast : ''}`}>
+            <span className={s.checkIcon} style={{ background: v.bg, color: v.fg }}>
+              <Icon name={v.icon} size={14} />
+            </span>
+            <div className={s.checkBody}>
+              <div className={s.checkHead}>
+                <span className={s.checkCode}>{f.code.replace(/_/g, ' ')}</span>
+                <span className="vd-tag" style={{ background: v.bg, color: v.fg }}>{v.label}</span>
+              </div>
+              <div className={s.checkText}>{f.text}</div>
+            </div>
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
 // Pane 3 at desktop, inline in the case column below it (PRD D-3).
 export function PatientPanel({ ac }: { ac: CaseItem }) {
   const labs = [...(ac.relevantLabs || []), ...(ac.pastLabs || [])];
   return (
     <div className={s.panel}>
+      <SafetyChecks flags={ac.flags} />
       <Card level={2} className={s.history}>
         <MicroLabel>Patient history</MicroLabel>
         {ac.history}

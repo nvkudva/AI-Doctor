@@ -1,7 +1,7 @@
 # Supabase CLI config. This directory is the backend: migrations/, functions/,
 # tests/ and seed.sql all live here, in the layout the CLI expects.
 
-project_id = "virtual-doctor"
+project_id = "ai-doctor"
 
 [api]
 enabled = true

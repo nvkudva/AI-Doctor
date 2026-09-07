@@ -1,0 +1,63 @@
+/* Booking a test the plan ordered (patient-todo P0 #2). */
+.screen { display: flex; flex-direction: column; gap: var(--vd-space-4); }
+
+.top { display: flex; align-items: center; gap: var(--vd-space-4); }
+.back { height: 44px; padding: 0 var(--vd-space-5); }
+.pageTitle { composes: vd-t-largeTitle vd-truncate from global; color: var(--vd-ink-1); flex: 1; }
+
+.what { display: flex; align-items: center; gap: var(--vd-space-4); }
+.whatIcon {
+  width: 38px; height: 38px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-inv-bg); color: var(--vd-inv-fg);
+  display: flex; align-items: center; justify-content: center;
+}
+.whatBody { min-width: 0; }
+.whatName { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.whatNote { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.lab { display: flex; align-items: center; gap: var(--vd-space-4); color: var(--vd-ink-4); }
+.labBody { flex: 1; min-width: 0; }
+.labName { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.labNote { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.days { display: flex; gap: var(--vd-space-3); }
+.day {
+  flex: 1; height: 62px; border-radius: var(--vd-radius-md); cursor: pointer;
+  border: none; background: var(--vd-surface-card); box-shadow: var(--vd-elev-1);
+  color: var(--vd-ink-1); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+}
+.dayOn { background: var(--vd-ink-1); color: var(--vd-ink-on-brand); box-shadow: var(--vd-elev-2); }
+.dayName { composes: vd-t-caption from global; opacity: 0.75; }
+.dayNum { font-size: 17px; font-weight: 700; }
+
+.dayLabel { composes: vd-t-micro from global; color: var(--vd-ink-4); }
+
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--vd-space-3); }
+.slot {
+  height: 44px; border-radius: var(--vd-radius-sm); border: none; cursor: pointer;
+  background: var(--vd-surface-card); box-shadow: var(--vd-elev-1);
+  color: var(--vd-ink-1); font-size: 14px; font-weight: 600;
+}
+.slotOn {
+  background: var(--vd-grad-primary); color: var(--vd-ink-on-brand);
+  box-shadow: var(--vd-shadow-cta); font-weight: 700;
+}
+.slotGone {
+  background: var(--vd-surface-chip); color: var(--vd-ink-4);
+  box-shadow: none; text-decoration: line-through; cursor: default; font-weight: 400;
+}
+
+.summary { }
+.summaryWhen { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.summaryWhere { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }
+
+.confirmed { }
+.confirmedHead { display: flex; align-items: center; gap: var(--vd-space-3); }
+.tick {
+  width: 28px; height: 28px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-ok-bg); color: var(--vd-ok-fg);
+  display: flex; align-items: center; justify-content: center;
+}
+.confirmedWhen { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.confirmedWhere { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }

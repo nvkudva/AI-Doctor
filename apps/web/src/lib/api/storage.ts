@@ -21,6 +21,13 @@ export interface LocalSnapshot {
   /** Review decisions keyed by case id, including decisions on seeded cases,
    *  so a doctor never re-reviews a case they already signed (UX-02). */
   decisions?: Record<string, ReviewDecision>;
+  /** Doses ticked off, keyed by dose id. The schema records what was
+   *  prescribed, not what was swallowed. */
+  doses?: Record<string, boolean>;
+  /** Answers to the day-3 check-in, keyed by consult id. */
+  checkIns?: Record<string, string>;
+  /** Test slots the patient booked from a plan, until booking has a backend. */
+  booked?: any[];
 }
 
 export interface ReviewDecision {

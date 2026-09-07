@@ -4,21 +4,36 @@
 import { useNavigate } from 'react-router';
 import { AppHeader, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { relAge } from '../../../lib/core';
+import { doseState } from '../../../store/doses';
+import { toPanels } from '../../../store/labs';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 import { useClinic } from '../../../store';
-import { seedAppointments, seedLabs } from '../../../store/seeds';
+
 import { PatientNotify, usePatientNotices } from './PatientNotify';
 import s from './HomeScreen.module.css';
 
-export function HomeScreen({ onStart }: { onStart: () => void }) {
+const KIND_LABEL: Record<'in_person' | 'video' | 'imaging' | 'lab', string> = {
+  in_person: 'Appointment with your doctor',
+  video: 'Video consultation',
+  imaging: 'Imaging appointment',
+  lab: 'Lab test',
+};
+
+export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onCheckIn: () => void }) {
   const { user } = useAuth();
   const clinic = useClinic();
   const nav = useNavigate();
   const mobile = useBreakpoint() === 'mobile';
 
-  const rx = clinic.prescriptions.filter(p => p.nextDose);
-  const flagged = seedLabs.filter(l => !l.ok);
+  // The next dose that is still actionable — a schedule of eight rows belongs
+  // on Medicines, not on the dashboard.
+  const nextDose = clinic.doses.find(d => !d.taken && doseState(d) !== 'missed');
+  const missed = clinic.doses.filter(d => doseState(d) === 'missed').length;
+  const flagged = toPanels(clinic.labs).filter(p => p.worst !== 'normal');
+  const upcoming = clinic.appointments
+    .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
+    .sort((a, b) => a.startsAt - b.startsAt);
   const latest = clinic.queue.find(c => c.mine);
   const notices = usePatientNotices();
 
@@ -33,43 +48,60 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
       />
 
       <div className={s.grid}>
+        {clinic.checkIn && (
+          <Section title="A quick check">
+            <Card level={1} pad="13px 15px" onClick={onCheckIn} aria-label="Answer the check-in about your plan">
+              <div className={s.ctaTitle}>How is it going?</div>
+              <div className={s.ctaBody}>
+                It has been a few days since your plan was approved. One tap tells your doctor how you are doing.
+              </div>
+            </Card>
+          </Section>
+        )}
+
         <Section title="Medication">
-          {rx.length === 0
-            ? <Empty body="No active prescriptions. An approved plan adds one here." />
-            : rx.map((p, i) => (
+          {!nextDose
+            ? <Empty body="No doses due. An approved prescription puts its schedule here." />
+            : (
               <Row
-                key={i}
                 icon="drop"
-                title={p.name}
-                detail={p.detail}
-                meta={p.nextDose}
-                label={`Open prescription: ${p.name}`}
-                onClick={() => nav('/patient/profile')}
+                title={nextDose.rx}
+                detail={nextDose.detail}
+                meta={missed ? `Next at ${timeLabel(nextDose.at)} · ${missed} missed` : `Next at ${timeLabel(nextDose.at)}`}
+                tone={missed ? 'var(--vd-bad-fg)' : undefined}
+                label="Open your medicine schedule"
+                onClick={() => nav('/patient/medicines')}
               />
-            ))}
+            )}
         </Section>
 
         <Section title="Appointment">
-          {seedAppointments.length === 0
+          {upcoming.length === 0
             ? <Empty body="Nothing booked. Tests a doctor orders appear here." />
-            : seedAppointments.map(a => (
-              <Row key={a.id} icon="clock" title={a.title} detail={a.where} meta={a.when} />
+            : upcoming.map(a => (
+              <Row
+                key={a.id}
+                icon="clock"
+                title={a.reason || KIND_LABEL[a.kind]}
+                detail={a.location}
+                meta={whenLine(a.startsAt)}
+              />
             ))}
         </Section>
 
         <Section title="Results">
           {flagged.length === 0
             ? <Empty body="All results are within range." />
-            : flagged.map((l, i) => (
+            : flagged.map(p => (
               <Row
-                key={i}
+                key={p.panel}
                 icon="doc"
-                title={l.name}
-                detail={`${l.result} · ${l.date}`}
-                meta="Needs review"
+                title={p.panel}
+                detail={p.values.map(v => v.analyte).join(' · ')}
+                meta="Needs a look"
                 tone="var(--vd-warn-fg)"
-                label={`Open lab result: ${l.name}`}
-                onClick={() => nav('/patient/records?tab=labs')}
+                label={`Open lab result: ${p.panel}`}
+                onClick={() => nav(`/patient/labs/${encodeURIComponent(p.panel)}`)}
               />
             ))}
         </Section>
@@ -118,6 +150,25 @@ export function HomeScreen({ onStart }: { onStart: () => void }) {
       </div>
     </div>
   );
+}
+
+function timeLabel(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function whenLine(at: number): string {
+  const d = new Date(at);
+  const days = Math.round((startOfDay(at) - startOfDay(Date.now())) / 86400000);
+  const time = timeLabel(at);
+  if (days === 0) return `Today · ${time}`;
+  if (days === 1) return `Tomorrow · ${time}`;
+  return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${time}`;
+}
+
+function startOfDay(at: number): number {
+  const d = new Date(at);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

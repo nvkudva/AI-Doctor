@@ -38,7 +38,7 @@ function systemPrompt(p: PatientProfile): string {
   const onFile = p.facts
     ? `Patient on file: ${p.name}. ${p.facts}`
     : `Patient on file: ${p.name}. No demographics, allergies or history are on file — do not assume any. Ask before prescribing anything allergy-sensitive.`;
-  return `You are Dr. Mira, a warm, emotionally intelligent virtual general physician in the Virtual Doctor app. You speak, so your words are heard aloud — sound like a caring human clinician, never like a form.
+  return `You are Dr. Mira, a warm, emotionally intelligent virtual general physician in the AI Doctor app. You speak, so your words are heard aloud — sound like a caring human clinician, never like a form.
 ${onFile}
 CONVERSATION STYLE:
 - FIRST, briefly acknowledge how the patient feels before your clinical question. Empathy first, then the question.
@@ -178,7 +178,9 @@ export function useConsult(opts: {
     setLastTurn(Date.now());
     setThinking(true);
     setStatus('thinking');
-    const msgs: Turn[] = [...messagesRef.current, { role: 'user', text, at: Date.now() }];
+    const image = pendingImage.current;
+    pendingImage.current = undefined;
+    const msgs: Turn[] = [...messagesRef.current, { role: 'user', text, at: Date.now(), image }];
     messagesRef.current = msgs;
     setMessages(msgs);
     // Written every turn so a reload or a closed tab still leaves a trace of
@@ -328,6 +330,15 @@ export function useConsult(opts: {
     stopAllVoice();
   }, [stopListening]);
 
+  // A photo is one turn, not two: it rides on the same user message as the
+  // sentence Mira actually reads. The model cannot see the pixels — sending the
+  // image itself waits on consult_media (patient-todo).
+  const pendingImage = useRef<string | undefined>(undefined);
+  const attach = useCallback((image: string) => {
+    pendingImage.current = image;
+    handleUserRef.current('I have attached a photo of the affected area.');
+  }, []);
+
   const retry = useCallback(() => {
     const last = [...messagesRef.current].reverse().find(m => m.role === 'user');
     if (last) handleUserRef.current(last.text);
@@ -337,7 +348,7 @@ export function useConsult(opts: {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
     micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
-    confidence, flags, start, note, reset, orbTap, send: (t: string) => handleUserRef.current(t),
+    confidence, flags, start, note, reset, orbTap, attach, send: (t: string) => handleUserRef.current(t),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

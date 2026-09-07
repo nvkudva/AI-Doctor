@@ -1,4 +1,4 @@
-# Virtual Doctor — Data Model (Source of Truth for Persistence)
+# AI Doctor — Data Model (Source of Truth for Persistence)
 
 **Status:** Design. This document governs *what the data is*. `docs/PRD.md` governs *what to build*,
 `docs/ARCHITECTURE.md` governs *how the system is shaped*, `docs/AGENT-EXPERIENCE.md` governs *how Mira

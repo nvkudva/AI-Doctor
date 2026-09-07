@@ -1,6 +1,5 @@
-// Login module: adult gate + Google / demo sign-in.
+// Login module: Google / demo sign-in.
 // One column on mobile; brand column + sign-in card at ≥800 (DESIGN §10.9).
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Card, Icon, MiraPresence } from '../../lib/ui';
 import { useAuth, type Role } from '../../shell/auth';
@@ -18,26 +17,12 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
   const nav = useNavigate();
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  const [adultOk, setAdultOk] = useState(false);
-  const [err, setErr] = useState('');
-
-  const gate = () => {
-    if (!adultOk) {
-      setErr('This service is for adults (18+). Please confirm to continue.');
-      return false;
-    }
-    setErr('');
-    return true;
-  };
-
   const demo = (role: Role) => {
-    if (!gate()) return;
     signInDemo(role);
     nav(role === 'doctor' ? '/doctor' : '/patient');
   };
 
   const google = async () => {
-    if (!gate()) return;
     await signInGoogle();
     if (!googleConfigured) nav('/patient');
   };
@@ -66,25 +51,8 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
         </div>
 
         <Card className={s.card}>
-          <div
-            onClick={() => { setAdultOk(a => !a); setErr(''); }}
-            role="switch"
-            aria-checked={adultOk}
-            tabIndex={0}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdultOk(a => !a); setErr(''); } }}
-            aria-label="Confirm you are 18 or older"
-            aria-invalid={!!err || undefined}
-            aria-describedby={err || authErr ? 'vd-login-error' : undefined}
-            className={`${s.gate}${adultOk ? ' ' + s.gateOn : ''}`}
-          >
-            <span className={`${s.track}${adultOk ? ' ' + s.trackOn : ''}`}>
-              <span className={s.knob} />
-            </span>
-            <span>I confirm I am 18 or older</span>
-          </div>
-
-          {(err || authErr) && (
-            <div id="vd-login-error" role="alert" className={s.error}>{err || authErr}</div>
+          {authErr && (
+            <div id="vd-login-error" role="alert" className={s.error}>{authErr}</div>
           )}
 
           <Button
@@ -111,12 +79,8 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
           </div>
 
           <div className={s.demos}>
-            <DemoCard onClick={() => demo('patient')} label="Fake patient" who="Alex Kumar" />
-            <DemoCard onClick={() => demo('doctor')} label="Fake doctor" who="Dr. Whitfield" />
-          </div>
-
-          <div className={s.footnote}>
-            One tap to sign in — your visits stay private and a licensed doctor reviews every plan.
+            <DemoCard onClick={() => demo('patient')} label="Patient" who="Alex Kumar" />
+            <DemoCard onClick={() => demo('doctor')} label="Doctor" who="Dr. Whitfield" />
           </div>
         </Card>
       </div>
@@ -132,8 +96,8 @@ function DemoCard({ onClick, label, who }: { onClick: () => void; label: string;
       className={s.demoCard}
     >
       <span className={s.demoIcon}><Icon name="person" size={22} /></span>
-      <span className={s.demoLabel}>{label}</span>
-      <span className={s.demoWho}>{who}</span>
+      <span className={s.demoLabel}>{who}</span>
+      <span className={s.demoWho}>{label}</span>
     </Card>
   );
 }

@@ -254,3 +254,16 @@
 @media (hover: hover) {
   .pill:hover { filter: brightness(1.08); }
 }
+
+/* An attached photo rides inside the person's own turn. */
+.photo {
+  display: block; width: 100%; max-width: 190px;
+  border-radius: var(--vd-radius-sm); margin-bottom: var(--vd-space-3);
+}
+.attach {
+  width: 44px; height: 44px; flex: none; cursor: pointer;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-card); box-shadow: var(--vd-elev-1);
+  color: var(--vd-nav-active);
+  display: flex; align-items: center; justify-content: center;
+}

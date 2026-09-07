@@ -17,6 +17,13 @@ export interface Recommendation {
   items: RecItem[]; advice: string; urgency: Urgency;
 }
 
+export type FlagSeverity = 'block' | 'warn' | 'info';
+
+/** One validator verdict on a draft — allergy, interaction, dose, red flag. */
+export interface SafetyFlag {
+  code: string; severity: FlagSeverity; text: string; source: string;
+}
+
 export interface LabResult { name: string; date: string; result: string; ok: boolean }
 export interface PastConsult { title: string; date: string; note: string }
 
@@ -24,7 +31,7 @@ export interface CaseItem {
   id: string; mine?: boolean; submittedAt?: number; slaNudged?: boolean;
   patient: string; demo: string; title: string; meta: string; status: ConsultStatus;
   summary: string; symptoms: string[]; history: string;
-  confidence: Confidence; flags: string[];
+  confidence: Confidence; flags: SafetyFlag[];
   stated: string[]; inferred: string[]; observation: string;
   rec: Recommendation;
   relevantLabs: LabResult[]; pastLabs: LabResult[]; pastConsults: PastConsult[];
@@ -66,9 +73,9 @@ export function resolveTenantSlug(hostname: string, search: string): string {
 }
 
 export function tenantDisplayName(slug: string): string {
-  if (slug === 'demo') return 'Virtual Doctor';
+  if (slug === 'demo') return 'AI Doctor';
   const pretty = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  return (pretty || 'Virtual Doctor') + ' · Virtual Doctor';
+  return (pretty || 'AI Doctor') + ' · AI Doctor';
 }
 
 export * from './time';

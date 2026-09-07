@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'Virtual Doctor',
-        short_name: 'VDoctor',
+        name: 'AI Doctor',
+        short_name: 'AI Doctor',
         description: 'Voice-first AI doctor with human review',
         display: 'standalone',
         background_color: '#5F7CC4',

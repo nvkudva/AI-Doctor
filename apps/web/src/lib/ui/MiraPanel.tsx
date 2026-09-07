@@ -27,6 +27,8 @@ export interface MiraTurn {
   role: 'user' | 'mira';
   text: string;
   at: number;
+  /** A photo the person attached, as a data URL. Rendered in their own turn. */
+  image?: string;
 }
 
 /** What the panel needs from a session. useConsult and useReview both satisfy it. */
@@ -44,6 +46,8 @@ export interface MiraSession {
   send: (text: string) => void;
   /** Context pills above the composer — they differ per role. */
   suggestions: Suggestion[];
+  /** Attach a photo to the conversation. Absent means the surface offers none. */
+  attach?: (image: string) => void;
   micDenied?: boolean;
   clearMicDenied?: () => void;
   failed?: boolean;
@@ -85,6 +89,27 @@ function Waveform({ state, onTap }: { state: VoiceState; onTap: () => void }) {
       ))}
     </div>
   );
+}
+
+// Photos are downscaled before they enter the conversation: a phone camera
+// frame is several megabytes, and every turn of it would be carried through the
+// transcript, the draft and localStorage.
+const MAX_EDGE = 1280;
+
+function readImage(file: File, done: (image: string) => void) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    done(c.toDataURL('image/jpeg', 0.82));
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); };
+  img.src = url;
 }
 
 // A dock switch. `off` tints it red, the way a call UI marks a disabled input.
@@ -133,6 +158,7 @@ export function MiraPanel({
   });
   // Prototype only — nothing is captured yet.
   const notesRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [, tick] = useState(0);
 
   // Relative timestamps stay fresh while the panel is open.
@@ -245,6 +271,13 @@ export function MiraPanel({
                   return (
                     <div key={i} className={`${s.turn}${mine ? ' ' + s.turnMine : ''}`}>
                       <div className={`${s.bubble}${mine ? ' ' + s.bubbleMine : ''}`}>
+                        {m.image && (
+                          <img
+                            src={m.image}
+                            alt={m.text || 'Photo you attached'}
+                            className={s.photo}
+                          />
+                        )}
                         <div className={s.bubbleText}>{m.text}</div>
                         {groupEnd && (
                           <div className={`${s.stamp}${mine ? ' ' + s.stampMine : ''}`}>
@@ -282,6 +315,27 @@ export function MiraPanel({
             )}
 
             <div className={s.composer}>
+              {session.attach && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) readImage(f, session.attach!);
+                    }}
+                  />
+                  <div
+                    {...pressProps(() => fileRef.current?.click(), 'Add a photo')}
+                    className={s.attach}
+                  >
+                    <Icon name="camera" size={20} />
+                  </div>
+                </>
+              )}
               <input
                 value={input}
                 aria-label="Type your message instead"

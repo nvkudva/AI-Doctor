@@ -32,6 +32,10 @@
 /* Declared after the size classes so it wins the padding. */
 .iconOnly { min-width: 48px; min-height: 44px; padding: 0; }
 
+/* ...but a split-pill half is sized by its partner, not by the standalone
+   icon-button minimums, which made the chevron taller and wider than the label. */
+.halfLeft.iconOnly, .halfRight.iconOnly { min-width: 0; min-height: 0; }
+
 .skinPrimary {
   background: var(--vd-grad-primary);
   color: var(--vd-ink-on-brand);

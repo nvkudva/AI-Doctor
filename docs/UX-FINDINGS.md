@@ -1,4 +1,4 @@
-# Virtual Doctor — UX audit findings
+# AI Doctor — UX audit findings
 
 Flow-level audit (information architecture, flow gaps, dead ends, feedback, state
 survival). Pure visual/CSS issues are out of scope and deliberately excluded.

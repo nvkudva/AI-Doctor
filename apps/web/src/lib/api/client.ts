@@ -6,7 +6,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { anonKey, functionsBase, requireSupabase, supabase } from './supabase';
 import type {
-  AiDraftRow, ApiErrorShape, ApproveResult, CaseBundle, ConsultMessageRow, ConsultRow,
+  AiDraftRow, ApiErrorShape, AppointmentRow, ApproveResult, CaseBundle, ConsultMessageRow, ConsultRow,
   ConsultTurnDone, DecisionResult, HospitalPublic, LabResultRow, MembershipRow, NotificationRow,
   PatientDetailsRow, PrescriptionRow, ProfileRow, RecommendationJson, ReviewOutcomeRow,
   ReviewTurnDone, ReviseDraftResult, StartConsultResult, VoiceSession,
@@ -165,6 +165,39 @@ export async function getReviewQueue(hospitalId: string): Promise<(ConsultRow & 
     .in('status', ['pending_review', 'needs_human'])
     .order('urgency', { ascending: false })
     .order('submitted_at', { ascending: true })) || [];
+}
+
+/** Every appointment in this doctor's book. The calendar groups them itself. */
+export async function getDoctorAppointments(doctorId: string): Promise<AppointmentRow[]> {
+  const sb = requireSupabase();
+  return unwrap(await sb
+    .from('appointments')
+    .select('*')
+    .eq('doctor_id', doctorId)
+    .order('starts_at', { ascending: true })) || [];
+}
+
+/** The patient's own appointments — RLS scopes this to their rows. */
+export async function getMyAppointments(patientId: string): Promise<AppointmentRow[]> {
+  const sb = requireSupabase();
+  return unwrap(await sb
+    .from('appointments')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('starts_at', { ascending: true })) || [];
+}
+
+/**
+ * The only column a clinician moves on a booked slot. Attendance is a fact
+ * recorded after the fact, so it is a plain update, not an RPC.
+ */
+export async function setAppointmentStatus(
+  id: string,
+  status: AppointmentRow['status'],
+): Promise<void> {
+  const sb = requireSupabase();
+  const { error } = await sb.from('appointments').update({ status }).eq('id', id);
+  if (error) throw fromPostgrest(error);
 }
 
 /** Names for the queue cards. A doctor may read a profile they share a consult with. */

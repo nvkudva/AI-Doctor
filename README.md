@@ -4,6 +4,8 @@ A voice-first AI consultation that a licensed doctor signs off before it reaches
 
 Dr. Mira — the AI physician — talks the patient through their symptoms, then drafts a plan. That draft is not a prescription. It sits in a review queue until a real doctor approves it, and the database is built so the AI *cannot* publish one on its own.
 
+**[Try the demo →](https://ai-doctor-8ai.pages.dev)** — sign in as **Alex Kumar** (patient) or **Dr. Whitfield** (doctor); no password. Seeded data, shared by everyone who opens the link. The consultation itself needs a Gemini key with quota, so Dr. Mira will say she is having trouble; everything else — the review queue, the approval gate, labs, appointments — is live against a real Postgres with RLS.
+
 <p align="center">
   <img src="docs/images/login.png"        alt="Sign-in"        width="24%">
   <img src="docs/images/patient-home.png" alt="Patient home"   width="24%">

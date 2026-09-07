@@ -24,26 +24,33 @@
 
 .clickable { cursor: pointer; }
 
-/* Empty state: 88 disc, headline + callout, optional action. */
+/* Empty state: headline + callout over a disc, optional action. Compact on a
+   phone, where it otherwise ran into the bottom nav; full size from 800 up. */
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 12px;
-  padding: 40px 20px;
+  gap: 8px;
+  padding: 16px 20px;
 }
+@media (min-width: 800px) { .empty { gap: 12px; padding: 40px 20px; } }
 
 .glyph {
-  width: 88px;
-  height: 88px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--vd-radius-pill);
   background: var(--vd-surface-panel);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--vd-ink-3);
+}
+.glyph svg { width: 24px; height: 24px; }
+@media (min-width: 800px) {
+  .glyph { width: 88px; height: 88px; }
+  .glyph svg { width: 34px; height: 34px; }
 }
 
 .emptyTitle {

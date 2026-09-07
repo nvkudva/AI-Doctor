@@ -1,7 +1,10 @@
-/* The one Dr. Mira surface (PRD MC-1). Always a phone-shaped card, never
-   modal: the positioner lets every pointer event through so the app behind
-   stays live. It docks to the nav — on the bar below 800, against the rail's
-   edge above it (`--mira-left`). */
+/* The one Dr. Mira surface (PRD MC-1). Never modal: the positioner lets every
+   pointer event through so the app behind stays live. It docks to the nav — on
+   the bar below 800, against the rail's edge above it (`--mira-left`).
+   On a phone it fills the screen inside a 10px inset and stops above the bottom
+   bar, dipping just into the top of the orb — which stays on top of it, since
+   the orb is the panel's dismiss control. From 800 up it is a deliberately
+   narrow column running the full height of the page. */
 .positioner {
   position: fixed;
   inset: 0;
@@ -10,8 +13,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* Clears the bar and the orb that overhangs its top edge. */
-  padding: 14px 14px calc(118px + env(safe-area-inset-bottom)) var(--mira-left, 14px);
+  /* 88px clears the bar (78) and overlaps the orb's top third. */
+  padding: 10px 10px calc(88px + env(safe-area-inset-bottom));
 }
 @media (min-width: 800px) {
   .positioner {
@@ -24,11 +27,13 @@
   .positioner { padding: 20px 20px 20px var(--mira-left); }
 }
 
+/* No aspect ratio: a fixed 9:16 card letterboxed the conversation on a phone
+   and cropped it short of the page on a desktop. Height always fills; only the
+   width is constrained, and only once there is room beside it. */
 .frame {
   pointer-events: auto;
-  width: min(372px, 100%);
-  aspect-ratio: 393 / 852;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   display: flex;
   animation: vd-pop var(--vd-dur-4) var(--vd-ease-overshoot) both;
 }
@@ -171,28 +176,43 @@
 }
 .failedText { composes: vd-t-footnote vd-w7 from global; flex: 1; color: var(--vd-bad-fg); }
 
+/* One scrolling row, sized so at least four chips are readable at 390px. The
+   chips used to wrap onto several lines, which pushed the composer down the
+   panel; they scroll now, and the right-edge fade is what says so — the old
+   hidden-scrollbar overflow gave no such signal (QA-10). */
 .pills {
   flex: none;
   display: flex;
-  /* Wrapping instead of a hidden-scrollbar overflow: the last chip used to sit
-     two-thirds off a 390px viewport with nothing to say it scrolled (QA-10). */
-  flex-wrap: wrap;
-  gap: var(--vd-space-2);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: var(--vd-space-1);
   margin-top: var(--vd-space-3);
-  padding-bottom: 2px;
+  /* Bleeds to the panel's edges and puts the inset back as padding, so the row
+     has the full width to scroll in and the first chip still lines up. */
+  margin-inline: calc(var(--vd-space-4) * -1);
+  padding: 0 var(--vd-space-4) 2px;
+  /* Fades only the trailing edge, and only while there is more to reach. */
+  mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent 100%);
 }
+.pills::-webkit-scrollbar { display: none; }
+
 .pill {
   composes: vd-t-caption vd-w7 from global;
+  font-size: 11px;
   flex: none;
   cursor: pointer;
   white-space: nowrap;
-  min-height: 44px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 8px;
   border-radius: var(--vd-radius-pill);
+  scroll-snap-align: start;
 }
-@media (min-width: 800px) { .pill { min-height: 36px; padding: 0 12px; } }
+@media (min-width: 800px) { .pill { min-height: 30px; padding: 0 11px; font-size: 12px; } }
 
 .composer {
   flex: none;

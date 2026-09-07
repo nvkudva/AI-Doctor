@@ -109,13 +109,14 @@
 
 .orbLabel { composes: vd-t-subhead vd-w7 from global; font-size: 14px; }
 
-/* Mobile bottom bar. */
+/* Mobile bottom bar. Sits ABOVE the Mira panel (z 41): the panel is full-bleed
+   on a phone, and the orb in this bar is its only dismiss control. */
 .dock {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 40;
+  z-index: 42;
   padding: 0 14px calc(16px + env(safe-area-inset-bottom));
 }
 .dockInner { position: relative; width: 100%; max-width: 372px; margin: 0 auto; }

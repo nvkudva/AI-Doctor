@@ -101,10 +101,18 @@ export function PatientFlow() {
   const panels = useMemo(() => toPanels(clinic.labs), [clinic.labs]);
   const panel = screen === 'labs' ? panels.find(p => p.panel === subject) : undefined;
   // What the doctor already said about this result, when a plan covers it.
+  // The doctor's own words, but only when the approved plan actually names this
+  // panel or one of its analytes. Advice about a different complaint printed
+  // under a lipid result reads as if it were about the lipids.
   const labNote = useMemo(() => {
     if (!panel) return undefined;
     const mine = clinic.queue.find(c => c.mine && c.status === 'approved');
-    return mine?.rec.advice || undefined;
+    if (!mine?.rec.advice) return undefined;
+    const subjects = [panel.panel, ...panel.values.map(v => v.analyte)].map(x => x.toLowerCase());
+    const covered = [mine.rec.title, mine.rec.summary, ...mine.rec.items.map(i => `${i.name} ${i.why}`)]
+      .join(' ')
+      .toLowerCase();
+    return subjects.some(x => covered.includes(x)) ? mine.rec.advice : undefined;
   }, [panel, clinic.queue]);
   const bookNote = useMemo(() => {
     const mine = clinic.queue.find(c => c.mine && c.status === 'approved');

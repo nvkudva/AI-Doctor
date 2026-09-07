@@ -406,6 +406,16 @@ let hospitalId: string | null = null;
  * last resort and is normally refused: the table carries policies but no SELECT
  * grant to `authenticated`. Memoized — it cannot change without a reload.
  */
+export async function resolveHospitalName(slug?: string): Promise<string | null> {
+  const fallbackSlug = (import.meta.env.VITE_TENANT_SLUG as string | undefined) || '';
+  for (const candidate of [slug, fallbackSlug]) {
+    if (!candidate) continue;
+    const h = await getHospitalBySlug(candidate).catch(() => null);
+    if (h) return h.name;
+  }
+  return null;
+}
+
 export async function resolveHospitalId(slug?: string): Promise<string> {
   if (hospitalId) return hospitalId;
   const fallbackSlug = (import.meta.env.VITE_TENANT_SLUG as string | undefined) || '';

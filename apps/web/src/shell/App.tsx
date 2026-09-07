@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { MiraPresence } from '../lib/ui';
 import { resolveTenantSlug, tenantDisplayName } from '../lib/core';
 import { setDocumentTitle } from '../lib/platform';
+import { hasSupabase, resolveHospitalName } from '../lib/api';
 import { AppShell } from './AppShell';
 import { AuthProvider, useAuth } from './auth';
 import { SignedInRoutes, SignedOutRoutes } from './routes';
@@ -30,9 +31,22 @@ function GatedApp() {
 
   useEffect(() => {
     const slug = resolveTenantSlug(location.hostname, location.search);
-    const name = tenantDisplayName(slug);
-    setTenantName(name);
-    setDocumentTitle(name);
+    // The hostname is only a guess at the tenant. Where there is a backend, the
+    // hospital's own name is the answer — a deploy on a hosting subdomain would
+    // otherwise title itself after the subdomain ("Ai Doctor 8ai").
+    const fallback = tenantDisplayName(slug);
+    setTenantName(fallback);
+    setDocumentTitle(fallback);
+    if (!hasSupabase()) return;
+    let live = true;
+    resolveHospitalName(slug)
+      .then((name) => {
+        if (!live || !name) return;
+        setTenantName(name);
+        setDocumentTitle(name);
+      })
+      .catch(() => { /* the hostname guess stands */ });
+    return () => { live = false; };
   }, []);
 
   if (!ready) {

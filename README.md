@@ -4,9 +4,52 @@ A demo clinic web app where an AI drafts a clinical plan from a patient conversa
 
 The approval gate is a database constraint, not application logic — the AI path has no INSERT grant on `prescriptions` at all.
 
-[Live demo](https://ai-doctor-8ai.pages.dev) — [Docs](docs/)
+[Live demo](https://ai-doctor-8ai.pages.dev) — [Docs](docs/) — [Screens](#screens)
 
-![Doctor review desk: pending drafts on the left, the AI draft in the middle, patient history on the right. Seeded demo data.](docs/images/doctor-desk.png)
+![Doctor review desk on a tablet: the queue sorted by urgency then longest waiting, each row counting down to the two-hour review target, one case already past it. Seeded demo data.](docs/images/tablet/doctor-reviews.png)
+
+## Screens
+
+Captured from the running app against the seeded database. Phone is 430 x 932,
+tablet 900 x 1180 — the doctor desk collapses to a labelled sidebar and a single
+column on a phone, and the review queue only splits into queue / case / patient
+once a case is open.
+
+### The patient
+
+| | | |
+|---|---|---|
+| ![Sign-in](docs/images/mobile/login.png) | ![Patient home](docs/images/mobile/patient-home.png) | ![Day-three check-in](docs/images/mobile/patient-checkin.png) |
+| **Sign in** — two seeded accounts, no password. | **Home** — the next dose, what is booked, results flagged for a look, and the latest plan. | **Check-in** — three taps, three days after a plan is approved. "Same" or "worse" opens a follow-up rather than a new consult. |
+| ![Medicines](docs/images/mobile/patient-medicines.png) | ![Lab results](docs/images/mobile/patient-labs.png) | ![One lab panel](docs/images/mobile/patient-lab-detail.png) |
+| **Medicines** — dose times read from the prescription's own timing text; due, taken and missed. | **Labs** — panels, worst-first. | **A result, explained** — the value against its own reference range, one plain sentence, and the readings before it. |
+
+### The doctor
+
+| | |
+|---|---|
+| ![Doctor home](docs/images/mobile/doctor-home.png) | ![Review queue](docs/images/mobile/doctor-reviews.png) |
+| **Home** — the shift: waiting, urgent, longest wait against the two-hour target, decided today. | **Reviews** — only cases awaiting a decision, urgency first, each counting down. |
+| ![Case review](docs/images/mobile/doctor-case.png) | ![Appointments](docs/images/mobile/doctor-appointments.png) |
+| **A case** — the AI's plan with the validator's verdicts beside it, not buried in the transcript. | **Appointments** — a real day, grouped by clinic session, with attendance. |
+
+### Tablet
+
+| | |
+|---|---|
+| ![Patient home on a tablet](docs/images/tablet/patient-home.png) | ![Lab detail on a tablet](docs/images/tablet/patient-lab-detail.png) |
+| ![Doctor home on a tablet](docs/images/tablet/doctor-home.png) | ![Case review on a tablet](docs/images/tablet/doctor-case.png) |
+| ![Appointments on a tablet](docs/images/tablet/doctor-appointments.png) | ![History on a tablet](docs/images/tablet/patient-history.png) |
+
+## Install it
+
+It is a PWA: the manifest ships maskable and Apple touch icons, the shell is
+precached, and the app installs to a home screen from Chrome or iOS Safari.
+Clinical traffic is never cached — every `rest`, `rpc`, `functions`, `auth`,
+`realtime` and `storage` call is `NetworkOnly`, so a stale queue or a stale plan
+cannot be served from disk. Offline you get the shell and a banner saying so.
+
+Regenerate the icon set from the source SVG with `bun apps/web/scripts/make-icons.mjs`.
 
 ## Requirements
 

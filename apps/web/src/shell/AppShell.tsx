@@ -7,8 +7,10 @@ import s from './AppShell.module.css';
 // active module edge-to-edge; each module owns its responsive layout.
 // Module switching is URL-based (/patient, /doctor), not tab-based.
 
+type UpdateSW = (reload?: boolean) => Promise<void>;
+
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [updateReady, setUpdateReady] = useState(false);
+  const [applyUpdate, setApplyUpdate] = useState<UpdateSW | null>(null);
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
   // A mistyped or outdated link says so instead of silently landing you home (UX-27).
   const { key, state } = useLocation();
@@ -22,8 +24,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [notFound, key]);
 
   useEffect(() => {
-    // Gated SW update: never silently reload mid-consult.
-    const onSW = () => setUpdateReady(true);
+    // Gated SW update: never silently reload mid-consult. main.tsx hands us
+    // registerSW's updateSW — calling it is what promotes the waiting worker.
+    const onSW = (e: Event) => {
+      const fn = (e as CustomEvent<UpdateSW>).detail;
+      if (typeof fn === 'function') setApplyUpdate(() => fn);
+    };
     const onOff = () => setOffline(true);
     const onOn = () => setOffline(false);
     window.addEventListener('vd:sw-update', onSW);
@@ -40,8 +46,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className={s.shell}>
       {offline && (
         <div role="status" className={`vd-glass-thin ${s.offline}`}>
-          You’re offline — anything you do now stays on this device and is sent
-          to your doctor when the connection is back.
+          You’re offline — the app is open but nothing new can be sent or
+          fetched. Reconnect to reach your doctor.
         </div>
       )}
       {showNotFound && (
@@ -53,8 +59,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           page's own content, with no way past them (QA-17). */}
       <a href="#vd-main" className={s.skip}>Skip to content</a>
       <main id="vd-main" tabIndex={-1} className={s.main}>{children}</main>
-      {updateReady && (
-        <div {...pressProps(() => location.reload(), 'Reload to apply update')} className={s.toast}>
+      {applyUpdate && (
+        <div {...pressProps(() => void applyUpdate(true), 'Reload to apply update')} className={s.toast}>
           Update ready — tap to reload
         </div>
       )}

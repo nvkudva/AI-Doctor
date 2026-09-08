@@ -5,12 +5,26 @@ import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { useAuth, type Role } from './auth';
 import { LoginPage } from '../modules/login/LoginPage';
 
-const PatientApp = lazy(() =>
-  import('../modules/patient/PatientApp').then(m => ({ default: m.PatientApp })),
-);
-const DoctorApp = lazy(() =>
-  import('../modules/doctor/DoctorApp').then(m => ({ default: m.DoctorApp })),
-);
+const importPatient = () => import('../modules/patient/PatientApp');
+const importDoctor = () => import('../modules/doctor/DoctorApp');
+
+const PatientApp = lazy(() => importPatient().then(m => ({ default: m.PatientApp })));
+const DoctorApp = lazy(() => importDoctor().then(m => ({ default: m.DoctorApp })));
+
+/** Warm the chunk a known role is about to land on, so the first route
+ *  transition after the session gate resolves has nothing left to download.
+ *  With no role yet — the login screen — both are warmed: together they are
+ *  about 31 kB gzipped, cheaper than guessing wrong and making the winner wait. */
+export function prefetchModule(role?: Role): void {
+  const wanted = role === 'doctor' ? [importDoctor]
+    : role === 'patient' ? [importPatient]
+    : [importPatient, importDoctor];
+  for (const load of wanted) {
+    void load().catch(() => {
+      /* offline, or the chunk is gone after a deploy — the route will retry */
+    });
+  }
+}
 
 // First landing only: default to the user's home view, preserving any
 // deep link (path + query) they arrived with.

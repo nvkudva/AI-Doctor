@@ -8,9 +8,14 @@ import { App } from './shell/App';
 
 initTheme();
 
-registerSW({
+// registerSW returns the only function that can promote a waiting worker:
+// it posts SKIP_WAITING and reloads once the new worker has taken control.
+// AppShell's toast used to call location.reload(), which re-runs the OLD
+// worker's cached shell — the new build then sat waiting until every tab for
+// this origin was closed, so a deploy was effectively never picked up.
+const updateSW = registerSW({
   onNeedRefresh() {
-    window.dispatchEvent(new Event('vd:sw-update'));
+    window.dispatchEvent(new CustomEvent('vd:sw-update', { detail: updateSW }));
   },
 });
 

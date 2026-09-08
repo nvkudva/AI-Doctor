@@ -2,10 +2,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { MiraPresence } from '../lib/ui';
 import { resolveTenantSlug, tenantDisplayName } from '../lib/core';
 import { setDocumentTitle } from '../lib/platform';
-import { hasSupabase, resolveHospitalName } from '../lib/api';
+import { hasSupabase } from '../lib/api/env';
 import { AppShell } from './AppShell';
 import { AuthProvider, useAuth } from './auth';
-import { SignedInRoutes, SignedOutRoutes } from './routes';
+import { prefetchModule, SignedInRoutes, SignedOutRoutes } from './routes';
 import s from './App.module.css';
 
 export function App() {
@@ -39,7 +39,11 @@ function GatedApp() {
     setDocumentTitle(fallback);
     if (!hasSupabase()) return;
     let live = true;
-    resolveHospitalName(slug)
+    // Imported here rather than at the top: lib/api/client pulls the Supabase
+    // SDK, and the tenant's display name is not worth putting it on the
+    // critical path — the hostname guess is already on screen.
+    import('../lib/api/client')
+      .then(({ resolveHospitalName }) => resolveHospitalName(slug))
       .then((name) => {
         if (!live || !name) return;
         setTenantName(name);
@@ -48,6 +52,17 @@ function GatedApp() {
       .catch(() => { /* the hostname guess stands */ });
     return () => { live = false; };
   }, []);
+
+  // A restored session names the role before the session gate resolves, so that
+  // module downloads during the wait. Signed out, the role is unknowable until
+  // the tap, so both are warmed while the login screen sits idle.
+  const role = user?.role;
+  useEffect(() => {
+    const warm = () => prefetchModule(role);
+    const idle = window.requestIdleCallback?.(warm);
+    if (idle === undefined) { const t = setTimeout(warm, 200); return () => clearTimeout(t); }
+    return () => window.cancelIdleCallback?.(idle);
+  }, [role]);
 
   if (!ready) {
     return (

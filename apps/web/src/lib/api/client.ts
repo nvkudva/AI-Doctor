@@ -4,7 +4,8 @@
 //
 // No endpoint here is invented: each is labelled with the §4 row it implements.
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { anonKey, functionsBase, requireSupabase, supabase } from './supabase';
+import { anonKey, functionsBase } from './env';
+import { requireSupabase, supabase } from './supabase';
 import type {
   AiDraftRow, ApiErrorShape, AppointmentRow, ApproveResult, CaseBundle, ConsultMessageRow, ConsultRow,
   ConsultTurnDone, DecisionResult, HospitalPublic, LabResultRow, MembershipRow, NotificationRow,

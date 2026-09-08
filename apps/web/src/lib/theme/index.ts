@@ -85,8 +85,16 @@ export function getTheme(): Theme {
   return 'light';
 }
 
+// The installed app's title bar and the mobile browser chrome read this meta,
+// so it has to follow the switch, not only the first paint. index.html sets it
+// pre-paint from the same two grounds.
+function syncThemeColor(t: Theme) {
+  document.getElementById('vd-theme-color')?.setAttribute('content', t === 'dark' ? '#241B45' : '#CDB6EC');
+}
+
 export function setTheme(t: Theme) {
   document.documentElement.dataset.theme = t;
+  syncThemeColor(t);
   try {
     localStorage.setItem(THEME_KEY, t);
   } catch { /* private mode */ }
@@ -102,5 +110,6 @@ export function initTheme(): Theme {
     else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) t = 'dark';
   } catch { /* private mode */ }
   document.documentElement.dataset.theme = t;
+  syncThemeColor(t);
   return t;
 }

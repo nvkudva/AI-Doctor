@@ -4,7 +4,7 @@ A demo clinic web app where an AI drafts a clinical plan from a patient conversa
 
 The approval gate is a database constraint, not application logic — the AI path has no INSERT grant on `prescriptions` at all.
 
-[Live demo](https://ai-doctor-8ai.pages.dev) — [Docs](docs/) — [Screens](#screens)
+[Live demo](https://aidoctor.nvkudva.workers.dev) — [Docs](docs/) — [Screens](#screens)
 
 ![Doctor review desk on a tablet: the queue sorted by urgency then longest waiting, each row counting down to the two-hour review target, one case already past it. Seeded demo data.](docs/images/tablet/doctor-reviews.png)
 
@@ -45,6 +45,8 @@ once a case is open.
 
 It is a PWA: the manifest ships maskable and Apple touch icons, the shell is
 precached, and the app installs to a home screen from Chrome or iOS Safari.
+It is served by a static-asset Cloudflare Worker (`apps/web/wrangler.jsonc`),
+whose `not_found_handling` answers unmatched paths with the SPA shell.
 Clinical traffic is never cached — every `rest`, `rpc`, `functions`, `auth`,
 `realtime` and `storage` call is `NetworkOnly`, so a stale queue or a stale plan
 cannot be served from disk. Offline you get the shell and a banner saying so.

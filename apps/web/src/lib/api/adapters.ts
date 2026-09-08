@@ -193,6 +193,7 @@ export function toUserConsult(
 export function toUserRx(p: PrescriptionRow) {
   return (p.prescription_items ?? []).map(i => ({
     name: i.name,
+    dosage: i.dosage,
     detail: [i.dosage, i.timing].filter(Boolean).join(' · ') || i.detail,
     date: shortDate(p.approved_at),
     user: true,

@@ -19,11 +19,17 @@ export function doseHours(timing: string): number[] {
   return ONCE;
 }
 
+/** A booked test or a diet plan is a prescription item, but it is not a dose:
+ *  only something with a dosage belongs on a schedule of what to take, when. */
+function isDosed(r: UserRx): boolean {
+  return !!(r.dosage && r.dosage.trim());
+}
+
 export function buildSchedule(rx: UserRx[], taken: Record<string, boolean>, days = 2, now = Date.now()): Dose[] {
   const out: Dose[] = [];
   const midnight = new Date(now);
   midnight.setHours(0, 0, 0, 0);
-  rx.forEach((r, i) => {
+  rx.filter(isDosed).forEach((r, i) => {
     const hours = doseHours(r.detail || '');
     for (let d = 0; d < days; d++) {
       for (const h of hours) {

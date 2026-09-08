@@ -78,7 +78,7 @@ export const seedConsults: UserConsult[] = [
 ];
 
 export const seedRx: UserRx[] = [
-  { name: 'Cetirizine 10mg', detail: 'Once daily, 14 days', date: 'Mar 4, 2026', nextDose: 'Tonight, 8:00 pm' },
+  { name: 'Cetirizine 10mg', dosage: '10 mg', detail: 'Once daily, 14 days', date: 'Mar 4, 2026', nextDose: 'Tonight, 8:00 pm' },
 ];
 
 export const seedAppointments: Appointment[] = [

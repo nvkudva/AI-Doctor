@@ -14,6 +14,8 @@ export interface UserConsult {
 
 export interface UserRx {
   name: string; detail: string; date: string; user?: boolean;
+  /** Empty for a plan item that is not a drug — a booked test, a diet plan. */
+  dosage?: string;
   /** When the next dose is due — drives the home dashboard's medication card. */
   nextDose?: string;
 }

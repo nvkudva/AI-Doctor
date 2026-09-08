@@ -318,8 +318,7 @@ begin
   -- ------------------------------------------------ labs, appointment, notices
   insert into public.lab_results (patient_id, hospital_id, panel, analyte, value_num, unit,
                                   ref_low, ref_high, abnormal, observed_at, source) values
-    (alex,  h_id, 'Complete Blood Count', 'Haemoglobin',        14.4, 'g/dL', 13.0, 17.0, 'normal',   '2026-02-02T00:00:00Z', 'integration'),
-    (alex,  h_id, 'Lipid Profile',        'LDL cholesterol',   132.0, 'mg/dL', 0.0, 100.0,'high',     '2026-02-02T00:00:00Z', 'integration'),
+    -- Alex's own series is seeded further down, dated relative to now.
     (maria, h_id, 'Complete Blood Count', 'Haemoglobin',        13.1, 'g/dL', 12.0, 15.0, 'normal',   '2026-06-20T00:00:00Z', 'integration'),
     (maria, h_id, 'C-reactive protein',   'CRP',                12.4, 'mg/L',  0.0,  5.0, 'high',     '2026-06-20T00:00:00Z', 'integration'),
     (james, h_id, 'Blood pressure log',   'Systolic (30d avg)', 138.0, 'mmHg', 90.0,130.0,'high',     '2026-06-01T00:00:00Z', 'manual'),
@@ -849,6 +848,121 @@ begin
      'Dr. Whitfield · today · CityCare, Room 2.', '/patient/records'),
     (h_id, fatima, 'appointment', 'Video appointment booked',
      'Dr. Whitfield · tomorrow · video consultation.', '/patient/records');
+end $$;
+
+-- ============================================================================
+-- Alex Kumar's record, filled out for the demo.
+--
+-- Two constraints shape what goes in here. Every analyte gets more than one
+-- reading, because a single point draws no trend line. And only genuinely
+-- current medicines are prescribed: the app puts every approved prescription
+-- on today's dose schedule, so a course that finished a year ago would show up
+-- as due tonight. Older consults are investigations and advice instead.
+-- ============================================================================
+
+do $$
+declare
+  h_id uuid := '0e2c0000-0000-4000-8000-000000000001';
+  alex uuid := 'c1a90000-0000-4000-8000-000000000001';
+  sara uuid := '77b30000-0000-4000-8000-000000000001';
+  x uuid;
+begin
+  -- ---------------------------------------------------------------- history
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Wheeze and night cough, worse since the cold weather', 'investigation',
+    'Asthma control review',
+    'Night waking twice a week and reliever use most days through the winter.',
+    '[{"name":"Spirometry with reversibility","timing":"Within 2 weeks","why":"Confirms how much of the narrowing opens up with a reliever.","detail":"Book at the respiratory clinic."},
+      {"name":"Peak flow diary","timing":"Morning and evening, 2 weeks","why":"Shows whether control is slipping overnight, which is when your symptoms are.","detail":"Record the best of three."}]'::jsonb,
+    'Seek urgent care if the reliever stops working or you cannot finish a sentence.',
+    'Asthma, poor overnight control', 'high',
+    now() - interval '14 months', now() - interval '14 months' + interval '4 hours',
+    now() - interval '14 months' + interval '1 day', 'seed-alex-asthma');
+
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Facial pain and a blocked nose, ten days', 'investigation',
+    'Acute sinusitis — supportive care',
+    'Ten days of nasal congestion and cheek pain, no fever, no visual symptoms.',
+    '[{"name":"Saline nasal rinse","timing":"Twice daily, 10 days","why":"Clears the congestion that keeps the sinuses from draining.","detail":"Sachets from any pharmacy."},
+      {"name":"Steam inhalation","timing":"As needed","why":"Eases the pressure while it settles.","detail":"Most sinusitis this age is viral and clears without antibiotics."}]'::jsonb,
+    'Come back if the pain is one-sided and worsening, or if vision or the eye socket is involved. Note: penicillin allergy on file — any antibiotic here must be a non-beta-lactam.',
+    'Acute sinusitis, no antibiotic indicated', 'high',
+    now() - interval '9 months', now() - interval '9 months' + interval '3 hours',
+    now() - interval '9 months' + interval '1 day', 'seed-alex-sinus');
+
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Routine check — father had a heart attack at 58', 'investigation',
+    'Cardiovascular risk screen',
+    'No symptoms. First-degree family history of early coronary disease.',
+    '[{"name":"Fasting lipid profile","timing":"Within 2 weeks","why":"A family history this early moves the screening age forward.","detail":"Nothing but water for 10 hours beforehand."},
+      {"name":"HbA1c","timing":"Same sample","why":"Checks blood sugar over the last three months alongside the lipids.","detail":"No preparation needed."}]'::jsonb,
+    'Nothing to change today. The results decide whether anything needs treating.',
+    'Screening, family history', 'high',
+    now() - interval '7 months', now() - interval '7 months' + interval '5 hours',
+    now() - interval '7 months' + interval '1 day', 'seed-alex-screen');
+
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Cholesterol result follow-up', 'investigation',
+    'Raised LDL — diet first',
+    'LDL 151 mg/dL with a family history, but no other risk factors at 33.',
+    '[{"name":"Diet and exercise plan","timing":"Ongoing, review in 6 months","why":"At your age and risk level this comes before any tablet.","detail":"Oily fish twice a week, less saturated fat, 150 minutes of activity."},
+      {"name":"Repeat lipid profile","timing":"In 6 months","why":"Shows whether the change is working before a statin is considered.","detail":"Fasting again."}]'::jsonb,
+    'Book the repeat lipids in six months. Come sooner for chest pain or breathlessness on exertion.',
+    'Raised LDL, lifestyle first', 'high',
+    now() - interval '6 months', now() - interval '6 months' + interval '2 hours',
+    now() - interval '6 months' + interval '1 day', 'seed-alex-lipids');
+
+  -- The one current course, so the dose schedule has a twice-daily preventer
+  -- on it rather than only the antihistamine.
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Using the blue inhaler more than usual again', 'prescription',
+    'Asthma preventer step-up',
+    'Reliever needed four days out of seven; preventer dose increased.',
+    '[{"name":"Beclometasone inhaler","dosage":"200 mcg","timing":"Twice daily, every day","notes":"Rinse your mouth after each dose.","why":"Regular reliever use means the preventer is not holding, not that you need more reliever.","detail":"Up from 100 mcg twice daily."},
+      {"name":"Salbutamol inhaler","dosage":"100 mcg","timing":"As needed, and 15 minutes before exercise","notes":"Through a spacer.","why":"Pre-treatment stops exercise setting off the wheeze.","detail":"Keep it with you."}]'::jsonb,
+    'Seek urgent care if the reliever stops working, or if you cannot speak a full sentence.',
+    'Asthma step-up, preventer', 'high',
+    now() - interval '12 days', now() - interval '12 days' + interval '2 hours',
+    now() - interval '11 days', 'seed-alex-preventer');
+
+  -- ------------------------------------------------------------------- labs
+  -- Three lipid readings and three counts, so the panel screens have a trend
+  -- to draw and the LDL visibly comes down after the diet plan.
+  insert into public.lab_results (patient_id, hospital_id, panel, analyte, value_num, unit,
+                                  ref_low, ref_high, abnormal, observed_at, source) values
+    (alex, h_id, 'Lipid Profile', 'LDL cholesterol',   151, 'mg/dL',  0, 100, 'high',   now() - interval '7 months', 'integration'),
+    (alex, h_id, 'Lipid Profile', 'LDL cholesterol',   141, 'mg/dL',  0, 100, 'high',   now() - interval '4 months', 'integration'),
+    (alex, h_id, 'Lipid Profile', 'LDL cholesterol',   132, 'mg/dL',  0, 100, 'high',   now() - interval '5 weeks',  'integration'),
+    (alex, h_id, 'Lipid Profile', 'Total cholesterol', 214, 'mg/dL',  0, 200, 'high',   now() - interval '5 weeks',  'integration'),
+    (alex, h_id, 'Lipid Profile', 'HDL cholesterol',    46, 'mg/dL', 40, 100, 'normal', now() - interval '5 weeks',  'integration'),
+    (alex, h_id, 'Lipid Profile', 'Triglycerides',     158, 'mg/dL',  0, 150, 'high',   now() - interval '5 weeks',  'integration'),
+
+    (alex, h_id, 'Complete Blood Count', 'Haemoglobin', 14.0, 'g/dL', 13.0, 17.0, 'normal', now() - interval '7 months', 'integration'),
+    (alex, h_id, 'Complete Blood Count', 'Haemoglobin', 14.2, 'g/dL', 13.0, 17.0, 'normal', now() - interval '4 months', 'integration'),
+    (alex, h_id, 'Complete Blood Count', 'White cell count', 6.4, 'x10^9/L', 4.0, 11.0, 'normal', now() - interval '5 weeks', 'integration'),
+    (alex, h_id, 'Complete Blood Count', 'Platelets',       249, 'x10^9/L', 150, 400, 'normal', now() - interval '5 weeks', 'integration'),
+
+    (alex, h_id, 'Diabetes panel', 'HbA1c', 5.6, '%', 4.0, 5.7, 'normal', now() - interval '7 months', 'integration'),
+    (alex, h_id, 'Diabetes panel', 'HbA1c', 5.4, '%', 4.0, 5.7, 'normal', now() - interval '5 weeks',  'integration'),
+
+    (alex, h_id, 'Vitamin D', '25-hydroxyvitamin D', 18, 'ng/mL', 30, 100, 'low', now() - interval '5 weeks', 'integration'),
+
+    (alex, h_id, 'Lung function', 'Peak flow (best)', 470, 'L/min', 500, 700, 'low',    now() - interval '14 months', 'manual'),
+    (alex, h_id, 'Lung function', 'Peak flow (best)', 545, 'L/min', 500, 700, 'normal', now() - interval '10 days',   'manual');
+
+  -- ----------------------------------------------------------- appointments
+  insert into public.appointments (hospital_id, patient_id, doctor_id, kind, starts_at,
+                                   duration_minutes, location, status) values
+    (h_id, alex, sara, 'lab',       now() - interval '7 months' + interval '9 days',  15, 'CityCare · Phlebotomy, Ground floor', 'completed'),
+    (h_id, alex, sara, 'in_person', now() - interval '6 months' + interval '2 days',  20, 'CityCare · General practice, Room 2', 'completed'),
+    (h_id, alex, sara, 'video',     now() - interval '12 days' + interval '3 hours',  15, 'Video consultation',                   'completed'),
+    (h_id, alex, sara, 'lab',       now() - interval '5 weeks' + interval '1 day',    15, 'CityCare · Phlebotomy, Ground floor',  'completed');
+
+  insert into public.notifications (hospital_id, recipient_id, kind, title, body, deep_link) values
+    (h_id, alex, 'system', 'Your vitamin D is low',
+     '18 ng/mL against a range of 30–100. Dr. Whitfield has seen it and will raise it at your next visit.', '/patient/records?tab=labs'),
+    (h_id, alex, 'decision', 'Preventer dose increased',
+     'Dr. Whitfield approved the step-up to beclometasone 200 mcg twice daily.', '/patient/records');
 end $$;
 
 drop function if exists pg_temp.seed_closed_case(uuid, uuid, uuid, text, public.plan_kind, text, text,

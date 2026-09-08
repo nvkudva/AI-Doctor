@@ -79,6 +79,36 @@ export function describeAllergies(d: PatientDetailsRow | null | undefined): stri
   return (d?.allergies ?? []).map(a => a.substance).filter(Boolean).join(', ');
 }
 
+/**
+ * What the reviewing doctor is told about the patient. This used to be the
+ * allergy list alone, which meant an active condition — the thing that most
+ * often decides whether a drug is safe — never reached the desk at all.
+ */
+export function describeHistory(d: PatientDetailsRow | null | undefined): string {
+  // The queue builds its rows before the case bundle arrives. Saying "nothing
+  // on file" at that point asserts an absence nobody has checked, which on a
+  // review desk is worse than saying nothing.
+  if (!d) return 'Open the case to load this patient\u2019s record.';
+  const allergies = describeAllergies(d);
+  const active = (d?.conditions ?? []).filter(c => c.status !== 'resolved');
+  const conditions = active
+    .map(c => (c.since ? `${c.name} (since ${c.since})` : c.name))
+    .filter(Boolean);
+  const meds = (d?.medications ?? [])
+    .map(m => [m.name, m.dose, m.frequency].filter(Boolean).join(' '))
+    .filter(Boolean);
+
+  const parts = [
+    allergies ? `Allergic to ${allergies}.` : 'No allergies on file.',
+    conditions.length ? `Active: ${conditions.join('; ')}.` : '',
+    meds.length ? `On: ${meds.join('; ')}.` : '',
+  ].filter(Boolean);
+  // Nothing on file at all reads as exactly that, rather than as a clean bill.
+  return allergies || conditions.length || meds.length
+    ? parts.join(' ')
+    : 'No allergies, conditions or medications on file for this patient.';
+}
+
 export function ageFromDob(dob: string | null | undefined): string {
   if (!dob) return '';
   const b = new Date(dob);
@@ -105,7 +135,6 @@ export function toCaseItem(args: {
 }): CaseItem {
   const { consult, draft } = args;
   const rec = (draft?.recommendation as Recommendation | undefined) ?? EMPTY_REC;
-  const allergies = describeAllergies(args.details);
   const age = ageFromDob(args.details?.dob);
   const demo = [age && `${age}`, args.details?.blood_group].filter(Boolean).join(' · ');
   const labs = (args.labs ?? []).map(toLabResult);
@@ -137,7 +166,7 @@ export function toCaseItem(args: {
     status,
     summary: draft?.note || consult.chief_complaint || '',
     symptoms: args.transcript ?? [],
-    history: allergies ? `Allergic to ${allergies}.` : 'No allergies or history on file for this patient.',
+    history: describeHistory(args.details),
     confidence: draft?.confidence ?? 'medium',
     flags,
     stated: args.transcript ?? [],

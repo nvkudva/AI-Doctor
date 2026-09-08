@@ -70,10 +70,17 @@ begin
   on conflict (profile_id, hospital_id) do nothing;
 
   insert into public.patient_details (profile_id, dob, sex, blood_group, allergies, conditions, medications) values
+    -- Multimorbid on purpose: the penicillin allergy and the kidney disease
+    -- between them rule out most of what you would reach for first, which is
+    -- the whole point of showing a safety panel to a doctor.
     (alex, '1992-03-14', 'male', 'O+',
      '[{"substance":"Penicillin","class":"beta_lactam","severity":"severe","reaction":"rash, swelling","source":"self_reported"}]'::jsonb,
-     '[{"name":"Asthma","since":"2015","status":"active","source":"self_reported"}]'::jsonb,
-     '[{"name":"Salbutamol inhaler","dose":"100 mcg","frequency":"PRN","source":"self_reported"}]'::jsonb),
+     '[{"name":"IgA nephropathy","since":"2023","status":"active","source":"clinician","note":"Biopsy-proven."},
+       {"name":"Chronic kidney disease, stage 3a","since":"2024","status":"active","source":"clinician","note":"eGFR 52. Avoid NSAIDs; review renally cleared doses."},
+       {"name":"Asthma","since":"2015","status":"active","source":"self_reported"}]'::jsonb,
+     '[{"name":"Ramipril","dose":"5 mg","frequency":"OD","source":"clinician","note":"Renoprotective; check potassium and creatinine after any dose change."},
+       {"name":"Beclometasone inhaler","dose":"200 mcg","frequency":"BD","source":"clinician"},
+       {"name":"Salbutamol inhaler","dose":"100 mcg","frequency":"PRN","source":"self_reported"}]'::jsonb),
     (maria, '1997-05-02', 'female', 'O-', '[]'::jsonb,
      '[{"name":"Seasonal allergies","status":"active","source":"self_reported"}]'::jsonb, '[]'::jsonb),
     (james, '1985-01-20', 'male', 'B+', '[]'::jsonb,
@@ -291,7 +298,7 @@ begin
       'items', jsonb_build_array(jsonb_build_object('name','Stretching routine','dosage','',
         'timing','Twice daily, 2 weeks','notes','','why','Movement is the main treatment for mechanical back pain.',
         'detail','Twice daily, 2 weeks')),
-      'advice','Keep moving gently; seek care if pain spreads down the leg or bladder changes appear.',
+      'advice','Keep moving gently; seek care if pain spreads down the leg or bladder changes appear. No ibuprofen or naproxen — anti-inflammatories are not safe with your kidney function.',
       'urgency','routine'),
     'Mechanical lower back pain', 'high',
     '[{"code":"allergy_clear","severity":"info","text":"No beta-lactam in this draft; penicillin allergy on file.","source":"validator"}]'::jsonb,
@@ -924,6 +931,60 @@ begin
     'Asthma step-up, preventer', 'high',
     now() - interval '12 days', now() - interval '12 days' + interval '2 hours',
     now() - interval '11 days', 'seed-alex-preventer');
+
+  -- ------------------------------------------------------------- the kidney
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Blood in the urine after a chest infection', 'investigation',
+    'Visible haematuria — nephrology referral',
+    'Frank haematuria two days into an upper respiratory infection, second episode in a year.',
+    '[{"name":"Urine albumin:creatinine ratio","timing":"Within 1 week","why":"Measures how much protein the kidneys are leaking, which decides how urgent this is.","detail":"First morning sample."},
+      {"name":"Creatinine and eGFR","timing":"Same sample","why":"Establishes where kidney function is starting from.","detail":"No preparation needed."},
+      {"name":"Nephrology referral","timing":"Routine","why":"Haematuria that tracks an infection this closely is the classic pattern for IgA nephropathy, and it needs a biopsy to confirm.","detail":"The clinic will write to you."}]'::jsonb,
+    'Seek urgent care for reduced urine output, swelling of the face or legs, or breathlessness.',
+    'Synpharyngitic haematuria, suspected IgA nephropathy', 'medium',
+    now() - interval '30 months', now() - interval '30 months' + interval '6 hours',
+    now() - interval '30 months' + interval '1 day', 'seed-alex-haematuria');
+
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Kidney review — protein still in the urine', 'prescription',
+    'CKD stage 3a — start an ACE inhibitor',
+    'Biopsy-proven IgA nephropathy with an ACR of 78 mg/mmol and eGFR drifting down.',
+    '[{"name":"Ramipril","dosage":"5 mg","timing":"Once daily, at night","notes":"A dry cough is the usual side effect; tell us rather than stopping it.","why":"It lowers the protein leak, which is what actually slows the disease down.","detail":"Started at 2.5 mg and stepped up."},
+      {"name":"Creatinine and potassium","dosage":"","timing":"Two weeks after any dose change","notes":"","why":"An ACE inhibitor can raise potassium and nudge creatinine; both need checking once.","detail":"Bloods only."}]'::jsonb,
+    'Avoid ibuprofen, naproxen and any other anti-inflammatory — with your kidney function they are not safe. Paracetamol is fine.',
+    'IgA nephropathy, proteinuria — ACE inhibitor started', 'high',
+    now() - interval '20 months', now() - interval '20 months' + interval '3 hours',
+    now() - interval '20 months' + interval '1 day', 'seed-alex-acei');
+
+  x := pg_temp.seed_closed_case(h_id, alex, sara,
+    'Annual kidney check', 'investigation',
+    'CKD annual review — stable',
+    'eGFR 52 and holding, ACR down to 31 mg/mmol on ramipril. Blood pressure 124/78.',
+    '[{"name":"Renal profile and urine ACR","timing":"In 6 months","why":"Twice a year is the review interval for stage 3a that is not moving.","detail":"First morning urine plus bloods."},
+      {"name":"Blood pressure at home","timing":"Weekly","why":"Blood pressure is the single biggest lever on how fast kidney function falls.","detail":"Target below 130/80."}]'::jsonb,
+    'Keep off anti-inflammatories. If you get a vomiting or diarrhoeal illness, stop the ramipril for those days and drink — dehydration plus an ACE inhibitor is what puts kidneys in hospital.',
+    'CKD 3a, stable on ACE inhibitor', 'high',
+    now() - interval '3 months', now() - interval '3 months' + interval '2 hours',
+    now() - interval '3 months' + interval '1 day', 'seed-alex-ckd-review');
+
+  insert into public.lab_results (patient_id, hospital_id, panel, analyte, value_num, unit,
+                                  ref_low, ref_high, abnormal, observed_at, source) values
+    (alex, h_id, 'Renal profile', 'Creatinine', 118, 'umol/L', 60, 110, 'high',   now() - interval '30 months', 'integration'),
+    (alex, h_id, 'Renal profile', 'Creatinine', 141, 'umol/L', 60, 110, 'high',   now() - interval '20 months', 'integration'),
+    (alex, h_id, 'Renal profile', 'Creatinine', 138, 'umol/L', 60, 110, 'high',   now() - interval '3 months',  'integration'),
+    (alex, h_id, 'Renal profile', 'eGFR',        68, 'mL/min/1.73m2', 90, 120, 'low', now() - interval '30 months', 'integration'),
+    (alex, h_id, 'Renal profile', 'eGFR',        49, 'mL/min/1.73m2', 90, 120, 'low', now() - interval '20 months', 'integration'),
+    (alex, h_id, 'Renal profile', 'eGFR',        52, 'mL/min/1.73m2', 90, 120, 'low', now() - interval '3 months',  'integration'),
+    (alex, h_id, 'Renal profile', 'Potassium',  4.9, 'mmol/L', 3.5, 5.3, 'normal', now() - interval '3 months', 'integration'),
+
+    (alex, h_id, 'Urine protein', 'Albumin:creatinine ratio', 78, 'mg/mmol', 0, 3, 'high', now() - interval '20 months', 'integration'),
+    (alex, h_id, 'Urine protein', 'Albumin:creatinine ratio', 44, 'mg/mmol', 0, 3, 'high', now() - interval '12 months', 'integration'),
+    (alex, h_id, 'Urine protein', 'Albumin:creatinine ratio', 31, 'mg/mmol', 0, 3, 'high', now() - interval '3 months',  'integration');
+
+  insert into public.appointments (hospital_id, patient_id, doctor_id, kind, starts_at,
+                                   duration_minutes, location, status) values
+    (h_id, alex, sara, 'in_person', now() - interval '3 months' + interval '4 days', 20, 'CityCare · Nephrology clinic', 'completed'),
+    (h_id, alex, sara, 'in_person', now() + interval '16 days' + interval '10 hours', 20, 'CityCare · Nephrology clinic', 'booked');
 
   -- ------------------------------------------------------------------- labs
   -- Three lipid readings and three counts, so the panel screens have a trend

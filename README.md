@@ -1,77 +1,78 @@
-# AI Doctor
+# AI-Doctor
 
-A voice-first AI consultation that a licensed doctor signs off before it reaches the patient.
+A demo clinic web app where an AI drafts a clinical plan from a patient conversation and a licensed doctor must approve it in Postgres before it can become a prescription.
 
-Dr. Mira — the AI physician — talks the patient through their symptoms, then drafts a plan. That draft is not a prescription. It sits in a review queue until a real doctor approves it, and the database is built so the AI *cannot* publish one on its own.
+The approval gate is a database constraint, not application logic — the AI path has no INSERT grant on `prescriptions` at all.
 
-**[Try the demo →](https://ai-doctor-8ai.pages.dev)** — sign in as **Alex Kumar** (patient) or **Dr. Whitfield** (doctor); no password. Seeded data, shared by everyone who opens the link. The consultation itself needs a Gemini key with quota, so Dr. Mira will say she is having trouble; everything else — the review queue, the approval gate, labs, appointments — is live against a real Postgres with RLS.
+[Live demo](https://ai-doctor-8ai.pages.dev) — [Docs](docs/)
 
-<p align="center">
-  <img src="docs/images/login.png"        alt="Sign-in"        width="24%">
-  <img src="docs/images/patient-home.png" alt="Patient home"   width="24%">
-  <img src="docs/images/consult.png"      alt="Live consult"   width="24%">
-  <img src="docs/images/patient-plan.png" alt="Approved plan"  width="24%">
-</p>
+![Doctor review desk: pending drafts on the left, the AI draft in the middle, patient history on the right. Seeded demo data.](docs/images/doctor-desk.png)
 
-## The approval gate
+## Requirements
 
-Human-in-the-loop is structural, not procedural. `prescriptions` is writable only through the doctor-approval path — enforced by a Postgres constraint and trigger, not by application code. Tenant isolation is RLS. There is no permission logic in the app that a bug could bypass.
-
-![Doctor review desk](docs/images/doctor-desk.png)
-
-The doctor's desk: pending drafts on the left, the AI's reasoning and proposed plan in the middle, patient history on the right. Approve, edit, or decline — every outcome is traced.
-
-## Stack
-
-| | |
-|---|---|
-| Frontend | React 19, React Router 8, Vite 7, PWA — one app, `/patient` and `/doctor` modules |
-| Backend | Supabase — Postgres + RLS, Auth, Realtime, Storage |
-| Server logic | Deno Edge Functions: `ai-consult`, `ai-review`, `voice-token` |
-| AI | Gemini — Live API for the speech-to-speech leg, text + structured JSON for the clinical draft |
-
-Voice audio streams directly between the browser and Google, authorized by a short-lived token minted server-side. No model or provider key ever reaches the browser.
-
-## Layout
-
-```
-apps/web/          the PWA — shell, modules/{patient,doctor,login}, lib/{ui,api,core,theme,voice}
-supabase/          migrations/ (forward-only, each ships its own RLS)
-                   functions/  (Deno Edge Functions + _shared/ protocols, guards, tools)
-                   tests/      (pgTAP), seed.sql
-docs/              PRD, ARCHITECTURE, DATA-MODEL, DESIGN — the sources of truth
-```
+- [Bun](https://bun.sh) 1.x — the only package manager the scripts use
+- Docker — the local Supabase stack runs in it
+- [Supabase CLI](https://supabase.com/docs/guides/cli) — Postgres, Auth, Storage, Realtime, Edge Runtime
+- A Gemini API key with quota, if you want the AI consult to answer. Without one the UI runs and the review queue works; the consult replies with an error.
 
 ## Run it
 
-Requires [Bun](https://bun.sh), Docker, and the [Supabase CLI](https://supabase.com/docs/guides/cli).
-
 ```bash
+git clone https://github.com/nvkudva/AI-Doctor.git
+cd AI-Doctor
 bun install
-bun run db:start          # boots Postgres, Auth, Storage, Realtime, Edge Runtime
-bun run db:reset          # applies migrations, then seed.sql
-bun run dev               # http://localhost:3001
+cp apps/web/.env.example apps/web/.env.local   # fill in the variables below
+bun run db:start                               # prints the API URL and anon key
+bun run db:reset                               # applies migrations, then seed.sql
+bun run dev                                    # http://localhost:3001
 ```
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and paste the API URL and anon key that `db:start` printed. Set `VITE_DEMO_PASSWORD=1234` and the login page's **Fake patient** / **Fake doctor** buttons sign in as real seeded users under real RLS.
+The login page should offer "Fake patient" and "Fake doctor" buttons that sign in as seeded users under real RLS.
 
-With both Supabase variables unset the app runs in demo mode instead — seeds and `localStorage`, no network, no backend needed.
+With `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` both unset, the app runs entirely on seeds and `localStorage` — no Docker, no backend.
 
-```bash
-bun run typecheck
-bun run db:test           # pgTAP: approval gate, state transitions, RLS isolation
-```
+## Configuration
 
-## Docs
+`apps/web/.env.local` (browser — never put a provider or service-role key here):
 
-| | |
-|---|---|
-| [`docs/PRD.md`](docs/PRD.md) | what to build |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how to build it — governs all implementation |
-| [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) | persistence, the state machine, the gate |
-| [`docs/DESIGN.md`](docs/DESIGN.md) | design system |
-| [`supabase/README.md`](supabase/README.md) | backend |
+| Variable | Required | What it is |
+|---|---|---|
+| `VITE_SUPABASE_URL` | No | Local or hosted API URL. Unset means offline demo mode. |
+| `VITE_SUPABASE_ANON_KEY` | No | Anon key printed by `bun run db:start`. Public by design; RLS enforces access. |
+| `VITE_TENANT_SLUG` | Yes | Tenant to act as when the hostname has no subdomain. `citycare` in the seed. |
+| `VITE_DEMO_PASSWORD` | No | Shared password for the seeded accounts. Set it to enable the fake-login buttons. |
 
----
+`supabase/functions/.env` (server, loaded by `bun run db:functions`):
+
+| Variable | Required | What it is |
+|---|---|---|
+| `GEMINI_API_KEY` | For real AI | Without it the consult and review functions fail. |
+| `AI_PROVIDER` | No | Defaults to `stub`; set to the Gemini provider for real model calls. |
+| `GEMINI_TEXT_MODEL`, `GEMINI_LIVE_MODEL`, `GEMINI_LIVE_VOICE` | No | Model overrides. |
+
+## How it works
+
+`apps/web/` is a React 19 + Vite 7 PWA with `modules/patient`, `modules/doctor` and `modules/login`. Two interchangeable stores implement the same interface — `store/LocalClinic.tsx` (seeds plus `localStorage`) and `store/SupabaseClinic.tsx` (live) — and `store/ClinicProvider.tsx` picks one based on whether Supabase is configured.
+
+`supabase/functions/` holds three Deno Edge Functions: `ai-consult` runs a patient turn, `ai-review` drives the doctor-side coordinator, and `voice-token` mints a short-lived Gemini Live token. `_shared/agent.ts` rebuilds consult state from Postgres on every turn and runs a deterministic red-flag sweep before any model call.
+
+`supabase/migrations/` is forward-only and carries the authorization layer: `prescriptions.review_id` is `NOT NULL UNIQUE`, a trigger re-checks that the approving review matches the consult, the doctor and the draft hash, and INSERT on `prescriptions` is revoked from `anon`, `authenticated` and `service_role`. Consult state moves through an allowlist table. Tenant isolation is RLS.
+
+## Status
+
+Working: the approval gate, the consult state machine, RLS tenant isolation, the doctor review queue, labs and appointments, and the offline demo store.
+
+Not working or not built:
+
+- The voice leg is not wired up. `voice-token` mints a Live session token, but no client code opens the WebSocket, and no Live tool call is dispatched. The consult today is text.
+- The hosted demo has no funded Gemini quota, so the AI consult returns an error there. Everything around it is live against Postgres.
+- The hosted demo is a single shared database with open signup and no password on the seeded accounts. There is no reset schedule. Assume anything you write is public and anything you read may have been written by a stranger.
+- The pgTAP suites (`supabase/tests/`, covering the gate, transitions and RLS) have never been run against a live database — see `supabase/README.md`. There are no tests for `apps/` or for the Edge Functions.
+- `apps/web/src/lib/api/ai.ts` contains a second, unguarded clinical path used in offline demo mode. It hard-codes drug names and doses and none of the server-side guards apply to it. Do not treat its output as clinical content.
+- A code review on 2026-09-07 recorded open P0 authorization defects in `voice-token` and `ai-review`. See [REVIEW.md](REVIEW.md) before deploying this anywhere real.
 
 Not a medical device. Demo data throughout; no real patient data, no clinical claims.
+
+## License
+
+No licence file yet — all rights reserved.

@@ -86,8 +86,8 @@
 .docDate { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
 
 .consult { margin-bottom: 10px; }
-.consultHead { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
-.consultTitle { composes: vd-t-headline vd-w6 from global; color: var(--vd-ink-1); }
+.consultHead { display: flex; align-items: center; gap: 10px; }
+.consultTitle { composes: vd-t-headline vd-w6 from global; color: var(--vd-ink-1); flex: 1; min-width: 0; }
 .consultPill { flex: none; }
 .consultMeta { composes: vd-t-subhead from global; font-weight: 400; color: var(--vd-ink-3); margin-top: 3px; }
 .consultNote { composes: vd-t-callout from global; color: var(--vd-ink-3); margin-top: 8px; }
@@ -125,4 +125,17 @@
   padding: 5px 11px;
   border-radius: var(--vd-radius-pill);
   flex: none;
+}
+
+/* Every record row leads with the icon for its kind. */
+.consultIcon {
+  width: 30px; height: 30px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-surface-chip); color: var(--vd-ink-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.labIcon {
+  width: 32px; height: 32px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-lab-ok-bg); color: var(--vd-lab-ok-fg);
+  display: flex; align-items: center; justify-content: center;
+  margin-right: var(--vd-space-3);
 }

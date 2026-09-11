@@ -297,6 +297,14 @@ export function useConsult(opts: {
     say(text);
   }, [say]);
 
+  // Stop talking and stop listening, but keep the conversation: closing the
+  // panel must not silently end a consult the patient is part-way through.
+  const silence = useCallback(() => {
+    stopListening();
+    stopAllVoice();
+    setStatus('idle');
+  }, [stopListening]);
+
   const reset = useCallback(() => {
     stopListening();
     stopAllVoice();
@@ -348,7 +356,7 @@ export function useConsult(opts: {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
     micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
-    confidence, flags, start, note, reset, orbTap, attach, send: (t: string) => handleUserRef.current(t),
+    confidence, flags, start, note, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

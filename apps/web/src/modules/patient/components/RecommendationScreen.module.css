@@ -178,3 +178,6 @@
   composes: vd-t-footnote vd-w6 from global;
   color: var(--vd-ok-fg); margin-top: var(--vd-space-3);
 }
+
+/* Notepads sit inside the plan card with their own breathing room. */
+.pad { margin-top: var(--vd-space-5); }

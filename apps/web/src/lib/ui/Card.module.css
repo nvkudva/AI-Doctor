@@ -71,3 +71,12 @@
 @media (hover: hover) {
   .clickable:hover { border-color: var(--vd-border-strong); box-shadow: var(--card-elev, var(--vd-elev-2)), var(--vd-glass-hi); }
 }
+
+/* Card head: the icon is what tells you, at a glance, what kind of card it is. */
+.header { display: flex; align-items: center; gap: var(--vd-space-3); margin-bottom: var(--vd-space-4); }
+.headerIcon {
+  width: 32px; height: 32px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-surface-chip); color: var(--vd-ink-3);
+  display: flex; align-items: center; justify-content: center;
+}
+.headerTitle { composes: vd-t-micro from global; color: var(--vd-ink-4); flex: 1; }

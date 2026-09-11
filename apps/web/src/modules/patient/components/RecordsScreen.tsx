@@ -114,6 +114,7 @@ function ConsultCard({ c }: { c: UserConsult }) {
         style={{ cursor: d ? 'pointer' : 'default' }}
       >
         <div className={s.consultHead}>
+          <span className={s.consultIcon}><Icon name="stethoscope" size={17} /></span>
           <div className={s.consultTitle}>{c.title}</div>
           <span className={s.consultPill}><StatusPill status={c.status === 'Approved' ? 'approved' : c.status} /></span>
         </div>
@@ -152,7 +153,8 @@ function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
   const t = ok ? tints.labOk : tints.labWarn;
   return (
     <Card level={1} pad="13px 15px" className={s.lab} onClick={onOpen} aria-label={`Open ${p.panel}`}>
-      <div style={{ minWidth: 0 }}>
+      <span className={s.labIcon}><Icon name="flask" size={18} /></span>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div className={s.labName}>{p.panel}</div>
         <div className={s.labDate}>
           {new Date(p.observedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}

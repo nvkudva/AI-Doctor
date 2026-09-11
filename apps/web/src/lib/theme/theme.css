@@ -18,6 +18,13 @@
   --vd-surface-chip: #f0ecfb;
   --vd-surface-mine: #cfb0f4;
   --vd-surface-raised: #faf8ff;
+  /* Notepad: prescriptions and ordered tests are documents, so they get a
+     paper surface with its own rule lines rather than a card. */
+  --vd-paper-bg: #ffffff;
+  --vd-paper-rule: rgba(30, 50, 90, 0.07);
+  --vd-paper-edge: rgba(30, 50, 90, 0.13);
+  --vd-paper-ink: #241b45;
+  --vd-paper-ink-soft: #585379;
   --vd-case-header: #e8d5ff;
 
   --vd-ink-1: #241b45;
@@ -159,6 +166,11 @@
   --vd-elev-4: 0 14px 32px rgba(0, 0, 0, 0.55);
   --vd-elev-5: 0 24px 56px rgba(0, 0, 0, 0.6);
 
+  --vd-paper-bg: #221c3d;
+  --vd-paper-rule: rgba(255, 255, 255, 0.07);
+  --vd-paper-edge: rgba(255, 255, 255, 0.14);
+  --vd-paper-ink: #efeaff;
+  --vd-paper-ink-soft: #b6aede;
   --vd-orb-deep: oklch(0.55 0.2 270);
   --vd-orb-mid: oklch(0.68 0.2 280);
   --vd-orb-glow: oklch(0.75 0.16 260);

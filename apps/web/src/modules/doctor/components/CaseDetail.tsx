@@ -65,6 +65,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
 
       <Card level={2} className={s.card}>
         <div className={s.cardHead}>
+          <span className={s.kindIcon}><Icon name="stethoscope" size={17} /></span>
           <MicroLabel>AI consultation</MicroLabel>
           <StatusPill status={ac.confidence} />
         </div>
@@ -185,7 +186,10 @@ export function PatientPanel({ ac }: { ac: CaseItem }) {
     <div className={s.panel}>
       <SafetyChecks flags={ac.flags} />
       <Card level={2} className={s.history}>
-        <MicroLabel>Patient history</MicroLabel>
+        <div className={s.cardHead}>
+          <span className={s.kindIcon}><Icon name="person" size={17} /></span>
+          <MicroLabel>Patient history</MicroLabel>
+        </div>
         {ac.history}
         <MicroLabel>Previous consultations</MicroLabel>
         {(ac.pastConsults || []).map((p, i) => (

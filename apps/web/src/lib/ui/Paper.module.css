@@ -1,0 +1,55 @@
+/* Notepad surface. The ruled lines are a repeating gradient rather than markup,
+   so they stay behind whatever content the page puts on top. */
+.paper {
+  position: relative;
+  background: var(--vd-paper-bg);
+  color: var(--vd-paper-ink);
+  border: 1px solid var(--vd-paper-edge);
+  border-radius: var(--vd-radius-md);
+  box-shadow: var(--vd-elev-2);
+  overflow: hidden;
+}
+
+/* The torn-off top: a row of punched holes across the head. */
+.perforation {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 14px;
+  background-image: radial-gradient(circle at 7px 7px, var(--vd-paper-edge) 2.6px, transparent 2.9px);
+  background-size: 18px 14px;
+  background-repeat: repeat-x;
+  opacity: 0.85;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-3);
+  padding: calc(14px + var(--vd-space-4)) var(--vd-space-5) var(--vd-space-3);
+  border-bottom: 1px solid var(--vd-paper-edge);
+}
+.icon { display: flex; flex: none; color: var(--vd-paper-ink-soft); }
+.title { composes: vd-t-micro from global; color: var(--vd-paper-ink-soft); flex: 1; }
+.meta { composes: vd-t-caption from global; color: var(--vd-paper-ink-soft); font-weight: 400; }
+
+.body { padding: var(--vd-space-2) var(--vd-space-5) var(--vd-space-5); }
+
+/* One rule per entry rather than a continuous 30px grid: a repeating gradient
+   only looks like paper if every line-height in the body is locked to its
+   pitch, and here it read as a rendering fault instead. */
+.item {
+  display: flex;
+  gap: var(--vd-space-4);
+  padding: var(--vd-space-4) 0;
+  border-bottom: 1px solid var(--vd-paper-rule);
+}
+.itemLast { border-bottom: none; padding-bottom: var(--vd-space-2); }
+.itemIcon {
+  display: flex; flex: none; margin-top: 2px;
+  color: var(--vd-paper-ink-soft);
+}
+.itemBody { min-width: 0; flex: 1; }
+.itemHead { display: flex; align-items: baseline; gap: var(--vd-space-3); }
+.itemName { composes: vd-t-body vd-w7 from global; color: var(--vd-paper-ink); flex: 1; }
+.itemLead { composes: vd-t-callout from global; color: var(--vd-paper-ink); }
+.itemWhy { composes: vd-t-footnote from global; color: var(--vd-paper-ink-soft); margin-top: var(--vd-space-2); }

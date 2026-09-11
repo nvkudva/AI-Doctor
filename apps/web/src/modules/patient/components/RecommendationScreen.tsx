@@ -2,7 +2,7 @@
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
 import type { Recommendation } from '../../../lib/core';
-import { Button, Card, MicroLabel, MiraPresence, StatusPill } from '../../../lib/ui';
+import { Button, Card, MicroLabel, MiraPresence, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { tints } from '../../../lib/theme';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './RecommendationScreen.module.css';
@@ -108,14 +108,21 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
             <div className={s.planTitle}>{rec.title}</div>
             <div className={s.planSummary}>{rec.summary}</div>
             {rx.length > 0 && (
-              <>
-                <MicroLabel>Prescription</MicroLabel>
-                {rx.map((it, i) => <PlanItem key={i} last={i === rx.length - 1} name={it.name} dosage={it.dosage} timing={it.timing} notes={it.notes} why={it.why} />)}
-              </>
+              <Paper icon="pill" title="Prescription" meta={`${rx.length} item${rx.length === 1 ? '' : 's'}`} className={s.pad}>
+                {rx.map((it, i) => (
+                  <PaperItem
+                    key={i}
+                    icon="pill"
+                    last={i === rx.length - 1}
+                    name={it.name}
+                    lead={[it.dosage, it.timing].filter(Boolean).join(' · ')}
+                    why={it.why || it.notes}
+                  />
+                ))}
+              </Paper>
             )}
             {tests.length > 0 && (
-              <>
-                <MicroLabel>Tests</MicroLabel>
+              <Paper icon="flask" title="Tests ordered" meta={`${tests.length} item${tests.length === 1 ? '' : 's'}`} className={s.pad}>
                 {tests.map((it, i) => (
                   <PlanItem
                     key={i}
@@ -129,7 +136,7 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
                     onBook={approved && onBook ? () => onBook(it.name) : undefined}
                   />
                 ))}
-              </>
+              </Paper>
             )}
             {rec.advice && (
               <div className={s.adviceBox}>

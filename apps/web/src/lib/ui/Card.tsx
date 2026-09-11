@@ -44,6 +44,32 @@ export function Card({
 }
 
 // Centred empty state: 88 icon disc, headline + callout, optional action.
+/**
+ * The head of a card: an icon that says what kind of thing this is, its label,
+ * and optional trailing content. Every card type in the app carries one, so the
+ * icon vocabulary stays in one place instead of being re-chosen per screen.
+ */
+export function CardHeader({ icon, title, meta, tone }: {
+  icon: IconName;
+  title: string;
+  meta?: React.ReactNode;
+  /** Tints the icon disc — defaults to the neutral chip. */
+  tone?: { bg: string; fg: string };
+}) {
+  return (
+    <div className={s.header}>
+      <span
+        className={s.headerIcon}
+        style={tone ? { background: tone.bg, color: tone.fg } : undefined}
+      >
+        <Icon name={icon} size={17} />
+      </span>
+      <div className={s.headerTitle}>{title}</div>
+      {meta}
+    </div>
+  );
+}
+
 export function EmptyState({
   icon, title, body, action, style,
 }: {

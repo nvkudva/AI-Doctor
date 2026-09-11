@@ -230,6 +230,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   return {
     active, status, messages, speakerOff, setSpeakerOff, micOff, setMicOff, start, stop, orbTap, failedCmd,
+    silence: stop,
     approvalStaged,
     command: (t: string) => commandRef.current(t, true),
     send: (t: string) => commandRef.current(t, true),

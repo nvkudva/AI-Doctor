@@ -287,3 +287,6 @@
   color: var(--vd-nav-active);
   display: flex; align-items: center; justify-content: center;
 }
+
+/* The close control reads as the way out, not as one more toggle. */
+.dockClose { color: var(--vd-bad-fg); }

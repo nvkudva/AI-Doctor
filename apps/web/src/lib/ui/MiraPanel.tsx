@@ -48,6 +48,8 @@ export interface MiraSession {
   suggestions: Suggestion[];
   /** Attach a photo to the conversation. Absent means the surface offers none. */
   attach?: (image: string) => void;
+  /** Stop speaking and listening, without discarding the conversation. */
+  silence?: () => void;
   micDenied?: boolean;
   clearMicDenied?: () => void;
   failed?: boolean;
@@ -374,12 +376,14 @@ export function MiraPanel({
                 {/* The camera control was removed: nothing was ever captured,
                     and a patient with a rash would tap it and wait (UX-22). */}
                 <div
-                  {...pressProps(onClose, 'Hide Dr. Mira')}
-                  title="Hide Dr. Mira"
-                  className={s.dockBtn}
+                  {...pressProps(() => { session.silence?.(); onClose(); }, 'Close Dr. Mira')}
+                  title="Close Dr. Mira"
+                  className={`${s.dockBtn} ${s.dockClose}`}
                 >
-                  {/* A minimize, not a hang-up: the session keeps running (UX-21). */}
-                  <Icon name="chevD" size={20} />
+                  {/* Closes rather than minimizes: audio stops on the way out, so
+                      nothing keeps talking behind a hidden panel. The transcript
+                      survives, so reopening resumes where it left off. */}
+                  <Icon name="x" size={20} />
                 </div>
               </div>
             </div>

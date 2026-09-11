@@ -158,3 +158,9 @@
 .checkHead { display: flex; align-items: center; gap: var(--vd-space-2); }
 .checkCode { composes: vd-t-micro from global; color: var(--vd-ink-4); }
 .checkText { composes: vd-t-footnote from global; color: var(--vd-ink-2); margin-top: 3px; }
+
+.kindIcon {
+  width: 30px; height: 30px; border-radius: var(--vd-radius-pill); flex: none;
+  background: var(--vd-surface-chip); color: var(--vd-ink-3);
+  display: flex; align-items: center; justify-content: center;
+}

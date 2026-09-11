@@ -139,3 +139,16 @@
   display: flex; align-items: center; justify-content: center;
   margin-right: var(--vd-space-3);
 }
+
+/* Item names on the closed card. Wraps rather than scrolls: a consult rarely
+   has more than three, and a hidden row would defeat the point of showing them. */
+.chips { display: flex; flex-wrap: wrap; gap: var(--vd-space-2); margin-top: var(--vd-space-4); }
+.chip {
+  composes: vd-t-caption from global;
+  display: inline-flex; align-items: center; gap: var(--vd-space-2);
+  border-radius: var(--vd-radius-pill); padding: 5px 10px;
+  max-width: 100%; min-width: 0;
+}
+.chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chipRx { background: var(--vd-rx-bg); color: var(--vd-rx-fg); }
+.chipTest { background: var(--vd-inv-bg); color: var(--vd-inv-fg); }

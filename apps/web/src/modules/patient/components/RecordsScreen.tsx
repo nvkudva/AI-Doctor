@@ -120,6 +120,23 @@ function ConsultCard({ c }: { c: UserConsult }) {
         </div>
         <div className={s.consultMeta}>{c.date} · Dr. Mira</div>
         <div className={s.consultNote}>{c.note}</div>
+        {/* What was actually prescribed or ordered, on the closed card: the
+            thing people scan their history for is the drug name, and having to
+            open every entry to find it made the list useless for that. */}
+        {d && (d.rx.length > 0 || d.tests.length > 0) && (
+          <div className={s.chips}>
+            {d.rx.map((x, i) => (
+              <span key={`r${i}`} className={`${s.chip} ${s.chipRx}`}>
+                <Icon name="pill" size={13} />{x.name}
+              </span>
+            ))}
+            {d.tests.map((x, i) => (
+              <span key={`t${i}`} className={`${s.chip} ${s.chipTest}`}>
+                <Icon name="flask" size={13} />{x.name}
+              </span>
+            ))}
+          </div>
+        )}
         {d && (
           <div className={s.more}>
             {open ? 'Show less' : 'View details'}

@@ -212,8 +212,18 @@ export function toUserConsult(
       summary: rec?.summary || consult.chief_complaint || '',
       evaluation: (consult.working_dx ?? []).map(d => d.label).join('; ') || rec?.title || '',
       advice: rx?.advice || rec?.advice || '',
-      tests: orders.map(o => ({ name: o.name, detail: o.detail || o.why || '' })),
-      rx: items.map(i => ({ name: i.name, dosage: i.dosage, timing: i.timing })),
+      // A plan item is a drug only if it carries a dosage. Everything else is
+      // something to do or book — a repeat blood test, a home BP log, a diet
+      // plan — and calling those a prescription is simply wrong. The plan
+      // screen splits them the same way; `investigation_orders` is the same
+      // list once a plan has been turned into booked orders.
+      tests: [
+        ...items.filter(i => !i.dosage?.trim())
+          .map(i => ({ name: i.name, detail: i.timing || i.detail || '' })),
+        ...orders.map(o => ({ name: o.name, detail: o.detail || o.why || '' })),
+      ],
+      rx: items.filter(i => !!i.dosage?.trim())
+        .map(i => ({ name: i.name, dosage: i.dosage, timing: i.timing })),
     },
   };
 }

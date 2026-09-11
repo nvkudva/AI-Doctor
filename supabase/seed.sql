@@ -20,7 +20,7 @@ declare
   c1 uuid; c2 uuid; c3 uuid; h1 uuid; h2 uuid;
   d1 uuid; d2 uuid; d3 uuid; dh1 uuid; dh2 uuid;
   rv uuid; rx uuid; hash text;
-  pw text := crypt('1234', gen_salt('bf'));
+  pw text := extensions.crypt('1234', extensions.gen_salt('bf'));
 begin
   -- ------------------------------------------------------------------ tenant
   insert into public.hospitals (id, slug, name, logo_url, theme, ai_config, admin_contact_email)
@@ -450,7 +450,7 @@ declare
   omar   uuid := 'a00c0000-0000-4000-8000-00000000000c';
   grace  uuid := 'a00d0000-0000-4000-8000-00000000000d';
 
-  pw text := crypt('1234', gen_salt('bf'));
+  pw text := extensions.crypt('1234', extensions.gen_salt('bf'));
   ignore uuid;
 begin
   insert into auth.users (instance_id, id, aud, role, email, encrypted_password,

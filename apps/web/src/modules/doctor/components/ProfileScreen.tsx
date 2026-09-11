@@ -23,7 +23,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
           rather than 24px lower on the one screen that scrolled them. */}
       <AppHeader
         title={user?.name || 'Dr. Sara Whitfield'}
-        subtitle={user?.email || 'sara.whitfield@example.com'}
+        subtitle={<span className={profile.email}>{user?.email || 'sara.whitfield@example.com'}</span>}
         actions={(
           <>
             <SignOutButton onClick={signOut} />

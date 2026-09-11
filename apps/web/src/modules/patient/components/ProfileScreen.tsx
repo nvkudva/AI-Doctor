@@ -23,7 +23,7 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
     <div className={profile.screen}>
       <AppHeader
         title={user?.name || 'Alex Kumar'}
-        subtitle={user?.email || 'alex.kumar@gmail.com'}
+        subtitle={<span className={profile.email}>{user?.email || 'alex.kumar@gmail.com'}</span>}
         actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}
         className={s.header}
       />

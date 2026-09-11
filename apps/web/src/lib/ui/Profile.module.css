@@ -40,3 +40,8 @@
   .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--vd-space-5); align-items: start; }
 }
 .column { min-width: 0; }
+
+/* The account's email sits under the name as the header subtitle. Two points
+   down from the standard subtitle: it is an identifier, not prose. */
+.email { font-size: 12px; }
+@media (min-width: 800px) { .email { font-size: 13px; } }

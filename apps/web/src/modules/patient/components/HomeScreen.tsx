@@ -89,21 +89,30 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             ))}
         </Section>
 
+        {/* A dashboard tells you there is something to look at; the looking
+            happens on Labs. One panel per row turned Home into a second copy
+            of that screen. */}
         <Section title="Results">
           {flagged.length === 0
             ? <Empty body="All results are within range." />
-            : flagged.map(p => (
-              <Row
-                key={p.panel}
-                icon="doc"
-                title={p.panel}
-                detail={p.values.map(v => v.analyte).join(' · ')}
-                meta="Needs a look"
-                tone="var(--vd-warn-fg)"
-                label={`Open lab result: ${p.panel}`}
-                onClick={() => nav(`/patient/labs/${encodeURIComponent(p.panel)}`)}
-              />
-            ))}
+            : (
+              <Card
+                level={1}
+                pad="14px 16px"
+                onClick={() => nav('/patient/records?tab=labs')}
+                aria-label={`Review ${flagged.length} lab result${flagged.length === 1 ? '' : 's'}`}
+                className={s.summary}
+              >
+                <span className={s.summaryCount}>{flagged.length}</span>
+                <div className={s.summaryBody}>
+                  <div className={s.summaryTitle}>
+                    {flagged.length === 1 ? '1 result needs a look' : `${flagged.length} results need a look`}
+                  </div>
+                  <div className={s.summaryDetail}>{flagged.map(p => p.panel).join(' · ')}</div>
+                </div>
+                <Icon name="chevR" size={16} />
+              </Card>
+            )}
         </Section>
 
         <Section title="From your doctor">

@@ -2,7 +2,7 @@
 // then settings. The doctor profile mirrors this layout (DESIGN §11.7).
 import { useState } from 'react';
 import {
-  AppHeader, Button, Card, EmptyState, MenuRow, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle, profile,
+  AppHeader, Button, Card, EmptyState, Icon, IdentityCard, MenuRow, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
@@ -11,6 +11,8 @@ import { PatientNotify } from './PatientNotify';
 import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
+  const drugs = prescriptions.filter(x => !!x.dosage?.trim());
+  const todo = prescriptions.filter(x => !x.dosage?.trim());
   const { user, signOut } = useAuth();
   const clinic = useClinic();
   const [editing, setEditing] = useState(false);
@@ -20,10 +22,14 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
   return (
     <div className={profile.screen}>
       <AppHeader
-        title=""
-        identity={{ name: user?.name || 'Alex Kumar', email: user?.email || 'alex.kumar@gmail.com' }}
+        title="Profile"
         actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}
         className={s.header}
+      />
+
+      <IdentityCard
+        name={user?.name || 'Alex Kumar'}
+        email={user?.email || 'alex.kumar@gmail.com'}
       />
 
       <StatRow items={[
@@ -63,19 +69,41 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
         </div>
       </Sheet>
 
+      {/* A plan item is a drug only when it carries a dosage. Listing a booked
+          blood test or a diet plan under "Prescriptions" was simply wrong. */}
       <ProfileSection>Prescriptions</ProfileSection>
-      {prescriptions.length === 0
-        ? <EmptyState icon="doc" title="No prescriptions on file" body="Approved prescriptions are saved here." />
+      {drugs.length === 0
+        ? <EmptyState icon="pill" title="No prescriptions on file" body="Approved prescriptions are saved here." />
         : (
           <div className={profile.list}>
-            {prescriptions.map((p, i) => (
+            {drugs.map((p, i) => (
               <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                <div className={s.rxName}>{p.name}</div>
-                <div className={s.rxMeta}>{p.detail} · {p.date}</div>
+                <span className={s.rxIcon}><Icon name="pill" size={16} /></span>
+                <div className={s.rxBody}>
+                  <div className={s.rxName}>{p.name}</div>
+                  <div className={s.rxMeta}>{p.detail} · {p.date}</div>
+                </div>
               </Card>
             ))}
           </div>
         )}
+
+      {todo.length > 0 && (
+        <>
+          <ProfileSection>Tests and things to do</ProfileSection>
+          <div className={profile.list}>
+            {todo.map((p, i) => (
+              <Card key={i} level={1} pad="13px 15px" className={s.rx}>
+                <span className={`${s.rxIcon} ${s.rxIconTest}`}><Icon name="flask" size={16} /></span>
+                <div className={s.rxBody}>
+                  <div className={s.rxName}>{p.name}</div>
+                  <div className={s.rxMeta}>{p.detail} · {p.date}</div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       <ProfileSection>Coverage &amp; payment</ProfileSection>
       <div className={profile.pair}>

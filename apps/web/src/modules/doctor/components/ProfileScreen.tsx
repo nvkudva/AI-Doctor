@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  AppHeader, Card, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
+  AppHeader, Card, IdentityCard, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
@@ -22,8 +22,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
           gutters, so its actions line up with Home, Appointments and Reviews
           rather than 24px lower on the one screen that scrolled them. */}
       <AppHeader
-        title=""
-        identity={{ name: user?.name || 'Dr. Sara Whitfield', email: user?.email || 'sara.whitfield@example.com' }}
+        title="Profile"
         actions={(
           <>
             <SignOutButton onClick={signOut} />
@@ -42,6 +41,10 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
       />
 
       <div className={profile.screen}>
+      <IdentityCard
+        name={user?.name || 'Dr. Sara Whitfield'}
+        email={user?.email || 'sara.whitfield@example.com'}
+      />
       <StatRow items={[
         { label: 'Patients', value: seedDoctor.patients },
         { label: 'Years', value: seedDoctor.years },

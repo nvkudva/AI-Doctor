@@ -5,7 +5,7 @@
 import {
   isReviewable, slaCountdown, waitAge, type CaseItem,
 } from '../../../lib/core';
-import { Button, Card, EmptyState, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
+import { Button, Card, CardHeader, EmptyState, Icon, StatusPill } from '../../../lib/ui';
 import type { AppointmentSlot } from '../../../store/types';
 import s from './DoctorHome.module.css';
 
@@ -59,51 +59,73 @@ export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeRevie
         </div>
       )}
 
-      <MicroLabel>Needs you now</MicroLabel>
-      {needsYou.length > 0 ? needsYou.map(c => (
-        <AttnRow
-          key={c.id}
-          icon="alert"
-          tone={c.rec.urgency === 'urgent' ? 'bad' : 'warn'}
-          title={`${c.patient} · ${c.title}`}
-          line={c.flags.find(f => f.severity !== 'info')?.text || c.summary}
-          meta={c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}
-          tag={<StatusPill status={c.rec.urgency} />}
-          onClick={() => onSelect(c.id)}
-        />
-      )) : (
-        <EmptyState
-          icon="check"
-          title="Nothing urgent"
-          body="No case is flagged urgent or past its review target."
-          action={<Button variant="tertiary" onClick={onSeeReviews}>Open the queue</Button>}
-        />
-      )}
-
-      <MicroLabel>Next appointments</MicroLabel>
-      {upcoming.length > 0 ? (
-        <>
-          {upcoming.map(a => (
-            <AttnRow
-              key={a.id}
-              icon={KIND_ICON[a.kind]}
-              tone="info"
-              title={a.patient}
-              line={a.location || 'No location on file'}
-              meta={whenLabel(a.startsAt)}
-              onClick={onSeeAll}
+      {/* Side by side from the desk breakpoint: two stacked lists pushed the
+          appointments below the fold in a 900px window. */}
+      <div className={s.sections}>
+        <Card tone="panel" level={1} className={s.section}>
+          <CardHeader
+            icon="alert"
+            title="Needs you now"
+            meta={needsYou.length > 0
+              ? <span className={s.count}>{needsYou.length}</span>
+              : undefined}
+          />
+          {needsYou.length > 0 ? (
+            <div className={s.rows}>
+              {needsYou.map(c => (
+                <AttnRow
+                  key={c.id}
+                  icon="alert"
+                  tone={c.rec.urgency === 'urgent' ? 'bad' : 'warn'}
+                  title={`${c.patient} · ${c.title}`}
+                  line={c.flags.find(f => f.severity !== 'info')?.text || c.summary}
+                  meta={c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}
+                  tag={<StatusPill status={c.rec.urgency} />}
+                  onClick={() => onSelect(c.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon="check"
+              title="Nothing urgent"
+              body="No case is flagged urgent or past its review target."
+              action={<Button variant="tertiary" onClick={onSeeReviews}>Open the queue</Button>}
             />
-          ))}
-          <Button variant="tertiary" onClick={onSeeAll}>See the whole book</Button>
-        </>
-      ) : (
-        <EmptyState
-          icon="clock"
-          title="Nothing booked"
-          body="Escalating a case from the review queue books a slot here."
-          action={<Button variant="tertiary" onClick={onSeeAll}>Open appointments</Button>}
-        />
-      )}
+          )}
+        </Card>
+
+        <Card tone="panel" level={1} className={s.section}>
+          <CardHeader icon="cal" title="Next appointments" />
+          {upcoming.length > 0 ? (
+            <>
+              <div className={s.rows}>
+                {upcoming.map(a => (
+                  <AttnRow
+                    key={a.id}
+                    icon={KIND_ICON[a.kind]}
+                    tone="info"
+                    title={a.patient}
+                    line={a.location || 'No location on file'}
+                    meta={whenLabel(a.startsAt)}
+                    onClick={onSeeAll}
+                  />
+                ))}
+              </div>
+              <Button variant="tertiary" fullWidth onClick={onSeeAll} className={s.seeAll}>
+                See the whole book
+              </Button>
+            </>
+          ) : (
+            <EmptyState
+              icon="clock"
+              title="Nothing booked"
+              body="Escalating a case from the review queue books a slot here."
+              action={<Button variant="tertiary" onClick={onSeeAll}>Open appointments</Button>}
+            />
+          )}
+        </Card>
+      </div>
     </>
   );
 }
@@ -153,15 +175,21 @@ function AttnRow({ icon, tone, title, line, meta, tag, onClick }: {
   onClick: () => void;
 }) {
   return (
-    <Card pad="14px 16px" level={1} onClick={onClick} className={s.attn}>
-      <span className={`${s.attnIcon} ${s[tone]}`}><Icon name={icon} size={18} /></span>
+    <div
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      className={s.attn}
+    >
+      <span className={`${s.attnIcon} ${s[tone]}`}><Icon name={icon} size={16} /></span>
       <div className={s.attnBody}>
         <div className={s.attnTitle}>{title}</div>
         <div className={s.attnLine}>{line}</div>
       </div>
       <div className={s.attnMeta}>{meta}</div>
       {tag}
-      <Icon name="chevR" size={16} />
-    </Card>
+      <Icon name="chevR" size={15} />
+    </div>
   );
 }

@@ -15,9 +15,32 @@
 }
 .bannerText { composes: vd-t-callout vd-w6 from global; flex: 1; }
 
-.attn { display: flex; align-items: center; gap: var(--vd-space-4); color: var(--vd-ink-4); }
+/* Two section cards side by side once there is room, so the appointments do
+   not fall below the fold of a 900px window. */
+.sections { display: grid; gap: var(--vd-space-4); margin-top: var(--vd-space-5); }
+@media (min-width: 1160px) { .sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--vd-space-5); } }
+.section { display: flex; flex-direction: column; min-width: 0; }
+.count {
+  composes: vd-t-caption from global;
+  background: var(--vd-bad-bg); color: var(--vd-bad-fg);
+  border-radius: var(--vd-radius-pill); padding: 2px 8px;
+}
+.seeAll { margin-top: var(--vd-space-3); }
+
+/* Rows sit flat inside the section card: separately elevated cards cost a gap
+   and a shadow each, which is most of what pushed this page long. */
+.rows { display: flex; flex-direction: column; }
+.attn {
+  display: flex; align-items: center; gap: var(--vd-space-3);
+  color: var(--vd-ink-4); cursor: pointer;
+  padding: var(--vd-space-3) 0;
+  border-bottom: 1px solid var(--vd-border);
+}
+.rows > .attn:last-child { border-bottom: none; padding-bottom: 0; }
+.attn:first-child { padding-top: 0; }
+@media (hover: hover) { .attn:hover .attnTitle { color: var(--vd-nav-active); } }
 .attnIcon {
-  width: 36px; height: 36px; border-radius: var(--vd-radius-pill); flex: none;
+  width: 30px; height: 30px; border-radius: var(--vd-radius-pill); flex: none;
   display: flex; align-items: center; justify-content: center;
 }
 .bad  { background: var(--vd-bad-bg);  color: var(--vd-bad-fg); }

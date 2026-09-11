@@ -101,11 +101,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--vd-grad-call);
-  border: 1px solid var(--vd-glass-border);
-  box-shadow: var(--vd-shadow-cta), var(--vd-glass-hi);
+  background: transparent;
+  border: none;
+  box-shadow: var(--vd-shadow-cta);
 }
-.orbDiscWide { background: transparent; border: none; box-shadow: none; }
+.orbDiscWide { box-shadow: none; }
 
 .orbLabel { composes: vd-t-subhead vd-w7 from global; font-size: 14px; }
 
@@ -143,9 +143,9 @@
   height: 62px;
   border-radius: var(--vd-radius-pill);
   cursor: pointer;
-  background: var(--vd-grad-call);
-  border: 1px solid var(--vd-glass-border);
-  box-shadow: var(--vd-shadow-cta), var(--vd-glass-hi);
+  background: transparent;
+  border: none;
+  box-shadow: var(--vd-shadow-cta);
   display: flex;
   align-items: center;
   justify-content: center;

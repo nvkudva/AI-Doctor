@@ -89,7 +89,7 @@ export function NavBar({ items, active, onSelect, orb, railTop }: {
       <div {...pressProps(orb.onClick, orb.label)} className={`${s.orbRow}${wide ? ' ' + s.orbRowWide : ''}`}>
         <span className={`${s.orbDisc}${wide ? ' ' + s.orbDiscWide : ''}`}>
           <VoiceAura state={orb.voiceState ?? 'idle'} />
-          <MiraOrb size={32} voiceState={orb.voiceState ?? 'idle'} />
+          <MiraOrb size={48} voiceState={orb.voiceState ?? 'idle'} />
         </span>
         {wide && <span className={s.orbLabel}>{orb.label}</span>}
       </div>
@@ -131,7 +131,7 @@ function BottomBar({ items, active, onSelect, orb }: {
         </nav>
         <div {...pressProps(orb.onClick, orb.label)} className={s.fab}>
           <VoiceAura state={orb.voiceState ?? 'idle'} />
-          <MiraOrb size={34} voiceState={orb.voiceState ?? 'idle'} />
+          <MiraOrb size={62} voiceState={orb.voiceState ?? 'idle'} />
         </div>
       </div>
     </div>

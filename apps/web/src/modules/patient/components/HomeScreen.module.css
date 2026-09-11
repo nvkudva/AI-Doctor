@@ -84,3 +84,5 @@
 .summaryBody { flex: 1; min-width: 0; }
 .summaryTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
 .summaryDetail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+
+.ctaAction { margin-top: var(--vd-space-4); }

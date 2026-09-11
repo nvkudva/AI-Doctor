@@ -2,15 +2,14 @@
 // appointment, results flagged for review, and notes from the doctor. Starting
 // a consult is the nav orb, so there is no hero here (DESIGN §11.5).
 import { useNavigate } from 'react-router';
-import { AppHeader, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
-import { relAge } from '../../../lib/core';
+import { AppHeader, Button, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
 import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 import { useClinic } from '../../../store';
 
-import { PatientNotify, usePatientNotices } from './PatientNotify';
+import { PatientNotify } from './PatientNotify';
 import s from './HomeScreen.module.css';
 
 const KIND_LABEL: Record<'in_person' | 'video' | 'imaging' | 'lab', string> = {
@@ -35,7 +34,6 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
     .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
     .sort((a, b) => a.startsAt - b.startsAt);
   const latest = clinic.queue.find(c => c.mine);
-  const notices = usePatientNotices();
 
   return (
     <div className={s.screen}>
@@ -50,11 +48,17 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
       <div className={s.grid}>
         {clinic.checkIn && (
           <Section title="A quick check">
-            <Card level={1} pad="13px 15px" onClick={onCheckIn} aria-label="Answer the check-in about your plan">
+            {/* The button is the affordance, so the card itself is not also a
+                button — a control inside a clickable card is two hit targets
+                for one action, and screen readers announce the nesting. */}
+            <Card level={1} pad="13px 15px">
               <div className={s.ctaTitle}>How is it going?</div>
               <div className={s.ctaBody}>
                 It has been a few days since your plan was approved. One tap tells your doctor how you are doing.
               </div>
+              <Button variant="secondary" onClick={onCheckIn} className={s.ctaAction}>
+                Answer
+              </Button>
             </Card>
           </Section>
         )}
@@ -113,22 +117,6 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
                 <Icon name="chevR" size={16} />
               </Card>
             )}
-        </Section>
-
-        <Section title="From your doctor">
-          {notices.length === 0
-            ? <Empty body="No messages. Review decisions land here." />
-            : notices.map(({ n, i }) => (
-              <Row
-                key={i}
-                icon="bell"
-                title={n.t}
-                detail={n.d}
-                meta={n.at ? relAge(n.at) : undefined}
-                label={n.caseId ? `Open your plan — ${n.t}` : undefined}
-                onClick={n.caseId ? () => nav('/patient/recommendation') : undefined}
-              />
-            ))}
         </Section>
 
         {latest && (

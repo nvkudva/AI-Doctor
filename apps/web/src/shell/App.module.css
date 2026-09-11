@@ -1,6 +1,6 @@
 .loading {
   flex: 1;
-  min-height: 100dvh;
+  min-height: var(--vd-app-h);
   background: var(--vd-bg-app);
   display: flex;
   flex-direction: column;

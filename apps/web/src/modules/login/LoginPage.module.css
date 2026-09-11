@@ -1,6 +1,6 @@
 /* Login (DESIGN §10.9): one centred column at every width — brand above the
    sign-in card. The card dissolves into the ground on mobile. */
-.page { min-height: 100dvh; display: flex; justify-content: center; background: var(--vd-bg-app); }
+.page { min-height: var(--vd-app-h); display: flex; justify-content: center; background: var(--vd-bg-app); }
 
 .wrap {
   width: min(420px, 100%);

@@ -1,5 +1,20 @@
-/* Chrome-less full-viewport wrapper: offline banner, module slot, update toast. */
-.shell { min-height: 100dvh; display: flex; flex-direction: column; }
+/* Chrome-less wrapper: offline banner, module slot, update toast. Full-viewport
+   through mobile and tablet; a bounded window from 1160 up. */
+.shell { min-height: var(--vd-app-h); width: 100%; display: flex; flex-direction: column; }
+
+@media (min-width: 1160px) {
+  .shell {
+    width: min(1400px, 100vw);
+    height: min(900px, 100dvh);
+    min-height: 0;
+    border-radius: var(--vd-radius-2xl);
+    /* `contain` is doing real work: it makes this the containing block for the
+       fixed-position chrome (the Mira panel, the toasts), so they dock to the
+       window's edges rather than the viewport's, and it clips to the corners. */
+    contain: paint;
+    box-shadow: var(--vd-elev-5);
+  }
+}
 .main { flex: 1; display: flex; flex-direction: column; }
 
 .offline {

@@ -265,6 +265,13 @@
   /* Document base — moved out of index.html so font.family has one definition. */
   * { box-sizing: border-box; }
 
+  /* How tall the app is. The viewport, until the desktop breakpoint caps it —
+     the modules size themselves against this rather than against 100dvh, so a
+     capped window is filled instead of being overflowed by a viewport-height
+     layout inside it. */
+  :root { --vd-app-h: 100dvh; }
+  @media (min-width: 1160px) { :root { --vd-app-h: min(900px, 100dvh); } }
+
   body {
     margin: 0;
     min-height: 100vh;
@@ -272,6 +279,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif;
   }
   [data-theme="dark"] body { background: #241b45; }
+
+  /* Above 1160 the app is a window centred on the page, not the page itself. */
+  #root { display: flex; flex-direction: column; min-height: 100dvh; }
+  @media (min-width: 1160px) { #root { align-items: center; justify-content: center; } }
 
   button, input, textarea, select { font: inherit; color: inherit; }
 

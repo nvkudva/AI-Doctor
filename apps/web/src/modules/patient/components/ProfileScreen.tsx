@@ -70,40 +70,45 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       </Sheet>
 
       {/* A plan item is a drug only when it carries a dosage. Listing a booked
-          blood test or a diet plan under "Prescriptions" was simply wrong. */}
-      <ProfileSection>Prescriptions</ProfileSection>
-      {drugs.length === 0
-        ? <EmptyState icon="pill" title="No prescriptions on file" body="Approved prescriptions are saved here." />
-        : (
-          <div className={profile.list}>
-            {drugs.map((p, i) => (
-              <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                <span className={s.rxIcon}><Icon name="pill" size={16} /></span>
-                <div className={s.rxBody}>
-                  <div className={s.rxName}>{p.name}</div>
-                  <div className={s.rxMeta}>{p.detail} · {p.date}</div>
-                </div>
-              </Card>
-            ))}
+          blood test or a diet plan under "Prescriptions" was simply wrong.
+          Side by side from 800 up, stacked on a phone. */}
+      <div className={profile.columns}>
+        <div className={profile.column}>
+          <ProfileSection>Prescriptions</ProfileSection>
+          {drugs.length === 0
+            ? <EmptyState icon="pill" title="No prescriptions on file" body="Approved prescriptions are saved here." />
+            : (
+              <div className={profile.list}>
+                {drugs.map((p, i) => (
+                  <Card key={i} level={1} pad="13px 15px" className={s.rx}>
+                    <span className={s.rxIcon}><Icon name="pill" size={16} /></span>
+                    <div className={s.rxBody}>
+                      <div className={s.rxName}>{p.name}</div>
+                      <div className={s.rxMeta}>{p.detail} · {p.date}</div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+        </div>
+
+        {todo.length > 0 && (
+          <div className={profile.column}>
+            <ProfileSection>Tests and things to do</ProfileSection>
+            <div className={profile.list}>
+              {todo.map((p, i) => (
+                <Card key={i} level={1} pad="13px 15px" className={s.rx}>
+                  <span className={`${s.rxIcon} ${s.rxIconTest}`}><Icon name="flask" size={16} /></span>
+                  <div className={s.rxBody}>
+                    <div className={s.rxName}>{p.name}</div>
+                    <div className={s.rxMeta}>{p.detail} · {p.date}</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
-
-      {todo.length > 0 && (
-        <>
-          <ProfileSection>Tests and things to do</ProfileSection>
-          <div className={profile.list}>
-            {todo.map((p, i) => (
-              <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                <span className={`${s.rxIcon} ${s.rxIconTest}`}><Icon name="flask" size={16} /></span>
-                <div className={s.rxBody}>
-                  <div className={s.rxName}>{p.name}</div>
-                  <div className={s.rxMeta}>{p.detail} · {p.date}</div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
+      </div>
 
       <ProfileSection>Coverage &amp; payment</ProfileSection>
       <div className={profile.pair}>

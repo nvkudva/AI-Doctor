@@ -53,3 +53,11 @@
 .identityText { min-width: 0; }
 .identityName { composes: vd-t-title vd-truncate from global; color: var(--vd-ink-1); }
 .identityEmail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-soft); }
+
+/* Two lists that read as a pair. Stacked on a phone, side by side from tablet
+   up, where the profile body already has the width for it. */
+.columns { display: grid; gap: var(--vd-space-3); }
+@media (min-width: 800px) {
+  .columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--vd-space-5); align-items: start; }
+}
+.column { min-width: 0; }

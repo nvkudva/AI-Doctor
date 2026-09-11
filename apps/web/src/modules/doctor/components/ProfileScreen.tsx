@@ -17,7 +17,10 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
   const [notifs, setNotifs] = useState(false);
   const reviewed = clinic.queue.filter(c => c.reviewedAt).length;
   return (
-    <div className={profile.screen}>
+    <>
+      {/* The header sits outside the scrolling body and on the desk's own
+          gutters, so its actions line up with Home, Appointments and Reviews
+          rather than 24px lower on the one screen that scrolled them. */}
       <AppHeader
         title=""
         identity={{ name: user?.name || 'Dr. Sara Whitfield', email: user?.email || 'sara.whitfield@example.com' }}
@@ -38,6 +41,7 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
         className={s.header}
       />
 
+      <div className={profile.screen}>
       <StatRow items={[
         { label: 'Patients', value: seedDoctor.patients },
         { label: 'Years', value: seedDoctor.years },
@@ -61,7 +65,8 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
         <MenuRow icon="person" onClick={() => nav('/patient')}>Patient view</MenuRow>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 

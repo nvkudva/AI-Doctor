@@ -7,7 +7,7 @@
   top: 16px;
   align-self: flex-start;
   flex: none;
-  height: calc(100dvh - 32px);
+  height: calc(var(--vd-app-h) - 32px);
   border-radius: var(--vd-radius-2xl);
   display: flex;
   flex-direction: column;
@@ -15,7 +15,7 @@
   transition: width var(--vd-dur-3) var(--vd-ease-spring);
 }
 @media (min-width: 1160px) {
-  .rail { top: 20px; height: calc(100dvh - 40px); }
+  .rail { top: 20px; height: calc(var(--vd-app-h) - 40px); }
 }
 
 .narrow { width: 76px; padding: 14px; align-items: center; }

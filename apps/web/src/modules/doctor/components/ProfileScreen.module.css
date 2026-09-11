@@ -24,4 +24,4 @@
 .fieldLabel { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
 .fieldValue { composes: vd-t-footnote vd-w7 from global; color: var(--vd-ink-1); text-align: right; }
 
-.header { margin-bottom: var(--vd-space-4); }
+.header { composes: header from './DeskHeader.module.css'; }

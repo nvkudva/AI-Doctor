@@ -32,27 +32,6 @@ export function StatRow({ items }: { items: { label: string; value: string; tone
   );
 }
 
-/**
- * Who is signed in. This used to live in the header via AppHeader's `identity`
- * mode, which rendered the name at 22px behind a 52px avatar — so Profile was
- * the one screen in each app whose title was a different size and 64px further
- * in than everywhere else. The header now carries a normal page title and the
- * account moves into the body, where it is content like everything else.
- */
-export function IdentityCard({ name, email }: { name: string; email: string }) {
-  const initials = name.replace(/^Dr\.\s*/, '').split(/\s+/).filter(Boolean)
-    .slice(0, 2).map(w => w[0]).join('').toUpperCase() || '•';
-  return (
-    <div className={s.identity}>
-      <span className={s.identityAvatar}>{initials}</span>
-      <div className={s.identityText}>
-        <div className={s.identityName}>{name}</div>
-        <div className={s.identityEmail}>{email}</div>
-      </div>
-    </div>
-  );
-}
-
 export function ProfileSection({ children }: { children: React.ReactNode }) {
   return <div className={s.section}>{children}</div>;
 }

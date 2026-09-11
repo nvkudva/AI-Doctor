@@ -2,7 +2,7 @@
 // then settings. The doctor profile mirrors this layout (DESIGN §11.7).
 import { useState } from 'react';
 import {
-  AppHeader, Button, Card, EmptyState, Icon, IdentityCard, MenuRow, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
+  AppHeader, Button, Card, EmptyState, Icon, MenuRow, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
@@ -22,14 +22,10 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
   return (
     <div className={profile.screen}>
       <AppHeader
-        title="Profile"
+        title={user?.name || 'Alex Kumar'}
+        subtitle={user?.email || 'alex.kumar@gmail.com'}
         actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}
         className={s.header}
-      />
-
-      <IdentityCard
-        name={user?.name || 'Alex Kumar'}
-        email={user?.email || 'alex.kumar@gmail.com'}
       />
 
       <StatRow items={[

@@ -59,7 +59,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             <Card level={1} pad="13px 15px">
               <div className={s.ctaTitle}>How is it going?</div>
               <div className={s.ctaBody}>
-                It has been a few days since your plan was approved. One tap tells your doctor how you are doing.
+                It has been a few days since your plan was approved. Answer one question so your doctor knows how you are doing.
               </div>
               <Button variant="secondary" onClick={onCheckIn} className={s.ctaAction}>
                 Answer

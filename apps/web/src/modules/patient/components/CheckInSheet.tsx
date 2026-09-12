@@ -3,7 +3,7 @@
 // to be worth acting on. "Same" or "worse" opens Mira with the answer already
 // said, so the patient never has to start a fresh consult to be heard.
 import { useState } from 'react';
-import { Button, Card, Icon } from '../../../lib/ui';
+import { Card } from '../../../lib/ui';
 import s from './CheckInSheet.module.css';
 
 export type CheckInAnswer = 'better' | 'same' | 'worse';
@@ -47,7 +47,8 @@ export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismi
         <div className={s.title}>Which plan would you like to update?</div>
       )}
       <div className={s.lede}>
-        It has been a few days since your doctor approved this plan. One tap is enough.
+        It has been a few days since your doctor approved this plan.
+        Choose the one that fits.
       </div>
 
       {plans.length > 1 && (
@@ -76,7 +77,7 @@ export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismi
               key={c.key}
               level={on ? 3 : 1}
               pad="16px 18px"
-              onClick={() => setPicked(c.key)}
+              onClick={() => { setPicked(c.key); onAnswer(c.key, c.key !== 'better'); }}
               className={`${s.choice}${on ? ' ' + s.choiceOn : ''}`}
             >
               <span className={s.badge} style={{ background: c.bg, color: c.fg }}>{c.label[0]}</span>
@@ -90,20 +91,19 @@ export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismi
       </div>
       )}
 
-      {picked && (
-        <Card tone="panel" bordered={false} className={s.note}>
-          <span className={s.noteIcon}><Icon name="alert" size={18} /></span>
-          <div className={s.noteText}>{FOLLOW_UP[picked]}</div>
-        </Card>
+      {/* What happens next, stated before the tap rather than inserted under
+          the thumb after it. The copy promised one tap and charged three, and
+          the callout pushed the CTA ~60px down mid-gesture (D25). */}
+      {active && (
+        <div className={s.outcomes}>
+          {CHOICES.map(c => (
+            <div key={c.key} className={s.outcome}>
+              <b>{c.label}:</b> {FOLLOW_UP[c.key]}
+            </div>
+          ))}
+        </div>
       )}
 
-      <Button
-        fullWidth
-        disabled={!picked}
-        onClick={() => picked && onAnswer(picked, picked !== 'better')}
-      >
-        Continue
-      </Button>
       <button type="button" className={s.later} onClick={onDismiss}>Not now — remind me tomorrow</button>
     </div>
   );

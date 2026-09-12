@@ -41,3 +41,7 @@
 .planRowOn { outline: 2px solid var(--vd-focus); outline-offset: 1px; }
 .planRowTitle { composes: vd-t-callout vd-w6 from global; color: var(--vd-ink-1); }
 .planRowSub { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+/* Said up front, so nothing appears under the thumb after the tap. */
+.outcomes { display: flex; flex-direction: column; gap: 6px; margin-top: var(--vd-space-2); }
+.outcome { composes: vd-t-footnote from global; color: var(--vd-ink-4); }

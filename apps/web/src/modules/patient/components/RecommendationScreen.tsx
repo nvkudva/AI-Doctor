@@ -2,7 +2,7 @@
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
 import type { Recommendation } from '../../../lib/core';
-import { Button, Card, Icon, MicroLabel, MiraPresence, Paper, PaperItem, StatusPill } from '../../../lib/ui';
+import { Button, Card, Icon, MicroLabel, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './RecommendationScreen.module.css';
 
@@ -55,7 +55,6 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
       </div>
 
       <div className={s.hero}>
-        <MiraPresence size={mobile ? 70 : bp === 'tablet' ? 88 : 96} />
         <div className={s.heroLine}>{headline}</div>
       </div>
 

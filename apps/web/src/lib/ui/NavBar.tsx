@@ -124,13 +124,19 @@ function BottomBar({ items, active, onSelect, orb }: {
       <div className={s.dockInner}>
         <nav className={`vd-glass ${s.bar}`} aria-label="Primary">
           {items.slice(0, 2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
-          <div className={s.fabGap} />
+          {/* Mira is a tab like the others: labelled, on the bar, at the same
+              target size. As a raised 62px disc she was the app's most
+              prominent control with no visible name, and she permanently
+              covered the last card on every screen (DESIGN-REVIEW D21). */}
+          <div {...pressProps(orb.onClick, orb.label)} className={s.tab}>
+            <span className={s.orbTabIcon}>
+              <VoiceAura state={orb.voiceState ?? 'idle'} />
+              <MiraOrb size={26} voiceState={orb.voiceState ?? 'idle'} />
+            </span>
+            <span className={s.tabLabel}>{orb.label}</span>
+          </div>
           {items.slice(2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
         </nav>
-        <div {...pressProps(orb.onClick, orb.label)} className={s.fab}>
-          <VoiceAura state={orb.voiceState ?? 'idle'} />
-          <MiraOrb size={62} voiceState={orb.voiceState ?? 'idle'} />
-        </div>
       </div>
     </div>
   );

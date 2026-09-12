@@ -3,7 +3,7 @@
 // to be worth acting on. "Same" or "worse" opens Mira with the answer already
 // said, so the patient never has to start a fresh consult to be heard.
 import { useState } from 'react';
-import { Button, Card, Icon, MiraPresence } from '../../../lib/ui';
+import { Button, Card, Icon } from '../../../lib/ui';
 import s from './CheckInSheet.module.css';
 
 export type CheckInAnswer = 'better' | 'same' | 'worse';
@@ -38,7 +38,6 @@ export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismi
   const active = plans.find(p => p.id === subject);
   return (
     <div className={s.screen}>
-      <div className={s.orb}><MiraPresence size={96} /></div>
       {active ? (
         <>
           <div className={s.title}>How is it going with {active.title.toLowerCase()}?</div>

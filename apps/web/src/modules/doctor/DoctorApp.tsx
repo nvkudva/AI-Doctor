@@ -13,6 +13,7 @@ import { QueueCard } from './components/QueueCard';
 import { ReviewRow } from './components/ReviewRow';
 import { AppointmentsScreen } from './components/AppointmentsScreen';
 import { CaseDetail, PatientPanel } from './components/CaseDetail';
+import { ApproveSheet } from './components/ApproveSheet';
 import { DeclineSheet } from './components/DeclineSheet';
 import { DoctorHome } from './components/DoctorHome';
 import { ProfileScreen } from './components/ProfileScreen';
@@ -71,6 +72,10 @@ function Desk({ tenantName }: { tenantName: string }) {
     'Needs an in-person examination — please show this consult at the hospital front desk.',
   );
   const [declineFor, setDeclineFor] = useState<string | null>(null);
+  // Approving is a two-step signature, never a tap: the sheet restates what is
+  // being signed and the acceptance has to be given each time (D2).
+  const [approveFor, setApproveFor] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
   // What was just sent, to whom — the most repeated moment in the desk (UX-24).
   const [sent, setSent] = useState<{ text: string; nextId?: string } | null>(null);
   useEffect(() => {
@@ -123,16 +128,23 @@ function Desk({ tenantName }: { tenantName: string }) {
     review.stop();
     nav(tabPath(tab));
   };
+  const approveCase = approveFor ? queue.find(c => c.id === approveFor) : undefined;
   const isActionable = (c?: CaseItem) => !!c && isReviewable(c.status);
   const announce = (id: string, text: string) => {
     const rest = queue.filter(c => c.id !== id && isReviewable(c.status));
     setSent({ text, nextId: rest[0]?.id });
+  };
+  const askApprove = (id: string) => {
+    setAccepted(false);
+    setApproveFor(id);
   };
   const approveId = (id: string) => {
     const c = queue.find(x => x.id === id);
     review.stop();
     clinic.decide(id, 'approved');
     announce(id, `Approved and sent to ${c?.patient || 'the patient'}.`);
+    setApproveFor(null);
+    setAccepted(false);
   };
   const confirmDecline = () => {
     if (!declineFor) return;
@@ -275,7 +287,7 @@ function Desk({ tenantName }: { tenantName: string }) {
                   actionable={isActionable(paneCase)}
                   asideInPanel={bp === 'desktop'}
                   staged={review.approvalStaged}
-                  onApprove={() => approveId(paneCase.id)}
+                  onApprove={() => askApprove(paneCase.id)}
                   onDecline={() => askDecline(paneCase.id)}
                   onEdit={() => clinic.decide(paneCase.id, 'changes')}
                   onEscalate={() => escalate(paneCase.id)}
@@ -293,6 +305,17 @@ function Desk({ tenantName }: { tenantName: string }) {
       </div>
       </>}
       </div>
+
+      {approveCase && (
+        <ApproveSheet
+          ac={approveCase}
+          open
+          accepted={accepted}
+          onAccept={setAccepted}
+          onCancel={() => { setApproveFor(null); setAccepted(false); }}
+          onConfirm={() => approveId(approveCase.id)}
+        />
+      )}
 
       {declineFor && (
         <DeclineSheet

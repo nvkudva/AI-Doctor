@@ -108,18 +108,34 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
             <div className={s.planTitle}>{rec.title}</div>
             <div className={s.planSummary}>{rec.summary}</div>
             {rx.length > 0 && (
-              <Paper icon="pill" title="Prescription" meta={`${rx.length} item${rx.length === 1 ? '' : 's'}`} className={s.pad}>
-                {rx.map((it, i) => (
-                  <PaperItem
-                    key={i}
-                    icon="pill"
-                    last={i === rx.length - 1}
-                    name={it.name}
-                    lead={[it.dosage, it.timing].filter(Boolean).join(' · ')}
-                    why={it.why || it.notes}
-                  />
-                ))}
-              </Paper>
+              <>
+                {/* An unsigned draft is not a prescription. Until a doctor has
+                    approved it, the doses are shown as what is *proposed* and
+                    the patient is told plainly not to start them (D3). */}
+                {!approved && (
+                  <div className={s.notActive} role="status">
+                    <b>Not yet active — do not start these medicines.</b> They become
+                    your prescription only once Dr. Whitfield has approved the plan.
+                  </div>
+                )}
+                <Paper
+                  icon="pill"
+                  title={approved ? 'Prescription' : 'Proposed medicines'}
+                  meta={`${rx.length} item${rx.length === 1 ? '' : 's'}`}
+                  className={approved ? s.pad : `${s.pad} ${s.draft}`}
+                >
+                  {rx.map((it, i) => (
+                    <PaperItem
+                      key={i}
+                      icon="pill"
+                      last={i === rx.length - 1}
+                      name={it.name}
+                      lead={[it.dosage, it.timing].filter(Boolean).join(' · ')}
+                      why={it.why || it.notes}
+                    />
+                  ))}
+                </Paper>
+              </>
             )}
             {tests.length > 0 && (
               <Paper icon="flask" title="Tests ordered" meta={`${tests.length} item${tests.length === 1 ? '' : 's'}`} className={s.pad}>

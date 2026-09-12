@@ -51,6 +51,27 @@ export function isOpenConsult(s: ConsultStatus): boolean {
   return OPEN.includes(s);
 }
 
+// One derivation of "where has this plan got to", so the home card, the plan
+// screen and History cannot disagree about the single most consequential fact
+// in the patient app (DESIGN-REVIEW D3). Every consult status collapses onto
+// one of these; nothing else is allowed to compute it.
+export type PlanStatus = 'pending_review' | 'approved' | 'changes' | 'rejected' | 'expired';
+
+export function planStatus(s: ConsultStatus | string | undefined): PlanStatus {
+  switch (s) {
+    case 'approved': return 'approved';
+    case 'changes': return 'changes';
+    case 'rejected': return 'rejected';
+    case 'expired': case 'abandoned': return 'expired';
+    default: return 'pending_review';
+  }
+}
+
+/** The patient's own case: the row every patient-side status must be read from. */
+export function myCase(queue: CaseItem[]): CaseItem | undefined {
+  return queue.find(c => c.mine);
+}
+
 export function isReviewable(s: ConsultStatus): boolean {
   return REVIEWABLE.includes(s);
 }

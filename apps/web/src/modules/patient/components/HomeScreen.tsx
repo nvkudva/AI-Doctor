@@ -2,6 +2,7 @@
 // appointment, results flagged for review, and notes from the doctor. Starting
 // a consult is the nav orb, so there is no hero here (DESIGN §11.5).
 import { useNavigate } from 'react-router';
+import { myCase, planStatus } from '../../../lib/core';
 import { AppHeader, Button, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
@@ -33,7 +34,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
   const upcoming = clinic.appointments
     .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
     .sort((a, b) => a.startsAt - b.startsAt);
-  const latest = clinic.queue.find(c => c.mine);
+  const latest = myCase(clinic.queue);
 
   return (
     <div className={s.screen}>
@@ -128,7 +129,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
               aria-label={`Open your plan: ${latest.title}`}
             >
               <div className={s.planRow}>
-                <StatusPill status={latest.status} />
+                <StatusPill status={planStatus(latest.status)} />
                 <div className={s.planMeta}>{latest.meta}</div>
               </div>
               <div className={s.planTitle}>{latest.title}</div>

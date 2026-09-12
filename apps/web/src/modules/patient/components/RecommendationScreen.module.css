@@ -181,3 +181,15 @@
 
 /* Notepads sit inside the plan card with their own breathing room. */
 .pad { margin-top: var(--vd-space-5); }
+
+/* An unapproved plan states its own inertness above the doses, and the card
+   below it is visibly a draft rather than a prescription (DESIGN-REVIEW D3). */
+.notActive {
+  composes: vd-t-footnote from global;
+  margin-top: var(--vd-space-4);
+  padding: 12px 14px;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+}
+.draft { opacity: 0.82; border-style: dashed; }

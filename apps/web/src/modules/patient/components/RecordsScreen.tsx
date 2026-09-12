@@ -116,7 +116,10 @@ function ConsultCard({ c }: { c: UserConsult }) {
         <div className={s.consultHead}>
           <span className={s.consultIcon}><Icon name="stethoscope" size={17} /></span>
           <div className={s.consultTitle}>{c.title}</div>
-          <span className={s.consultPill}><StatusPill status={c.status === 'Approved' ? 'approved' : c.status} /></span>
+          {/* History carries completed/cancelled consults as well as plan
+              states, so it lower-cases into the shared label map rather than
+              through planStatus, which is only about plans under review. */}
+          <span className={s.consultPill}><StatusPill status={c.status.toLowerCase()} /></span>
         </div>
         <div className={s.consultMeta}>{c.date} · Dr. Mira</div>
         <div className={s.consultNote}>{c.note}</div>

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
-import { isOpenConsult } from '../../../lib/core';
+import { isOpenConsult, myCase, planStatus } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
 import { persistLocal, restoreLocal } from '../../../lib/api';
@@ -122,6 +122,12 @@ export function PatientFlow() {
 
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [miraOpen, setMiraOpen] = useState(false);
+  // The plan screen reads the case row, not the mirrored reviewStatus: the
+  // mirror only tracked the *live* consult, so a case decided outside that
+  // window left home saying Approved and the plan saying Pending (D3).
+  // clinic.reviewStatus still answers for a consult that has no row yet.
+  const mineCase = myCase(clinic.queue);
+  const planReviewStatus = mineCase ? planStatus(mineCase.status) : clinic.reviewStatus;
 
   // Mira is told exactly what the patient has on file — nothing more (UX-25).
   const hp = clinic.profile;
@@ -337,8 +343,8 @@ export function PatientFlow() {
         {screen === 'recommendation' && rec && (
           <RecommendationScreen
             rec={rec}
-            reviewStatus={clinic.reviewStatus}
-            rejectReason={clinic.rejectReason}
+            reviewStatus={planReviewStatus}
+            rejectReason={mineCase?.rejectReason || clinic.rejectReason}
             allergies={hp.allergies}
             onFollowUp={openMira}
             onBack={() => nav('/patient')}

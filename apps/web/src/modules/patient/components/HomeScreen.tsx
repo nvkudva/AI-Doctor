@@ -52,7 +52,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
 
       <div className={s.grid}>
         {clinic.checkIn && (
-          <Section title="A quick check">
+          <Section>
             {/* The button is the affordance, so the card itself is not also a
                 button — a control inside a clickable card is two hit targets
                 for one action, and screen readers announce the nesting. */}
@@ -155,7 +155,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
           </Section>
         )}
 
-        <Section title="Feeling unwell?">
+        <Section>
           <Card level={1} pad="13px 15px" onClick={onStart} aria-label="Start a consultation with Dr. Mira">
             <div className={s.ctaTitle}>Start a consultation</div>
             <div className={s.ctaBody}>
@@ -187,10 +187,12 @@ function startOfDay(at: number): number {
   return d.getTime();
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// A heading is only worth a line of chrome when it groups something the cards
+// below it do not already say (D20).
+function Section({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className={s.section}>
-      <div className={s.sectionTitle}>{title}</div>
+      {title && <div className={s.sectionTitle}>{title}</div>}
       {children}
     </section>
   );

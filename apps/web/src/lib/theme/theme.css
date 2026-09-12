@@ -301,7 +301,10 @@
   .vd-scroll::-webkit-scrollbar { width: 0; }
 
   /* Section labels: 12/8 rhythm between sections, flush when first in a surface. */
-  .vd-microlabel { margin: var(--vd-space-4) 0 var(--vd-space-3); }
+  /* On the cards' own gutter, not flush to the screen edge beside content
+     inset by 20px — which is what clipped "LDL CHOLESTEROL OVER TIME" at the
+     left edge (DESIGN-REVIEW D20). */
+  .vd-microlabel { margin: var(--vd-space-4) var(--vd-space-4) var(--vd-space-3); }
   .vd-microlabel:first-child { margin-top: 0; }
 
   :focus-visible {

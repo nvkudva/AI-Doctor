@@ -22,11 +22,12 @@ import s from './DoctorApp.module.css';
 type Filter = 'all' | 'urgent' | 'breached';
 type DeskTab = 'home' | 'appointments' | 'reviews';
 
-// Home · Appointments · [Mira] · Reviews · Profile (DESIGN §10.8).
+// Reviews first, in this order at every breakpoint: the desk rail used to put
+// Profile first and Reviews last, burying the doctor's actual job (D18).
 const NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'appointments', label: 'Appointments', icon: 'clock' },
   { key: 'reviews', label: 'Reviews', icon: 'doc' },
+  { key: 'appointments', label: 'Appointments', icon: 'clock' },
+  { key: 'home', label: 'Home', icon: 'home' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
 
@@ -209,11 +210,11 @@ function Desk({ tenantName }: { tenantName: string }) {
           nav(k === 'profile' ? '/doctor/profile' : tabPath(k as DeskTab));
         }}
         orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: toggleMira }}
-        railTop="profile"
       />
       <div className={s.column}>
       {onProfile ? <ProfileScreen onSelectCase={selectCase} /> : <>
       <DeskHeader
+        title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : undefined}
         tenantName={tenantName}
         pendingCount={pendingCount}
         showNotifs={showNotifs}

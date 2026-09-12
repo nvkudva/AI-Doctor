@@ -54,12 +54,15 @@ function statusToReview(s: string): string {
 const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin', 'plan'];
 const TABS: RecordsTab[] = ['history', 'labs'];
 
-type NavTab = 'home' | 'history' | 'labs' | 'profile';
+type NavTab = 'home' | 'records' | 'medicines' | 'profile';
 
+// One destination per thing, in one order, at every breakpoint. History and
+// Labs were two tabs that opened the same Records screen, so History was
+// reachable two ways and Medicines not at all (D18).
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'history', label: 'History', icon: 'clock' },
-  { key: 'labs', label: 'Labs', icon: 'drop' },
+  { key: 'records', label: 'Records', icon: 'clock' },
+  { key: 'medicines', label: 'Medicines', icon: 'drop' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
 
@@ -287,8 +290,8 @@ export function PatientFlow() {
 
   const goTab = (t: NavTab) => {
     if (t === 'home') nav('/patient');
-    else if (t === 'profile') nav('/patient/profile');
-    else nav(`/patient/records?tab=${t}`);
+    else if (t === 'records') nav(`/patient/records?tab=${recordsTab}`);
+    else nav(`/patient/${t}`);
   };
 
   return (
@@ -297,10 +300,9 @@ export function PatientFlow() {
           History, Labs, Profile and Mira stay reachable while waiting (UX-20). */}
       <NavBar
         items={NAV_ITEMS}
-        active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
+        active={screen === 'labs' ? 'records' : NAV_ITEMS.some(i => i.key === screen) ? screen : ''}
         onSelect={k => goTab(k as NavTab)}
         orb={{ label: 'Dr. Mira', voiceState: consult.status, onClick: toggleMira }}
-        railTop="profile"
       />
 
       <MiraPanel

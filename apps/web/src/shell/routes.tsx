@@ -31,7 +31,8 @@ export function prefetchModule(role?: Role): void {
 function RoleLanding() {
   const { user } = useAuth();
   const { search } = useLocation();
-  return <Navigate to={(user?.role === 'doctor' ? '/doctor' : '/patient') + search} replace />;
+  // Reviews is the doctor's job, so it is where a doctor lands (D18).
+  return <Navigate to={(user?.role === 'doctor' ? '/doctor/reviews' : '/patient') + search} replace />;
 }
 
 // Unknown path: land the user home, but say the destination did not exist.

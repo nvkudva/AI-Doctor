@@ -2,7 +2,6 @@
 //   mobile   — horizontal glass pill fixed at the bottom, orb in the centre
 //   tablet   — 76px vertical icon rail, orb pinned at the bottom
 //   desktop  — 248px labelled sidebar, collapsible back to the icon rail
-// In either vertical form the `railTop` item floats to the top of the rail.
 import { useSyncExternalStore } from 'react';
 import { Icon, pressProps, type IconName } from './Primitives';
 import { MiraOrb, STATE_RING, type VoiceState } from './Mira';
@@ -51,23 +50,22 @@ export function useRailOffset(): number {
   return gutter + (bp === 'desktop' && !isCollapsed ? 248 : 76);
 }
 
-export function NavBar({ items, active, onSelect, orb, railTop }: {
+export function NavBar({ items, active, onSelect, orb }: {
   /** Exactly four. On mobile the first two sit left of the orb, the last two right. */
   items: NavItem[];
   active: string;
   onSelect: (key: string) => void;
   /** The centre FAB on mobile, the bottom FAB in the rail. */
   orb: { label: string; onClick: () => void; voiceState?: VoiceState };
-  /** Key of the item that leads the rail — the profile entry in both modules. */
-  railTop?: string;
 }) {
   const bp = useBreakpoint();
   const collapsed = useCollapsed();
   if (bp === 'mobile') return <BottomBar items={items} active={active} onSelect={onSelect} orb={orb} />;
   const wide = bp === 'desktop' && !collapsed;
-  const ordered = railTop
-    ? [...items].sort((a, b) => Number(b.key === railTop) - Number(a.key === railTop))
-    : items;
+  // Users build muscle memory from position. The rail used to float Profile to
+  // the top, so the same four items sat in a different order on desktop than on
+  // a phone — a guaranteed mis-click (DESIGN-REVIEW D18).
+  const ordered = items;
   return (
     <nav className={`vd-glass ${s.rail} ${wide ? s.wide : s.narrow}`} aria-label="Primary">
       {bp === 'desktop' && (

@@ -331,6 +331,8 @@ export function PatientFlow() {
           clinic.checkIn
             ? <CheckInSheet
                 title={clinic.checkIn.title}
+                plan={clinic.checkIn.plan}
+                alternatives={clinic.checkIn.alternatives}
                 onAnswer={(a, followUp) => {
                   clinic.answerCheckIn(a);
                   nav('/patient');

@@ -74,8 +74,14 @@ export interface Dose {
 /** A day-3 nudge on an approved plan. */
 export interface CheckIn {
   consultId: string;
+  /** The condition being asked about. */
   title: string;
+  /** The plan the patient is rating, named so they can see which one it is. */
+  plan: string;
   approvedAt: number;
+  /** Other approved plans also awaiting a check-in. Non-empty means the
+   *  patient must pick before the options appear (DESIGN-REVIEW D8). */
+  alternatives: { id: string; title: string; plan: string }[];
   answer?: 'better' | 'same' | 'worse';
 }
 

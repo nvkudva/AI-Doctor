@@ -56,11 +56,37 @@ export function doseState(d: Dose, now = Date.now()): DoseState {
 // The day-3 nudge: the newest approved plan at least three days old that has
 // not been answered yet. Anything sooner is not a check-in, it is a poke.
 const CHECK_IN_AFTER = 3 * 86400000;
+// Past this, the plan is history rather than treatment in progress.
+const CHECK_IN_WINDOW = 21 * 86400000;
 
 export function pendingCheckIn(queue: CaseItem[], answered: Record<string, string>, now = Date.now()): CheckIn | null {
-  const due = queue
+  // Only plans still being followed: a consult approved months ago is history,
+  // not something to nag about, and listing all of them turns the check-in
+  // into a survey the patient will dismiss.
+  const all = queue
     .filter(c => c.mine && c.status === 'approved' && c.reviewedAt && !answered[c.id])
-    .filter(c => now - (c.reviewedAt || 0) >= CHECK_IN_AFTER)
-    .sort((a, b) => (b.reviewedAt || 0) - (a.reviewedAt || 0))[0];
-  return due ? { consultId: due.id, title: due.rec.title || due.title, approvedAt: due.reviewedAt || 0 } : null;
+    .filter(c => {
+      const since = now - (c.reviewedAt || 0);
+      return since >= CHECK_IN_AFTER && since <= CHECK_IN_WINDOW;
+    })
+    .sort((a, b) => (b.reviewedAt || 0) - (a.reviewedAt || 0))
+    .slice(0, 3);
+  const due = all[0];
+  if (!due) return null;
+  // The condition and the plan name both come off the same case, so the sheet
+  // can never ask about one plan while home advertises another (D8).
+  const name = (c: typeof due) => {
+    const plan = c.rec.title || c.title;
+    const condition = (c.inferred || [])[0] || c.title;
+    // The plan line is dropped when it only repeats the condition.
+    return { id: c.id, title: condition, plan: plan === condition ? '' : plan };
+  };
+  const head = name(due);
+  return {
+    consultId: due.id,
+    title: head.title,
+    plan: head.plan,
+    approvedAt: due.reviewedAt || 0,
+    alternatives: all.slice(1).map(name),
+  };
 }

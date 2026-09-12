@@ -28,3 +28,17 @@
   background: none; border: none; cursor: pointer;
   color: var(--vd-ink-4); padding: var(--vd-space-3);
 }
+
+/* The plan being rated, named under the question (DESIGN-REVIEW D8). */
+.planName {
+  composes: vd-t-callout from global;
+  color: var(--vd-ink-3);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.plans { display: flex; flex-direction: column; gap: var(--vd-space-3); margin-bottom: var(--vd-space-4); }
+.planRow { text-align: left; cursor: pointer; }
+.planRowOn { outline: 2px solid var(--vd-focus); outline-offset: 1px; }
+.planRowTitle { composes: vd-t-callout vd-w6 from global; color: var(--vd-ink-1); }
+.planRowSub { composes: vd-t-footnote from global; color: var(--vd-ink-3); }

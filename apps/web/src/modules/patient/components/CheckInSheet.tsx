@@ -20,20 +20,55 @@ const FOLLOW_UP: Record<CheckInAnswer, string> = {
   worse: 'Because it is worse, Dr. Mira will ask a few questions now and flag this to your doctor as a priority.',
 };
 
-export function CheckInSheet({ title, onAnswer, onDismiss }: {
+export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismiss }: {
   title: string;
+  /** The plan being rated, shown so the patient can see which one it is. */
+  plan: string;
+  /** Other plans also awaiting a check-in; non-empty forces a choice first. */
+  alternatives?: { id: string; title: string; plan: string }[];
   onAnswer: (a: CheckInAnswer, followUp: boolean) => void;
   onDismiss: () => void;
 }) {
   const [picked, setPicked] = useState<CheckInAnswer | null>(null);
+  // With more than one plan running, the patient says which they are rating
+  // before they are offered better/same/worse — an answer attached to the
+  // wrong plan reaches the doctor as priority evidence about it (D8).
+  const plans = [{ id: 'head', title, plan }, ...alternatives];
+  const [subject, setSubject] = useState<string | null>(alternatives.length ? null : 'head');
+  const active = plans.find(p => p.id === subject);
   return (
     <div className={s.screen}>
       <div className={s.orb}><MiraPresence size={96} /></div>
-      <div className={s.title}>How is it going with {title.toLowerCase()}?</div>
+      {active ? (
+        <>
+          <div className={s.title}>How is it going with {active.title.toLowerCase()}?</div>
+          {active.plan && <div className={s.planName}>{active.plan}</div>}
+        </>
+      ) : (
+        <div className={s.title}>Which plan would you like to update?</div>
+      )}
       <div className={s.lede}>
         It has been a few days since your doctor approved this plan. One tap is enough.
       </div>
 
+      {plans.length > 1 && (
+        <div className={s.plans}>
+          {plans.map(p => (
+            <Card
+              key={p.id}
+              level={p.id === subject ? 3 : 1}
+              pad="12px 14px"
+              onClick={() => { setSubject(p.id); setPicked(null); }}
+              className={`${s.planRow}${p.id === subject ? ' ' + s.planRowOn : ''}`}
+            >
+              <div className={s.planRowTitle}>{p.title}</div>
+              {p.plan && <div className={s.planRowSub}>{p.plan}</div>}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {active && (
       <div className={s.choices}>
         {CHOICES.map(c => {
           const on = picked === c.key;
@@ -54,6 +89,7 @@ export function CheckInSheet({ title, onAnswer, onDismiss }: {
           );
         })}
       </div>
+      )}
 
       {picked && (
         <Card tone="panel" bordered={false} className={s.note}>

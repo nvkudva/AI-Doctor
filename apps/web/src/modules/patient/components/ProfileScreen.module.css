@@ -34,3 +34,32 @@
 .rxBody { min-width: 0; }
 
 .about { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+/* The one fact on this screen that can kill someone, at full width, directly
+   under the name, with its own control (DESIGN-REVIEW D28). */
+.allergy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: var(--vd-space-4);
+  border-radius: var(--vd-radius-lg);
+  border: 1px solid var(--vd-border);
+  background: var(--vd-surface-card);
+  color: var(--vd-ink-3);
+}
+.allergyOn {
+  background: var(--vd-bad-bg);
+  border-color: var(--vd-bad-fg);
+  border-left-width: 3px;
+  color: var(--vd-bad-fg);
+}
+.allergyIcon { flex: none; display: flex; }
+.allergyBody { flex: 1; min-width: 0; }
+.allergyLabel {
+  composes: vd-t-caption vd-w7 from global;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+}
+.allergyValue { composes: vd-t-headline from global; }

@@ -1,8 +1,9 @@
 // Patient profile: identity in the header, vitals, prescriptions, coverage,
 // then settings. The doctor profile mirrors this layout (DESIGN §11.7).
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import {
-  AppHeader, Button, Card, EmptyState, Icon, MenuRow, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
+  AppHeader, Button, Card, Disclosure, Icon, MenuRow, MicroLabel, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
 } from '../../../lib/ui';
 import { doseForm } from '../../../store/doses';
 import { useAuth } from '../../../shell/auth';
@@ -19,7 +20,18 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<HealthProfile>(clinic.profile);
   const p = clinic.profile;
+  const [billing, setBilling] = useState(false);
+  const nav = useNavigate();
   const open = () => { setDraft(clinic.profile); setEditing(true); };
+  const renderTodo = (t: UserRx, i: number) => (
+    <Card key={i} level={1} pad="13px 15px" className={s.rx}>
+      <span className={`${s.rxIcon} ${s.rxIconTest}`}><Icon name="flask" size={16} /></span>
+      <div className={s.rxBody}>
+        <div className={s.rxName}>{t.name}</div>
+        <div className={s.rxMeta}>{t.detail} · {t.date}</div>
+      </div>
+    </Card>
+  );
   return (
     <div className={profile.screen}>
       <AppHeader
@@ -29,14 +41,21 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
         className={s.header}
       />
 
+      {/* Allergy is the field that kills people. It does not share a component
+          with AGE, and it does not carry the same 10px label (D28). */}
+      <div className={p.allergies ? `${s.allergy} ${s.allergyOn}` : s.allergy}>
+        <span className={s.allergyIcon}><Icon name="alert" size={20} /></span>
+        <div className={s.allergyBody}>
+          <div className={s.allergyLabel}>Allergies</div>
+          <div className={s.allergyValue}>{p.allergies || 'None on file'}</div>
+        </div>
+        <Button variant="tertiary" onClick={open}>{p.allergies ? 'Edit' : 'Add'}</Button>
+      </div>
+
       <StatRow items={[
         { label: 'Age', value: p.age || 'Not set' },
-        { label: 'Blood', value: p.blood || 'Not set' },
-        { label: 'Allergy', value: p.allergies || 'None on file', tone: p.allergies ? 'var(--vd-bad-fg)' : undefined },
+        { label: 'Blood group', value: p.blood || 'Not set' },
       ]} />
-      <div className={s.editRow}>
-        <Button variant="tertiary" onClick={open}>Edit health profile</Button>
-      </div>
 
       <Sheet
         open={editing}
@@ -66,60 +85,65 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
         </div>
       </Sheet>
 
-      {/* A plan item is a drug only when it carries a dosage. Listing a booked
-          blood test or a diet plan under "Prescriptions" was simply wrong.
-          Side by side from 800 up, stacked on a phone. */}
-      <div className={profile.columns}>
-        <div className={profile.column}>
-          <ProfileSection>Prescriptions</ProfileSection>
+      {/* Prescriptions are not duplicated here with a second row design: Your
+          medicines is the one place doses live, and this links to it (D28). */}
+      <ProfileSection>Medicines</ProfileSection>
+      <Card level={1} pad={6} className={profile.list}>
+        <MenuRow icon="pill" onClick={() => nav('/patient/medicines')}>
           {drugs.length === 0
-            ? <EmptyState icon="pill" title="No prescriptions on file" body="Approved prescriptions are saved here." />
-            : (
-              <div className={profile.list}>
-                {drugs.map((p, i) => (
-                  <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                    <span className={s.rxIcon}><Icon name={doseForm(p.name, p.detail)} size={16} /></span>
-                    <div className={s.rxBody}>
-                      <div className={s.rxName}>{p.name}</div>
-                      <div className={s.rxMeta}>{p.detail} · {p.date}</div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-        </div>
+            ? 'No prescriptions on file'
+            : `${drugs.length} prescription${drugs.length === 1 ? '' : 's'} · today's doses`}
+        </MenuRow>
+      </Card>
 
-        {todo.length > 0 && (
-          <div className={profile.column}>
-            <ProfileSection>Tests and things to do</ProfileSection>
-            <div className={profile.list}>
-              {todo.map((p, i) => (
-                <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                  <span className={`${s.rxIcon} ${s.rxIconTest}`}><Icon name="flask" size={16} /></span>
-                  <div className={s.rxBody}>
-                    <div className={s.rxName}>{p.name}</div>
-                    <div className={s.rxMeta}>{p.detail} · {p.date}</div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+      {/* "Tests and things to do" is a name a developer gives a bucket. Grouped
+          by what the patient has to do about each, oldest work collapsed. */}
+      {todo.length > 0 && (
+        <>
+          <ProfileSection>Tests and follow-ups</ProfileSection>
+          {(['due', 'scheduled', 'done'] as const).map(group => {
+            const rows = todo.filter(t => followUpGroup(t) === group);
+            if (!rows.length) return null;
+            const label = group === 'due' ? 'Due now' : group === 'scheduled' ? 'Scheduled' : 'Completed';
+            if (group === 'done') {
+              return (
+                <Disclosure key={group} title={`${label} · ${rows.length}`} defaultOpen={false}>
+                  <div className={profile.list}>{rows.map(renderTodo)}</div>
+                </Disclosure>
+              );
+            }
+            return (
+              <div key={group}>
+                <MicroLabel>{label} · {rows.length}</MicroLabel>
+                <div className={profile.list}>{rows.map(renderTodo)}</div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* Behind its own row: insurance and card details are not something the
+          patient came to this screen to read. */}
+      <ProfileSection>Billing</ProfileSection>
+      <Card level={1} pad={6} className={profile.list}>
+        <MenuRow icon="doc" onClick={() => setBilling(b => !b)} detail="Star Health · •••• 4291">
+          Insurance and payment
+        </MenuRow>
+        {billing && (
+          <div className={profile.pair}>
+            <Card level={1} pad={12}>
+              <div className={s.tileLabel}>Insurance</div>
+              <div className={s.tileValue}>Star Health · AX-48291</div>
+              <div className={s.tileMeta}>Family Floater · ₹500 copay</div>
+            </Card>
+            <Card level={1} pad={12}>
+              <div className={s.tileLabel}>Payment</div>
+              <div className={s.tileValue}>•••• 4291</div>
+              <div className={s.tileMeta}>HDFC · Exp 09/28</div>
+            </Card>
           </div>
         )}
-      </div>
-
-      <ProfileSection>Coverage &amp; payment</ProfileSection>
-      <div className={profile.pair}>
-        <Card level={1} pad={12}>
-          <div className={s.tileLabel}>Insurance</div>
-          <div className={s.tileValue}>Star Health · AX-48291</div>
-          <div className={s.tileMeta}>Family Floater · ₹500 copay</div>
-        </Card>
-        <Card level={1} pad={12}>
-          <div className={s.tileLabel}>Payment</div>
-          <div className={s.tileValue}>•••• 4291</div>
-          <div className={s.tileMeta}>HDFC · Exp 09/28</div>
-        </Card>
-      </div>
+      </Card>
 
       <ProfileSection>Settings</ProfileSection>
       <Card level={1} pad={6} className={profile.list}>
@@ -155,4 +179,14 @@ function Field({ label, value, onChange, placeholder }: {
       />
     </label>
   );
+}
+
+
+// What the patient has to do about a follow-up, from its own date: anything
+// dated in the future is scheduled, anything past is either done or overdue.
+function followUpGroup(t: UserRx): 'due' | 'scheduled' | 'done' {
+  const at = Date.parse(t.date);
+  if (Number.isNaN(at)) return 'due';
+  if (at > Date.now()) return 'scheduled';
+  return at < Date.now() - 30 * 86400000 ? 'done' : 'due';
 }

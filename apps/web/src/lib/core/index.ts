@@ -77,11 +77,24 @@ export function isReviewable(s: ConsultStatus): boolean {
 }
 
 export function urgencyRank(c: Pick<CaseItem, 'rec'>): number {
-  return c.rec && c.rec.urgency === 'urgent' ? 0 : 1;
+  const u = c.rec?.urgency;
+  return u === 'urgent' ? 0 : u === 'soon' ? 1 : 2;
 }
 
-export function sortQueue<T extends Pick<CaseItem, 'rec' | 'submittedAt'>>(q: T[]): T[] {
-  return [...q].sort((a, b) => urgencyRank(a) - urgencyRank(b) || ((a.submittedAt || 0) - (b.submittedAt || 0)));
+/** Unresolved safety flags — 'info' is a check that passed. */
+export function concernCount(c: Pick<CaseItem, 'flags'>): number {
+  return (c.flags || []).filter(f => f.severity !== 'info').length;
+}
+
+// Safety flags first, then urgency, then the longest wait — and the caption
+// above the list says exactly this. It used to claim "urgency, then longest
+// waiting" while ranking only urgent-vs-everything, so SOON and ROUTINE tied
+// and the order read as noise the doctor could not trust (DESIGN-REVIEW D13).
+export function sortQueue<T extends Pick<CaseItem, 'rec' | 'submittedAt' | 'flags'>>(q: T[]): T[] {
+  return [...q].sort((a, b) =>
+    concernCount(b) - concernCount(a)
+    || urgencyRank(a) - urgencyRank(b)
+    || ((a.submittedAt || 0) - (b.submittedAt || 0)));
 }
 
 // Tenant parsing only — subdomain wiring lands with hosting (ARCH Phase 6).

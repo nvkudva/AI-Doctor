@@ -9,15 +9,20 @@ const DOT: Record<string, string> = {
   high: 'var(--vd-ok-fg)', medium: 'var(--vd-warn-fg)', low: 'var(--vd-bad-fg)',
 };
 
-export function ReviewRow({ c, selected, onSelect }: {
-  c: CaseItem; selected?: boolean; onSelect: () => void;
+export function ReviewRow({ c, selected, lead, onSelect }: {
+  c: CaseItem;
+  selected?: boolean;
+  /** The worst case in the Breached group: the only row drawn in red, so the
+   *  one that genuinely needs attention first stands out (D13). */
+  lead?: boolean;
+  onSelect: () => void;
 }) {
   const urgent = c.rec.urgency === 'urgent';
   const sla = c.submittedAt ? slaCountdown(c.submittedAt) : null;
   const concerns = c.flags.filter(f => f.severity !== 'info').length;
   return (
     <Card
-      className={[s.row, urgent && s.urgent, sla?.breached && s.breached].filter(Boolean).join(' ')}
+      className={[s.row, urgent && s.urgent, lead && s.breached].filter(Boolean).join(' ')}
       level={selected ? 3 : 2}
       selected={selected}
       onClick={onSelect}
@@ -47,7 +52,9 @@ export function ReviewRow({ c, selected, onSelect }: {
       </div>
       <div className={s.wait}>
         <div className={s.waited}>{c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}</div>
-        {sla && <div className={s.sla} style={{ color: sla.tone }}>{sla.label}</div>}
+        {sla && (
+          <div className={s.sla} style={{ color: lead ? sla.tone : 'var(--vd-warn-fg)' }}>{sla.label}</div>
+        )}
       </div>
       <Icon name="chevR" size={18} />
     </Card>

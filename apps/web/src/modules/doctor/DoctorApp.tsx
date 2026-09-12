@@ -106,6 +106,7 @@ function Desk({ tenantName }: { tenantName: string }) {
   const pendingCount = reviewable.length;
   const breachedCount = reviewable.filter(c => c.submittedAt && slaCountdown(c.submittedAt).breached).length;
   const urgentCount = reviewable.filter(c => c.rec.urgency === 'urgent').length;
+  const isBreached = (c: CaseItem) => !!c.submittedAt && slaCountdown(c.submittedAt).breached;
   const filtered = visible.length !== reviewable.length;
   const queueLabel = `Awaiting a decision · ${pendingCount}`;
   const counts: Record<Filter, number> = { all: pendingCount, urgent: urgentCount, breached: breachedCount };
@@ -250,17 +251,33 @@ function Desk({ tenantName }: { tenantName: string }) {
                   {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} counts={counts} />}
                   <div className={s.queueHead}>
                     <MicroLabel>{queueLabel}</MicroLabel>
-                    <span className={s.queueSort}>urgency, then longest waiting</span>
+                    <span className={s.queueSort}>safety flags, then urgency, then longest waiting</span>
                   </div>
-                  {breachedCount > 0 && (
-                    <div className={s.breachBanner} role="status">
-                      <Icon name="alert" size={16} />
-                      {breachedCount === 1 ? '1 case has' : `${breachedCount} cases have`} passed the 2-hour review target.
-                    </div>
-                  )}
-                  {visible.map(c => (
-                    <ReviewRow key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
-                  ))}
+                  {/* Two groups instead of a banner and six identically red
+                      rows: the heading carries the count, and only the case at
+                      the top of Breached gets the red treatment (D13). */}
+                  {(['breached', 'ontarget'] as const).map(group => {
+                    const rows = visible.filter(c => isBreached(c) === (group === 'breached'));
+                    if (rows.length === 0) return null;
+                    return (
+                      <div key={group}>
+                        <div className={s.queueGroup}>
+                          {group === 'breached'
+                            ? `Breached · ${rows.length}`
+                            : `Within target · ${rows.length}`}
+                        </div>
+                        {rows.map((c, i) => (
+                          <ReviewRow
+                            key={c.id}
+                            c={c}
+                            lead={group === 'breached' && i === 0}
+                            selected={c.id === paneCase?.id}
+                            onSelect={() => selectCase(c.id)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                   {visible.length === 0 && (
                     <div className={s.queueEmpty}>
                       {filtered && reviewable.length > 0 ? 'No cases match this filter.' : 'Nothing awaiting a decision.'}

@@ -334,3 +334,30 @@
 @media (prefers-reduced-motion: reduce) {
   .dot { animation: none; opacity: 0.6; }
 }
+
+/* One notice per surface, under the composer: what failed, and the one
+   action that fixes it (DESIGN-REVIEW D7). */
+.notice {
+  composes: vd-t-footnote vd-w6 from global;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--vd-space-2);
+  padding: 8px 12px;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+}
+.noticeText { flex: 1; min-width: 0; }
+.noticeAction {
+  composes: vd-t-footnote vd-w7 from global;
+  flex: none;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--vd-radius-sm);
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

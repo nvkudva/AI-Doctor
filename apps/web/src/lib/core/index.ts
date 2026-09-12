@@ -108,8 +108,14 @@ export function resolveTenantSlug(hostname: string, search: string): string {
 
 export function tenantDisplayName(slug: string): string {
   if (slug === 'demo') return 'AI Doctor';
-  const pretty = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  return (pretty || 'AI Doctor') + ' · AI Doctor';
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'AI Doctor';
+}
+
+/** The window title. One product name, always present: the tab used to flip
+ *  between "AI Doctor" and the hospital's name as the tenant resolved, so the
+ *  service appeared to have two names (DESIGN-REVIEW D24). */
+export function windowTitle(hospital: string): string {
+  return hospital && hospital !== 'AI Doctor' ? `${hospital} · AI Doctor` : 'AI Doctor';
 }
 
 export * from './time';

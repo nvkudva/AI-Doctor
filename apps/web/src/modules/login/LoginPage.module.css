@@ -18,14 +18,22 @@
   gap: 22px;
   margin-bottom: 28px;
 }
+/* At a desk the brand column is a column, so it reads left-to-right like
+   everything else rather than as a centred 360px poster (D24). */
+@media (min-width: 1160px) {
+  .brand { align-items: flex-start; text-align: left; }
+  .brand .lede { margin-left: 0; }
+}
 .name { composes: vd-t-display from global; color: var(--vd-ink-1); }
 @media (min-width: 800px)  { .name { font-size: 34px; } }
 @media (min-width: 1160px) { .name { font-size: 38px; } }
 
-.lede { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 12px; max-width: 320px; }
+.lede { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 12px; max-width: 34ch; }
 @media (min-width: 800px) { .lede { font-size: 16px; line-height: 1.55; } }
 
-.trust { display: flex; flex-direction: column; gap: 10px; }
+/* Left-aligned against the card's edge, not centred in a 360px column on a
+   1400px canvas (DESIGN-REVIEW D24). */
+.trust { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; }
 .trustRow {
   composes: vd-t-callout from global;
   font-size: 15px;
@@ -80,9 +88,40 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  padding: 14px 10px;
   text-align: center;
+  cursor: pointer;
+  border-radius: var(--vd-radius-lg);
+  border: 1px solid var(--vd-border);
+  background: var(--vd-surface-card);
+  box-shadow: var(--vd-elev-1);
 }
+.demoCard:active { transform: scale(0.98); }
+.demoCardOff { opacity: 0.55; cursor: default; }
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--vd-border-strong);
+  border-top-color: var(--vd-brand-1);
+  animation: vd-spin 0.8s linear infinite;
+}
+@keyframes vd-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 .demoIcon { display: flex; color: var(--vd-ink-1); }
 .demoLabel { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
 .demoWho { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
 
+
+
+/* The first screen of a medical service says what it is bound by. */
+.legal {
+  composes: vd-t-footnote from global;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  color: var(--vd-ink-4);
+}
+.legal a { color: var(--vd-ink-3); text-decoration: underline; }

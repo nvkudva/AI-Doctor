@@ -143,7 +143,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             <Card
               level={1}
               pad="13px 15px"
-              onClick={() => nav('/patient/recommendation')}
+              onClick={() => nav(`/patient/plan/${encodeURIComponent(latest.id)}`)}
               aria-label={`Open your plan: ${latest.title}`}
             >
               <div className={s.planRow}>

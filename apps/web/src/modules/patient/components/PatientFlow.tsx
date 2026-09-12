@@ -22,7 +22,7 @@ import { CheckInSheet } from './CheckInSheet';
 import { EmptyRecommendation } from './EmptyRecommendation';
 import s from './PatientFlow.module.css';
 
-type Screen = 'home' | 'recommendation' | 'records' | 'profile' | 'labs' | 'book' | 'medicines' | 'checkin';
+type Screen = 'home' | 'recommendation' | 'records' | 'profile' | 'labs' | 'book' | 'medicines' | 'checkin' | 'plan';
 
 // The doctor's case pane shows a result as one line, not a range bar.
 function toLabRow(v: LabValue) {
@@ -51,7 +51,7 @@ function statusToReview(s: string): string {
   return s === 'approved' ? 'approved' : s === 'rejected' ? 'rejected' : s === 'changes' ? 'changes' : 'pending';
 }
 
-const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin'];
+const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin', 'plan'];
 const TABS: RecordsTab[] = ['history', 'labs'];
 
 type NavTab = 'home' | 'history' | 'labs' | 'profile';
@@ -77,7 +77,11 @@ export function PatientFlow() {
   // /patient/labs/:panel and /patient/book/:test carry their subject in the URL,
   // so a reload or a deep link lands on the same result or the same test.
   const subject = parts[3] ? decodeURIComponent(parts[3]) : '';
+  // /patient/plan/:id names the plan, so one can be bookmarked or sent to
+  // someone; /patient/recommendation stays as the id-less current plan
+  // (DESIGN-REVIEW D17).
   const screen: Screen = (SCREENS.includes(seg as Screen) ? seg : 'home') as Screen;
+  const planId = screen === 'plan' ? subject : '';
   const tabParam = params.get('tab');
   const recordsTab: RecordsTab = (TABS.includes(tabParam as RecordsTab) ? tabParam : 'history') as RecordsTab;
   const setRecordsTab = (t: RecordsTab) => {
@@ -126,7 +130,7 @@ export function PatientFlow() {
   // mirror only tracked the *live* consult, so a case decided outside that
   // window left home saying Approved and the plan saying Pending (D3).
   // clinic.reviewStatus still answers for a consult that has no row yet.
-  const mineCase = myCase(clinic.queue);
+  const mineCase = (planId && clinic.queue.find(c => c.mine && c.id === planId)) || myCase(clinic.queue);
   const planReviewStatus = mineCase ? planStatus(mineCase.status) : clinic.reviewStatus;
 
   // Mira is told exactly what the patient has on file — nothing more (UX-25).
@@ -197,7 +201,8 @@ export function PatientFlow() {
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current || rec) return;
-    const mine = clinic.queue.find(c => c.mine);
+    // A /patient/plan/:id link opens that plan, not whichever is newest.
+    const mine = mineCase;
     if (!mine) return;
     restored.current = true;
     setRec(mine.rec);
@@ -342,7 +347,7 @@ export function PatientFlow() {
               />
             : <EmptyRecommendation onHome={() => nav('/patient')} />
         )}
-        {screen === 'recommendation' && rec && (
+        {(screen === 'recommendation' || screen === 'plan') && rec && (
           <RecommendationScreen
             rec={rec}
             reviewStatus={planReviewStatus}
@@ -358,7 +363,7 @@ export function PatientFlow() {
             }}
           />
         )}
-        {screen === 'recommendation' && !rec && (
+        {(screen === 'recommendation' || screen === 'plan') && !rec && (
           <EmptyRecommendation onHome={() => nav('/patient')} />
         )}
         {screen === 'profile' && <ProfileScreen prescriptions={clinic.prescriptions} />}

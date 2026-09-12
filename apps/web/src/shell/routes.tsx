@@ -60,9 +60,15 @@ export function SignedOutRoutes({ tenantName }: { tenantName: string }) {
 // review desk (another patient's record + working Approve controls), and a
 // doctor session has no patient module of its own.
 function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, viewAs } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== role) return <Navigate to={user.role === 'doctor' ? '/doctor' : '/patient'} replace />;
+  // The one exception: a doctor may borrow the patient module, but only through
+  // the explicit Patient view switch, and the banner above says so the whole
+  // time. Every other mismatch — including a stale URL — goes home.
+  const borrowed = role === 'patient' && user.role === 'doctor' && viewAs === 'patient';
+  if (user.role !== role && !borrowed) {
+    return <Navigate to={user.role === 'doctor' ? '/doctor' : '/patient'} replace />;
+  }
   return <>{children}</>;
 }
 

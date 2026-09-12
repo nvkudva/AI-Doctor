@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { pressProps } from '../lib/ui';
+import { useAuth } from './auth';
 import s from './AppShell.module.css';
 
 // AppShell: chrome-less full-viewport wrapper + update toast. Renders the
@@ -10,6 +11,12 @@ import s from './AppShell.module.css';
 type UpdateSW = (reload?: boolean) => Promise<void>;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { user, viewAs, setViewAs } = useAuth();
+  const nav = useNavigate();
+  // While a doctor is borrowing the patient module, every screen says so and
+  // every screen offers the way back — the module is not somewhere you can be
+  // stranded (DESIGN-REVIEW D1).
+  const borrowed = user?.role === 'doctor' && viewAs === 'patient';
   const [applyUpdate, setApplyUpdate] = useState<UpdateSW | null>(null);
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
   // A mistyped or outdated link says so instead of silently landing you home (UX-27).
@@ -43,7 +50,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className={s.shell}>
+    <div className={borrowed ? `${s.shell} ${s.shellBorrowed}` : s.shell}>
+      {borrowed && (
+        <div className={s.borrowed}>
+          <span>Viewing as patient</span>
+          <button
+            type="button"
+            className={s.borrowedBack}
+            onClick={() => { setViewAs(null); nav('/doctor'); }}
+          >
+            Back to doctor view
+          </button>
+        </div>
+      )}
       {offline && (
         <div role="status" className={`vd-glass-thin ${s.offline}`}>
           You’re offline — the app is open but nothing new can be sent or

@@ -15,6 +15,10 @@ export interface AuthUser {
 interface AuthCtx {
   user: AuthUser | null;
   ready: boolean;
+  /** Non-null only while a doctor has deliberately opted into another module's
+   *  view. Session-scoped: a reload puts the doctor back on their own desk. */
+  viewAs: Role | null;
+  setViewAs: (r: Role | null) => void;
   googleConfigured: boolean;
   googlePending: boolean;
   authErr: string;
@@ -54,8 +58,12 @@ const DEMO_USERS: Record<Role, AuthUser> = {
   doctor: { id: 'demo-doctor', name: 'Dr. Sara Whitfield', email: 'sara.whitfield.demo@example.com', role: 'doctor', provider: 'demo' },
 };
 
+// The authoritative role lives in public.memberships — role assignment is
+// never client-writable (migration 0002), so the auth user's metadata does not
+// carry it. `kind` is the closest hint the seeded metadata has; it decides only
+// which module paints while resolveRole() is in flight.
 function toUser(id: string, email: string, meta: Record<string, unknown>): AuthUser {
-  const role = meta.role === 'doctor' ? 'doctor' : 'patient';
+  const role: Role = meta.role === 'doctor' || meta.kind === 'clinician' ? 'doctor' : 'patient';
   const name =
     (meta.full_name as string) || (meta.name as string) || (email ? email.split('@')[0] : role === 'doctor' ? 'Doctor' : 'Patient');
   return { id, name, email, role, provider: 'google' };
@@ -70,11 +78,26 @@ function restore(): AuthUser | null {
   }
 }
 
+// Ask the database who this account is. Without it a clinician whose metadata
+// says nothing lands in the patient module under their own name, with no route
+// back to the review desk (DESIGN-REVIEW D1).
+async function resolveRole(fallback: Role): Promise<Role> {
+  try {
+    const { myMemberships } = await import('../lib/api/client');
+    const rows = await myMemberships();
+    if (!rows.length) return fallback;
+    return rows.some(m => m.role === 'doctor' || m.role === 'admin') ? 'doctor' : 'patient';
+  } catch {
+    return fallback; // offline, or memberships unreachable — the hint stands
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => restore());
   const [ready, setReady] = useState(false);
   const [googlePending, setGooglePending] = useState(false);
   const [authErr, setAuthErr] = useState('');
+  const [viewAs, setViewAs] = useState<Role | null>(null);
   const configured = hasSupabase();
 
   useEffect(() => {
@@ -93,6 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // The timer starts before the SDK fetch, so a slow chunk cannot hold the
     // skeleton past SESSION_TIMEOUT_MS any more than a slow auth host could.
     const timer = setTimeout(finish, SESSION_TIMEOUT_MS);
+    // One path for the restored session and every later auth event: paint what
+    // the metadata claims, then correct the role from memberships. Without the
+    // correction the second step silently demoted a doctor to a patient.
+    const adopt = (s: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+      const u = toUser(s.id, s.email || '', s.user_metadata || {});
+      persist(u);
+      void resolveRole(u.role).then((role) => {
+        if (live && role !== u.role) persist({ ...u, role });
+      });
+    };
     void loadSdk().then(({ supabase }) => {
       const sb = supabase();
       if (!sb || !live) {
@@ -102,14 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sb.auth
         .getSession()
         .then(({ data }) => {
-          const s = data.session?.user;
-          if (s) {
-            const u = toUser(s.id, s.email || '', (s.user_metadata || {}) as Record<string, unknown>);
-            setUser(u);
-            try {
-              localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-            } catch { /* private mode */ }
-          }
+          if (data.session?.user) adopt(data.session.user);
         })
         .catch(() => { /* offline or unreachable: keep the restored session */ })
         .finally(() => {
@@ -117,14 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           finish();
         });
       const { data: sub } = sb.auth.onAuthStateChange((_ev, session) => {
-        const s = session?.user;
-        if (s) {
-          const u = toUser(s.id, s.email || '', (s.user_metadata || {}) as Record<string, unknown>);
-          setUser(u);
-          try {
-            localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-          } catch { /* private mode */ }
-        }
+        if (session?.user) adopt(session.user);
       });
       unsubscribe = () => sub.subscription.unsubscribe();
       if (!live) unsubscribe();
@@ -143,6 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else localStorage.removeItem(AUTH_KEY);
     } catch { /* private mode */ }
   };
+
+  // A borrowed view belongs to one session of one account: signing out, or a
+  // different account arriving, puts the shell back on that account's own module.
+  const uid = user?.id;
+  useEffect(() => { setViewAs(null); }, [uid]);
 
   const signInGoogle = async () => {
     setAuthErr('');
@@ -204,7 +228,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ user, ready, googleConfigured: configured, googlePending, authErr, signInGoogle, signInDemo, signOut }}
+      value={{
+        user, ready, viewAs, setViewAs,
+        googleConfigured: configured, googlePending, authErr, signInGoogle, signInDemo, signOut,
+      }}
     >
       {children}
     </Ctx.Provider>

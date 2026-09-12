@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  AppHeader, Card, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, ThemeToggle, profile,
+  AppHeader, Card, MenuRow, NotifyButton, ProfileSection, SignOutButton, StatRow, SwitchRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
@@ -11,7 +11,7 @@ import { seedDoctor } from '../../../store/seeds';
 import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => void }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, viewAs, setViewAs } = useAuth();
   const clinic = useClinic();
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(false);
@@ -62,7 +62,14 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
 
       <ProfileSection>Settings</ProfileSection>
       <Card level={1} pad={6} className={profile.list}>
-        <MenuRow icon="person" onClick={() => nav('/patient')}>Patient view</MenuRow>
+        <SwitchRow
+          icon="person"
+          checked={viewAs === 'patient'}
+          detail="See the app as a patient does"
+          onChange={(on) => { setViewAs(on ? 'patient' : null); nav(on ? '/patient' : '/doctor'); }}
+        >
+          Patient view
+        </SwitchRow>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>
       </div>

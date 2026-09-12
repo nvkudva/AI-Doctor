@@ -101,3 +101,32 @@
   .row:not(.rowDisabled):hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); }
   .rowDanger:not(.rowDisabled):hover { color: var(--vd-bad-fg); }
 }
+
+/* SwitchRow's control. 51x31 is the platform switch size both phones use, so
+   the target reads as a switch before the label is read. */
+.track {
+  flex: 0 0 auto;
+  width: 51px;
+  height: 31px;
+  padding: 2px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-chip);
+  border: 1px solid var(--vd-border);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.trackOn { background: var(--vd-brand-1); border-color: var(--vd-brand-1); }
+
+.thumb {
+  display: block;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--vd-elev-2);
+  transition: transform 140ms ease;
+}
+.trackOn .thumb { transform: translateX(20px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .track, .thumb { transition: none; }
+}

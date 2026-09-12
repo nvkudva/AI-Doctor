@@ -36,6 +36,7 @@ export function MedicinesScreen({ doses, onTaken }: {
   }
   const past = doses.filter(d => doseState(d) !== 'later');
   const done = past.filter(d => d.taken).length;
+  const missed = past.length - done;
   const today = startOfDay(Date.now());
   const groups = [
     { label: 'Today', rows: doses.filter(d => startOfDay(d.at) === today) },
@@ -46,21 +47,26 @@ export function MedicinesScreen({ doses, onTaken }: {
     <>
       {header}
       <Card className={s.adherence}>
+        {/* Green is for confirmed-good only: no doses taken is not that, so the
+            count stays neutral until there is one, and the label counts the
+            same thing the meter fills (DESIGN-REVIEW D12). */}
         <div className={s.tallyRow}>
-          <div className={s.tally}>{done}</div>
-          <div className={s.tallyLabel}>of {past.length} doses so far</div>
+          <div className={`${s.tally}${done > 0 ? ' ' + s.tallyDone : ''}`}>{done}</div>
+          <div className={s.tallyLabel}>
+            of {past.length} dose{past.length === 1 ? '' : 's'} taken so far
+            {missed > 0 && <span className={s.tallyMissed}> · {missed} missed</span>}
+          </div>
         </div>
         <div className={s.bars}>
           {past.map(d => (
             <span
               key={d.id}
-              className={s.bar}
-              style={{ background: d.taken ? 'var(--vd-ok-fg)' : 'var(--vd-bad-fg)' }}
-              title={`${d.rx} · ${timeLabel(d.at)}`}
+              className={`${s.bar}${d.taken ? ' ' + s.barTaken : ' ' + s.barMissed}`}
+              title={`${d.rx} · ${timeLabel(d.at)} · ${d.taken ? 'taken' : 'missed'}`}
             />
           ))}
           {doses.filter(d => doseState(d) === 'later').map(d => (
-            <span key={d.id} className={s.bar} style={{ background: 'var(--vd-surface-chip)' }} />
+            <span key={d.id} className={s.bar} />
           ))}
         </div>
         <div className={s.adherenceNote}>

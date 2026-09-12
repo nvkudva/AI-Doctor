@@ -37,15 +37,36 @@ export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeRevie
   return (
     <>
       <div className={s.stats}>
-        <Stat value={String(waiting.length)} label="Waiting" tone="var(--vd-warn-fg)" sub="in the review queue" />
-        <Stat value={String(urgent.length)} label="Urgent" tone="var(--vd-bad-fg)" sub={urgent.length ? 'red flag raised' : 'none right now'} />
+        <Stat
+          value={String(waiting.length)}
+          label="Waiting"
+          tone={waiting.length ? 'var(--vd-warn-fg)' : 'var(--vd-ink-2)'}
+          sub="in the review queue"
+        />
+        {/* Red states "there is a red flag". No urgent cases is the opposite,
+            so an empty queue is neutral, not alarming (D12). */}
+        <Stat
+          value={String(urgent.length)}
+          label="Urgent"
+          tone={urgent.length ? 'var(--vd-bad-fg)' : 'var(--vd-ink-2)'}
+          sub={urgent.length ? 'red flag raised' : 'none right now'}
+        />
         <Stat
           value={oldest?.submittedAt ? waitAge(oldest.submittedAt) : '—'}
           label="Longest wait"
           tone={breached.length ? 'var(--vd-bad-fg)' : 'var(--vd-ink-2)'}
           sub="target is 2h"
         />
-        <Stat value={String(decided.length)} label="Decided today" tone="var(--vd-ok-fg)" sub={decidedSplit(decided)} />
+        {/* Green means confirmed-good. A shift with nothing signed is not that,
+            and with cases past target it is the opposite (DESIGN-REVIEW D12). */}
+        <Stat
+          value={String(decided.length)}
+          label="Decided today"
+          tone={decided.length === 0
+            ? (breached.length ? 'var(--vd-warn-fg)' : 'var(--vd-ink-2)')
+            : 'var(--vd-ok-fg)'}
+          sub={decidedSplit(decided)}
+        />
         <Stat value={String(appointments.filter(a => a.status === 'booked' && isToday(a.startsAt)).length)} label="Booked today" tone="var(--vd-ink-2)" sub="still to be seen" />
       </div>
 

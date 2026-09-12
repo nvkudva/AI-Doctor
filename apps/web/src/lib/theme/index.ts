@@ -11,25 +11,42 @@ export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 export const breakpoints = { tablet: 800, desktop: 1160 } as const;
 
 // Status pill bg|fg|label rows — the single label source (Primitives reads it).
-// Confidence reuses high/medium/low; urgency uses urgent/soon/routine.
+// Five semantic roles and nothing else (DESIGN-REVIEW D19):
+//   critical (red)  — a red flag, a breach, a missed dose, out of range
+//   warning (amber) — needs attention, or is awaiting someone's action
+//   positive (green)— in range, approved, taken: confirmed good, never a default
+//   info (blue)     — a neutral category (investigation / prescription / booked)
+//   neutral (grey)  — closed, historic, or merely informational
+// Amber used to mean "needs a look", "routine", "pending", "closed" AND
+// "breached"; green meant "in range", "routine", "approved", "safe" and "zero
+// doses taken". A colour that means six things means nothing.
 export const statusPill: Record<string, { bg: string; fg: string; label: string }> = {
+  // Awaiting someone's action.
   pending: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Pending' },
   pending_review: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Pending review' },
+  // Confirmed good.
   approved: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Approved' },
-  changes: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Changes' },
-  rejected: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Declined' },
+  completed: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Completed' },
+  // Neutral category.
+  changes: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Changes requested' },
+  booked: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Booked' },
+  prescription: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Prescription' },
+  investigation: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Investigation' },
+  // Closed or historic: an outcome, not an alarm.
+  rejected: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Declined' },
   expired: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Expired' },
-  high: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'High' },
-  medium: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Medium' },
-  low: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Low' },
+  cancelled: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Cancelled' },
+  closed: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Closed' },
+  // AI confidence is informational, not a verdict: high confidence is not the
+  // same kind of fact as an approved plan, so it does not borrow its green.
+  high: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'High confidence' },
+  medium: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Medium confidence' },
+  low: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Low confidence' },
+  // Urgency. Routine is the default, so it is neutral — not a good outcome.
   urgent: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Urgent' },
   soon: { bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', label: 'Soon' },
-  routine: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Routine' },
-  prescription: { bg: 'var(--vd-rx-bg)', fg: 'var(--vd-rx-fg)', label: 'Prescription' },
-  investigation: { bg: 'var(--vd-inv-bg)', fg: 'var(--vd-inv-fg)', label: 'Investigation' },
-  booked: { bg: 'var(--vd-info-bg)', fg: 'var(--vd-info-fg)', label: 'Booked' },
-  completed: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', label: 'Completed' },
-  cancelled: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Cancelled' },
+  routine: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'Routine' },
+  // A patient who did not attend needs chasing.
   no_show: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'No-show' },
 };
 

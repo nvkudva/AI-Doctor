@@ -2,8 +2,7 @@
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
 import type { Recommendation } from '../../../lib/core';
-import { Button, Card, MicroLabel, MiraPresence, Paper, PaperItem, StatusPill } from '../../../lib/ui';
-import { tints } from '../../../lib/theme';
+import { Button, Card, Icon, MicroLabel, MiraPresence, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './RecommendationScreen.module.css';
 
@@ -38,7 +37,6 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
   const headline = approved
     ? `Dr. Whitfield reviewed your ${isRx ? 'prescription' : 'plan'} — here it is.`
     : 'Sent to Dr. Whitfield for a quick review.';
-  const kind = isRx ? tints.rx : tints.investigation;
 
   const steps: { t: string; d: string; state: 'done' | 'active' | 'todo' }[] = [
     { t: 'Consult complete', d: 'Dr. Mira prepared your plan', state: 'done' },
@@ -98,12 +96,10 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
 
           <Card className={s.planCard}>
             <div className={s.badges}>
-              <span className={s.badge} style={{ background: kind.bg, color: kind.fg }}>
-                {isRx ? 'Prescription' : 'Investigation'}
-              </span>
-              <span className={s.badge} style={{ background: rec.urgency === 'urgent' ? 'var(--vd-bad-bg)' : rec.urgency === 'soon' ? 'var(--vd-warn-bg)' : 'var(--vd-ok-bg)', color: rec.urgency === 'urgent' ? 'var(--vd-bad-fg)' : rec.urgency === 'soon' ? 'var(--vd-warn-fg)' : 'var(--vd-ok-fg)' }}>
-                {rec.urgency === 'urgent' ? 'Urgent' : rec.urgency === 'soon' ? 'Soon' : 'Routine'}
-              </span>
+              <StatusPill status={isRx ? 'prescription' : 'investigation'} />
+              {/* Through the one map, so routine is the neutral default here
+                  too rather than a second shade of "good" (D19). */}
+              <StatusPill status={rec.urgency} />
             </div>
             <div className={s.planTitle}>{rec.title}</div>
             <div className={s.planSummary}>{rec.summary}</div>
@@ -156,8 +152,11 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
             )}
             {rec.advice && (
               <div className={s.adviceBox}>
-                <div className={s.adviceLabel}>When to seek help</div>
-                <div className={s.adviceText}>{rec.advice}</div>
+                <span className={s.adviceIcon}><Icon name="alert" size={18} /></span>
+                <div>
+                  <div className={s.adviceLabel}>When to seek help</div>
+                  <div className={s.adviceText}>{rec.advice}</div>
+                </div>
               </div>
             )}
             <div className={s.safety}>

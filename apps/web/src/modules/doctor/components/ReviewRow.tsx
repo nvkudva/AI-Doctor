@@ -54,8 +54,9 @@ export function ReviewRow({ c, selected, lead, compact, onSelect }: {
       <div className={s.plan}>
         <div className={s.title}>{c.title}</div>
         <div className={s.tags}>
+          {/* Two badges at most: what it is urgent, and what is unresolved.
+              The plan type is on the case itself (DESIGN-REVIEW D19). */}
           <StatusPill status={c.rec.urgency} />
-          <StatusPill status={c.rec.type} />
           {concerns > 0 && (
             <span className={s.concerns}>
               <Icon name="alert" size={11} />

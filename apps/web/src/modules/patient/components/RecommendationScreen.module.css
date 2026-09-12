@@ -84,31 +84,37 @@
 @media (min-width: 800px) { .planTitle { font-size: 17px; } }
 .planSummary { composes: read; color: var(--vd-ink-3); margin-bottom: 12px; max-width: 68ch; }
 
+/* "When to seek help" is the most urgent block on the plan; it used to be the
+   calmest colour on the screen. It is `critical` now (DESIGN-REVIEW D19). */
 .adviceBox {
-  background: var(--vd-advice-bg);
+  display: flex;
+  gap: 10px;
+  background: var(--vd-bad-bg);
+  border-left: 3px solid var(--vd-bad-fg);
   border-radius: var(--vd-radius-sm);
   padding: 12px 15px;
   margin-top: 4px;
 }
+.adviceIcon { flex: none; color: var(--vd-bad-fg); margin-top: 1px; }
 .adviceLabel {
   composes: vd-t-micro from global;
   letter-spacing: 0.08em;
-  color: var(--vd-advice-fg);
+  color: var(--vd-bad-fg);
   margin-bottom: 5px;
 }
 .adviceText { composes: read; max-width: 68ch; }
 
+/* Reassurance is informational, not a confirmed-good clinical state: it does
+   not get a green card competing with the approval badge above it. */
 .safety {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: var(--vd-safety-bg);
-  border-radius: var(--vd-radius-sm);
-  padding: 11px 14px;
+  padding: 11px 0 0;
   margin-top: 10px;
 }
-.safetyIcon { flex: none; color: var(--vd-safety-fg); }
-.safetyText { composes: vd-t-footnote vd-w6 from global; color: var(--vd-safety-fg); }
+.safetyIcon { flex: none; color: var(--vd-ink-4); }
+.safetyText { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
 
 .sideCard.sideCard { --card-pad: 16px; margin-top: 16px; }
 @media (min-width: 800px) { .sideCard.sideCard { --card-pad: 18px; margin-top: 0; } }

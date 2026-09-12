@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { AppHeader, Card, EmptyState, Icon, MenuRow, MicroLabel, Popover, ThemeToggle } from '../../../lib/ui';
 import { PatientNotify } from './PatientNotify';
-import { doseState, type DoseState } from '../../../store/doses';
+import { doseForm, doseState, type DoseState } from '../../../store/doses';
 import type { Dose } from '../../../store/types';
 import s from './MedicinesScreen.module.css';
 
@@ -105,8 +105,11 @@ function DoseRow({ d, onTaken, onSkipped }: {
     <div className={`${s.row}${state === 'later' ? ' ' + s.rowLater : ''}${d.taken ? ' ' + s.rowTaken : ''}`}>
       <div className={s.time}>{timeLabel(d.at)}</div>
       <Card level={1} pad="14px 16px" className={`${s.card}${state === 'due' ? ' ' + s.cardDue : ''}`}>
+        {/* The dose's own form, not one droplet repeated down the page. A
+            recorded dose keeps the state glyph, because that is what the row
+            is now about (D26). */}
         <span className={s.icon} style={{ background: tone.bg, color: tone.fg }}>
-          <Icon name={tone.icon} size={17} />
+          <Icon name={state === 'taken' || state === 'skipped' ? tone.icon : doseForm(d.rx, d.detail)} size={17} />
         </span>
         <div className={s.body}>
           <div className={s.name}>{d.rx}</div>

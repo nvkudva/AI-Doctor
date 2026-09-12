@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   AppHeader, Button, Card, EmptyState, Icon, MenuRow, profile, ProfileSection, Sheet, SignOutButton, StatRow, ThemeToggle,
 } from '../../../lib/ui';
+import { doseForm } from '../../../store/doses';
 import { useAuth } from '../../../shell/auth';
 import { useClinic } from '../../../store';
 import type { HealthProfile, UserRx } from '../../../store';
@@ -77,7 +78,7 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
               <div className={profile.list}>
                 {drugs.map((p, i) => (
                   <Card key={i} level={1} pad="13px 15px" className={s.rx}>
-                    <span className={s.rxIcon}><Icon name="pill" size={16} /></span>
+                    <span className={s.rxIcon}><Icon name={doseForm(p.name, p.detail)} size={16} /></span>
                     <div className={s.rxBody}>
                       <div className={s.rxName}>{p.name}</div>
                       <div className={s.rxMeta}>{p.detail} · {p.date}</div>

@@ -60,6 +60,11 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
   person: <><circle cx="12" cy="8" r="3.8" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></>,
   clock: <><path d="M3.5 11.5a8.5 8.5 0 1 1 2.6 6.1" /><path d="M3.5 20v-4.6h4.6" /><path d="M12 7.6V12l3 1.9" /></>,
   drop: <><path d="M12 2.5c3.4 3.9 5.6 6.9 5.6 9.9a5.6 5.6 0 0 1-11.2 0c0-3 2.2-6 5.6-9.9z" /><path d="M12 10v4M10 12h4" /></>,
+  // Dosage forms, so a medicine list is not one droplet repeated down the page
+  // (DESIGN-REVIEW D26).
+  inhaler: <><rect x="7.4" y="8.6" width="7.2" height="12" rx="2" /><path d="M14.6 11.4h3.2a1.8 1.8 0 0 1 1.8 1.8v1.4" /><path d="M9.4 8.6V5.2a1.8 1.8 0 0 1 1.8-1.8h1.6" /></>,
+  tablet: <><circle cx="12" cy="12" r="8.4" /><path d="M3.6 12h16.8" /></>,
+  syringe: <><path d="M13.6 4.4 19.6 10.4" /><path d="M16.6 7.4 8.4 15.6l-3 .6.6-3L14.2 5" /><path d="M4 20l2.4-2.4" /><path d="M10.6 9.4l1.6 1.6" /></>,
   home: <path d="M3 9.6 12 3l9 6.6V20a1 1 0 0 1-1 1h-5v-6.2H9V21H4a1 1 0 0 1-1-1z" />,
   speaker: <><path d="M4 9v6h4l5 4V5L8 9H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /></>,
   send: <path d="M4 12h13M12 5l7 7-7 7" />,

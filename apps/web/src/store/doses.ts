@@ -106,3 +106,13 @@ export function pendingCheckIn(queue: CaseItem[], answered: Record<string, strin
     alternatives: all.slice(1).map(name),
   };
 }
+
+
+/** The dosage form a medicine's own text implies, for its row's glyph (D26). */
+export function doseForm(name: string, detail = ''): 'inhaler' | 'syringe' | 'drop' | 'tablet' {
+  const t = `${name} ${detail}`.toLowerCase();
+  if (/inhal|puff|nebul|spray/.test(t)) return 'inhaler';
+  if (/inject|syringe|subcut|\bim\b|\biv\b|pen\b/.test(t)) return 'syringe';
+  if (/drops?\b|eye|ear|syrup|suspension|solution|\bml\b/.test(t)) return 'drop';
+  return 'tablet';
+}

@@ -43,12 +43,25 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
           <MicroLabel>AI consultation</MicroLabel>
           <StatusPill status={ac.confidence} />
         </div>
-        <div className={s.summary}>{ac.summary}</div>
-        <Disclosure title="What the patient said" defaultOpen={false}>
-          <ul className={s.said}>
-            {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
-          </ul>
-        </Disclosure>
+        {/* The source above the conclusion, and open. Hiding what the patient
+            reported while highlighting what the AI concluded from it trains
+            the reviewer to rubber-stamp (DESIGN-REVIEW D10). */}
+        <MicroLabel>What the patient reported</MicroLabel>
+        {ac.stated.length > 0 ? (
+          <>
+            <ul className={s.said}>
+              {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+            <Disclosure title="How Dr. Mira summarised it" defaultOpen={false}>
+              <div className={s.summary}>{ac.summary}</div>
+            </Disclosure>
+          </>
+        ) : (
+          // No verbatim account on this consult: the summary is the only
+          // record of what the patient said, so it is not hidden behind a
+          // disclosure the doctor has to know to open.
+          <div className={s.summary}>{ac.summary}</div>
+        )}
         <div className={s.assessment}>
           <b>Assessment:</b> {(ac.inferred || []).join('; ') || ac.rec.title}
         </div>

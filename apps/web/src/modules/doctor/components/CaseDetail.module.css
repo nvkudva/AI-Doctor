@@ -53,12 +53,13 @@
 .summary { composes: read; margin-bottom: var(--vd-space-3); }
 .said { composes: read; margin: 0; padding-left: 18px; }
 
+/* The AI's conclusion, same type size as the patient's words and no filled
+   background: it is one input to the decision, not the decision (D10). */
 .assessment {
   composes: read;
-  background: var(--vd-assessment-bg);
-  border: 1px solid var(--vd-assessment-bd);
-  border-radius: var(--vd-radius-sm);
-  padding: var(--vd-space-4);
+  border-left: 3px solid var(--vd-assessment-bd);
+  border-radius: 0;
+  padding: var(--vd-space-2) 0 var(--vd-space-2) var(--vd-space-4);
 }
 
 .mini {

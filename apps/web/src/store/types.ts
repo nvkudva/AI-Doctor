@@ -69,6 +69,10 @@ export interface Dose {
   /** Epoch ms of the dose itself. */
   at: number;
   taken: boolean;
+  /** Epoch ms the patient actually recorded it, when they did. */
+  takenAt?: number;
+  /** Deliberately not taken. */
+  skipped?: boolean;
 }
 
 /** A day-3 nudge on an approved plan. */
@@ -142,6 +146,8 @@ export interface Clinic {
   bookSlot: (title: string, startsAt: number, location: string) => void;
   /** Tick a dose off, or untick it. */
   setDoseTaken: (id: string, taken: boolean) => void;
+  /** Record a dose as deliberately not taken; false clears it. */
+  setDoseSkipped: (id: string, skipped: boolean) => void;
   answerCheckIn: (answer: 'better' | 'same' | 'worse') => void;
   setProfile: (p: HealthProfile) => void;
   slaTick: () => void;

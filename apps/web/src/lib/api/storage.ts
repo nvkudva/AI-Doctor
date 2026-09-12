@@ -23,7 +23,10 @@ export interface LocalSnapshot {
   decisions?: Record<string, ReviewDecision>;
   /** Doses ticked off, keyed by dose id. The schema records what was
    *  prescribed, not what was swallowed. */
-  doses?: Record<string, boolean>;
+  /** Dose id → epoch ms it was recorded (or `true` from older records). */
+  doses?: Record<string, boolean | number>;
+  /** Dose id → deliberately not taken. */
+  skipped?: Record<string, boolean>;
   /** Answers to the day-3 check-in, keyed by consult id. */
   checkIns?: Record<string, string>;
   /** Test slots the patient booked from a plan, until booking has a backend. */

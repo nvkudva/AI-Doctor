@@ -124,6 +124,18 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       <Card level={1} pad={6} className={profile.list}>
         <MenuRow icon="key" disabled detail="Managed by your Google account">Change password</MenuRow>
       </Card>
+
+      {/* Where the dose ticks actually live. This used to sit in the medicines
+          header beside a promise that the doctor is told about missed doses —
+          a promise that depends on syncing this record does not (D14). */}
+      <ProfileSection>About</ProfileSection>
+      <Card level={1} pad="14px 16px" className={profile.list}>
+        <div className={s.about}>
+          The doses you tick off are kept on this device only. They are not sent
+          to your clinic, so tell Dr. Mira in a consultation if you have been
+          missing doses.
+        </div>
+      </Card>
     </div>
   );
 }

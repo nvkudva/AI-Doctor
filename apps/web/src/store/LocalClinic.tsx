@@ -49,7 +49,8 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   const [appointments, setAppointments] = useState<AppointmentSlot[]>(() => [
     ...seedDoctorSlots, ...((saved?.booked as AppointmentSlot[]) || []),
   ]);
-  const [taken, setTaken] = useState<Record<string, boolean>>(() => saved?.doses || {});
+  const [taken, setTaken] = useState<Record<string, boolean | number>>(() => saved?.doses || {});
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => saved?.skipped || {});
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => saved?.checkIns || {});
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
@@ -62,7 +63,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   useEffect(() => { persistLocal({ checkIns }); }, [checkIns]);
   useEffect(() => { persistLocal({ booked: appointments.filter(a => a.id.startsWith('bk-')) }); }, [appointments]);
 
-  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
   const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
   useEffect(() => {
     persistLocal({ consultsAdd: consults.filter(c => c.user) });
@@ -176,7 +177,15 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
       startsAt, minutes: 15, location, status: 'booked',
     }]),
 
-    setDoseTaken: (id, t) => setTaken(d => ({ ...d, [id]: t })),
+    // The value is when it was recorded, so the row can say so afterwards.
+    setDoseTaken: (id, t) => {
+      setSkipped(sk => (sk[id] ? { ...sk, [id]: false } : sk));
+      setTaken(d => ({ ...d, [id]: t ? Date.now() : false }));
+    },
+    setDoseSkipped: (id, sk) => {
+      setTaken(d => (d[id] ? { ...d, [id]: false } : d));
+      setSkipped(s => ({ ...s, [id]: sk }));
+    },
 
     answerCheckIn: (answer) => {
       if (!checkIn) return;

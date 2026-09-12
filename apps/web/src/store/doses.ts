@@ -25,7 +25,16 @@ function isDosed(r: UserRx): boolean {
   return !!(r.dosage && r.dosage.trim());
 }
 
-export function buildSchedule(rx: UserRx[], taken: Record<string, boolean>, days = 2, now = Date.now()): Dose[] {
+// `taken` values are the epoch ms the patient recorded the dose; `true`
+// survives from records written before the time was kept. `skipped` is the
+// deliberate not-taken, which is not the same fact as a missed dose.
+export function buildSchedule(
+  rx: UserRx[],
+  taken: Record<string, boolean | number>,
+  days = 2,
+  now = Date.now(),
+  skipped: Record<string, boolean> = {},
+): Dose[] {
   const out: Dose[] = [];
   const midnight = new Date(now);
   midnight.setHours(0, 0, 0, 0);
@@ -35,19 +44,26 @@ export function buildSchedule(rx: UserRx[], taken: Record<string, boolean>, days
       for (const h of hours) {
         const at = midnight.getTime() + d * 86400000 + h * 3600000;
         const id = `${i}:${d}:${h}`;
-        out.push({ id, rx: r.name, detail: r.detail || '', at, taken: !!taken[id] });
+        const mark = taken[id];
+        out.push({
+          id, rx: r.name, detail: r.detail || '', at,
+          taken: !!mark,
+          takenAt: typeof mark === 'number' ? mark : undefined,
+          skipped: !!skipped[id],
+        });
       }
     }
   });
   return out.sort((a, b) => a.at - b.at);
 }
 
-export type DoseState = 'taken' | 'missed' | 'due' | 'later';
+export type DoseState = 'taken' | 'skipped' | 'missed' | 'due' | 'later';
 
 // "Due" is the window a person can actually act in: from the dose time until an
 // hour past it. Before that it is not yet theirs to take; after, it was missed.
 export function doseState(d: Dose, now = Date.now()): DoseState {
   if (d.taken) return 'taken';
+  if (d.skipped) return 'skipped';
   if (now > d.at + 3600000) return 'missed';
   if (now >= d.at - 30 * 60000) return 'due';
   return 'later';

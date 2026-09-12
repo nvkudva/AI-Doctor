@@ -325,7 +325,7 @@ export function PatientFlow() {
           />
         )}
         {screen === 'medicines' && (
-          <MedicinesScreen doses={clinic.doses} onTaken={clinic.setDoseTaken} />
+          <MedicinesScreen doses={clinic.doses} onTaken={clinic.setDoseTaken} onSkipped={clinic.setDoseSkipped} />
         )}
         {screen === 'checkin' && (
           clinic.checkIn

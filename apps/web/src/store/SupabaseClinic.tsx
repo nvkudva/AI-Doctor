@@ -53,7 +53,8 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const [labs, setLabs] = useState<LabValue[]>([]);
   // No schema records a swallowed dose or a check-in answer, so both stay on
   // this device until one does (see store/doses.ts).
-  const [taken, setTaken] = useState<Record<string, boolean>>(() => restoreLocal()?.doses || {});
+  const [taken, setTaken] = useState<Record<string, boolean | number>>(() => restoreLocal()?.doses || {});
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => restoreLocal()?.skipped || {});
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
@@ -241,7 +242,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     return () => clearInterval(t);
   }, [uid, isDoctor, queue, refresh]);
 
-  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
   const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
 
   const value = useMemo<Clinic>(() => ({
@@ -354,11 +355,33 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       startsAt, minutes: 15, location, status: 'booked',
     }]),
 
-    setDoseTaken: (id, t) => setTaken(d => {
-      const next = { ...d, [id]: t };
-      persistLocal({ doses: next });
-      return next;
-    }),
+    // The value is when it was recorded, so the row can say so afterwards.
+    setDoseTaken: (id, t) => {
+      setSkipped(sk => {
+        if (!sk[id]) return sk;
+        const next = { ...sk, [id]: false };
+        persistLocal({ skipped: next });
+        return next;
+      });
+      setTaken(d => {
+        const next = { ...d, [id]: t ? Date.now() : false };
+        persistLocal({ doses: next });
+        return next;
+      });
+    },
+    setDoseSkipped: (id, sk) => {
+      setTaken(d => {
+        if (!d[id]) return d;
+        const next = { ...d, [id]: false };
+        persistLocal({ doses: next });
+        return next;
+      });
+      setSkipped(s => {
+        const next = { ...s, [id]: sk };
+        persistLocal({ skipped: next });
+        return next;
+      });
+    },
 
     answerCheckIn: (answer) => {
       if (!checkIn) return;

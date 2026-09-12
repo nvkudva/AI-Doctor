@@ -1,8 +1,9 @@
 // The dose schedule. Times are read out of each prescription's own timing text
 // (store/doses.ts); the ticks are this device's, because nothing in the schema
-// records a swallowed dose. The adherence bar says so rather than implying the
-// clinic is watching something it cannot see.
-import { AppHeader, Card, EmptyState, Icon, MicroLabel, ThemeToggle } from '../../../lib/ui';
+// records a swallowed dose. Where that record lives is stated in Profile ->
+// About rather than in this screen's header (DESIGN-REVIEW D14).
+import { useState } from 'react';
+import { AppHeader, Card, EmptyState, Icon, MenuRow, MicroLabel, Popover, ThemeToggle } from '../../../lib/ui';
 import { PatientNotify } from './PatientNotify';
 import { doseState, type DoseState } from '../../../store/doses';
 import type { Dose } from '../../../store/types';
@@ -10,14 +11,16 @@ import s from './MedicinesScreen.module.css';
 
 const TONE: Record<DoseState, { bg: string; fg: string; icon: 'check' | 'x' | 'drop' }> = {
   taken: { bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', icon: 'check' },
+  skipped: { bg: 'var(--vd-surface-chip)', fg: 'var(--vd-ink-3)', icon: 'x' },
   missed: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', icon: 'x' },
   due: { bg: 'var(--vd-rx-bg)', fg: 'var(--vd-rx-fg)', icon: 'drop' },
   later: { bg: 'var(--vd-surface-chip)', fg: 'var(--vd-ink-4)', icon: 'drop' },
 };
 
-export function MedicinesScreen({ doses, onTaken }: {
+export function MedicinesScreen({ doses, onTaken, onSkipped }: {
   doses: Dose[];
   onTaken: (id: string, taken: boolean) => void;
+  onSkipped: (id: string, skipped: boolean) => void;
 }) {
   const header = (
     <AppHeader title="Your medicines" actions={<><ThemeToggle /><PatientNotify /></>} />
@@ -70,7 +73,7 @@ export function MedicinesScreen({ doses, onTaken }: {
           ))}
         </div>
         <div className={s.adherenceNote}>
-          Kept on this device. Tell Dr. Mira if you have missed doses — she passes it on with your next plan.
+          Tell Dr. Mira if you have missed doses.
         </div>
       </Card>
 
@@ -78,7 +81,7 @@ export function MedicinesScreen({ doses, onTaken }: {
         <div key={g.label}>
           <MicroLabel>{g.label}</MicroLabel>
           <div className={s.list}>
-            {g.rows.map(d => <DoseRow key={d.id} d={d} onTaken={onTaken} />)}
+            {g.rows.map(d => <DoseRow key={d.id} d={d} onTaken={onTaken} onSkipped={onSkipped} />)}
           </div>
         </div>
       ))}
@@ -86,9 +89,18 @@ export function MedicinesScreen({ doses, onTaken }: {
   );
 }
 
-function DoseRow({ d, onTaken }: { d: Dose; onTaken: (id: string, taken: boolean) => void }) {
+function DoseRow({ d, onTaken, onSkipped }: {
+  d: Dose;
+  onTaken: (id: string, taken: boolean) => void;
+  onSkipped: (id: string, skipped: boolean) => void;
+}) {
   const state = doseState(d);
   const tone = TONE[state];
+  const [menu, setMenu] = useState(false);
+  // Recording a dose is the daily job of this screen; it used to offer only the
+  // retrospective "Took it late", so every dose still to come had no action at
+  // all (D14). Every dose that is not already recorded gets the tick.
+  const recordable = state === 'due' || state === 'missed' || state === 'later';
   return (
     <div className={`${s.row}${state === 'later' ? ' ' + s.rowLater : ''}${d.taken ? ' ' + s.rowTaken : ''}`}>
       <div className={s.time}>{timeLabel(d.at)}</div>
@@ -99,16 +111,47 @@ function DoseRow({ d, onTaken }: { d: Dose; onTaken: (id: string, taken: boolean
         <div className={s.body}>
           <div className={s.name}>{d.rx}</div>
           <div className={s.detail}>{d.detail}</div>
+          {state === 'taken' && (
+            <div className={s.stamp}>Taken{d.takenAt ? ` at ${timeLabel(d.takenAt)}` : ''}</div>
+          )}
+          {state === 'skipped' && <div className={s.stamp}>Skipped</div>}
         </div>
-        {state === 'due' && (
-          <button type="button" className={s.take} onClick={() => onTaken(d.id, true)}>Take</button>
+        {recordable && (
+          <button
+            type="button"
+            className={`${s.take}${state === 'due' ? ' ' + s.takeDue : ''}`}
+            aria-label={`Record ${d.rx} at ${timeLabel(d.at)} as taken`}
+            onClick={() => onTaken(d.id, true)}
+          >
+            <Icon name="check" size={24} />
+          </button>
         )}
-        {state === 'missed' && (
-          <button type="button" className={s.late} onClick={() => onTaken(d.id, true)}>Took it late</button>
-        )}
-        {d.taken && (
-          <button type="button" className={s.undo} onClick={() => onTaken(d.id, false)}>Undo</button>
-        )}
+        <div className={s.moreWrap}>
+          <button
+            type="button"
+            className={s.more}
+            aria-label={`More for ${d.rx} at ${timeLabel(d.at)}`}
+            aria-haspopup="menu"
+            aria-expanded={menu}
+            onClick={() => setMenu(o => !o)}
+          >
+            <Icon name="chevD" size={16} />
+          </button>
+          <Popover open={menu} onClose={() => setMenu(false)} label="Dose actions" align="right" width={200}>
+            {!d.taken && (
+              <MenuRow icon="check" onClick={() => { setMenu(false); onTaken(d.id, true); }}>Mark taken</MenuRow>
+            )}
+            {d.taken && (
+              <MenuRow icon="x" onClick={() => { setMenu(false); onTaken(d.id, false); }}>Undo</MenuRow>
+            )}
+            {!d.skipped && (
+              <MenuRow icon="x" onClick={() => { setMenu(false); onSkipped(d.id, true); }}>Skip this dose</MenuRow>
+            )}
+            {d.skipped && (
+              <MenuRow icon="x" onClick={() => { setMenu(false); onSkipped(d.id, false); }}>Un-skip</MenuRow>
+            )}
+          </Popover>
+        </div>
       </Card>
     </div>
   );

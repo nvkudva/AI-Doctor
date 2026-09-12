@@ -207,7 +207,7 @@ export function MiraPanel({
   const statusLine =
     session.status === 'listening' ? 'Listening — speak naturally…'
       : session.status === 'thinking' ? 'Thinking…'
-        : session.status === 'speaking' ? 'Dr. Mira is speaking — tap the wave to interrupt'
+        : session.status === 'speaking' ? 'Dr. Mira is speaking'
           // Idle needs no prompt; the waveform and composer speak for themselves.
           : '';
 
@@ -237,8 +237,15 @@ export function MiraPanel({
             {/* Only rendered when there is something to say, so the wave sits
                 straight on top of the notes. */}
             {statusLine && (
-              <div aria-live="polite" className={s.status}>
-                {statusLine}
+              <div className={s.statusRow}>
+                <span aria-live="polite" className={s.status}>{statusLine}</span>
+                {/* "Tap the wave" was the only way to stop her, and nothing on
+                    screen said so. Interrupting is a button (D6). */}
+                {session.status === 'speaking' && (
+                  <button type="button" onClick={session.orbTap} className={s.interrupt}>
+                    Interrupt
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -258,7 +265,7 @@ export function MiraPanel({
             <Card tone="panel" bordered={false} className={s.notesCard}>
               <div className={s.notesHead}>
                 <div className={s.grabber} />
-                <span className={s.notesLabel}>Consultation notes</span>
+                <span className={s.notesLabel}>Transcript</span>
               </div>
               <div ref={notesRef} className={s.notes}>
                 {session.messages.length === 0 && (
@@ -290,6 +297,13 @@ export function MiraPanel({
                     </div>
                   );
                 })}
+                {session.status === 'thinking' && (
+                  <div className={s.turn} aria-label="Dr. Mira is replying">
+                    <div className={`${s.bubble} ${s.typing}`}>
+                      <span className={s.dot} /><span className={s.dot} /><span className={s.dot} />
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 

@@ -17,23 +17,55 @@
 
 /* The reference range is the middle half of the bar, so an out-of-range value
    still lands on it instead of falling off the end. */
+/* The track is a real axis. --lo and --hi are where the reference band
+   genuinely falls on it, so a value above the range is drawn above the green
+   instead of near the end of a track labelled with the range (D5). */
 .bar {
   position: relative;
   height: 8px;
   border-radius: var(--vd-radius-pill);
   margin: var(--vd-space-4) 0 var(--vd-space-2);
   background: linear-gradient(90deg,
-    var(--vd-bad-bg) 0%, var(--vd-bad-bg) 22%,
-    var(--vd-ok-bg) 26%, var(--vd-ok-bg) 74%,
-    var(--vd-lab-warn-bg) 78%, var(--vd-lab-warn-bg) 100%);
+    var(--vd-lab-warn-bg) 0%, var(--vd-lab-warn-bg) var(--lo),
+    var(--vd-ok-bg) var(--lo), var(--vd-ok-bg) var(--hi),
+    var(--vd-bad-bg) var(--hi), var(--vd-bad-bg) 100%);
+}
+.band {
+  position: absolute;
+  left: var(--lo);
+  width: calc(var(--hi) - var(--lo));
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--vd-ok-fg);
+  border-right: 1px solid var(--vd-ok-fg);
+  opacity: 0.55;
 }
 .marker {
   position: absolute; top: -4px; width: 4px; height: 16px;
   border-radius: var(--vd-radius-pill); background: var(--vd-ink-1);
   transform: translateX(-2px);
 }
-.scale { display: flex; justify-content: space-between; }
-.scale span { font-size: 12px; line-height: 1.45; color: var(--vd-ink-4); }
+/* Off the plotted scale: a triangle pointing the way the value ran, so a
+   capped marker is never mistaken for a reading at the edge. */
+.markerOver, .markerUnder {
+  width: 0; height: 0; top: -5px; border-radius: 0; background: none;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+}
+.markerOver { border-left: 11px solid var(--vd-bad-fg); transform: translateX(-11px); }
+.markerUnder { border-right: 11px solid var(--vd-lab-warn-fg); transform: none; }
+
+/* Ticks sit under the boundaries they name, not at the ends of the track. */
+.scale { position: relative; height: 18px; }
+.tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--vd-ink-4);
+  white-space: nowrap;
+}
+.scaleNote { font-size: 12px; line-height: 1.45; color: var(--vd-ink-4); }
 .noRange { composes: vd-t-footnote from global; color: var(--vd-ink-4); margin: var(--vd-space-3) 0; }
 .explain { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }
 

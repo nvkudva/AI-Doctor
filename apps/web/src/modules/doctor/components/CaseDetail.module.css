@@ -173,3 +173,17 @@
   background: var(--vd-surface-chip); color: var(--vd-ink-3);
   display: flex; align-items: center; justify-content: center;
 }
+
+
+/* Inside the case column: the plan keeps a readable measure and the patient's
+   record sits beside it as a 300px sidebar, stacking above ~1100px worth of
+   room rather than becoming a third top-level column (DESIGN-REVIEW D15). */
+@media (min-width: 1100px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 720px) 300px;
+    gap: var(--vd-space-5);
+    align-items: start;
+  }
+  .split > .panel { position: sticky; top: 0; }
+}

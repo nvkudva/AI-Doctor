@@ -37,6 +37,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
         <StatusPill status={ac.status} />
       </div>
 
+      <div className={s.split}>
       <Card level={2} className={s.card}>
         <div className={s.cardHead}>
           <span className={s.kindIcon}><Icon name="stethoscope" size={17} /></span>
@@ -97,6 +98,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
       </Card>
 
       {!asideInPanel && <PatientPanel ac={ac} />}
+      </div>
 
       {actionable && (
         // Last in the column on purpose: the decision sits after the tests, the

@@ -25,8 +25,12 @@
     align-items: start;
   }
 }
+/* Two columns, not three. The worklist the doctor has finished with is a
+   fixed 360px rail; everything else belongs to the case, and the plan they
+   are signing gets the width — it used to be the narrowest of three columns,
+   about 185px, wrapping the assessment over two lines (DESIGN-REVIEW D15). */
 @media (min-width: 1160px) {
-  .panes { grid-template-columns: 340px minmax(0, 760px) 340px; }
+  .panes { grid-template-columns: 360px minmax(0, 1fr); }
 }
 
 .pane { min-width: 0; display: flex; flex-direction: column; gap: var(--vd-space-3); }
@@ -34,10 +38,8 @@
 /* Home, the calendar, and the unsplit worklist each own the whole desk. */
 .oneColumn { display: flex; flex-direction: column; gap: var(--vd-space-3); min-width: 0; }
 
+/* The patient panel now lives inside the case column (see CaseDetail). */
 .side { display: none; }
-@media (min-width: 1160px) {
-  .side { display: block; min-width: 0; position: sticky; top: 96px; }
-}
 
 .back {
   composes: vd-t-subhead vd-w7 from global;

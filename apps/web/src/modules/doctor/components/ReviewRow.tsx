@@ -9,9 +9,12 @@ const DOT: Record<string, string> = {
   high: 'var(--vd-ok-fg)', medium: 'var(--vd-warn-fg)', low: 'var(--vd-bad-fg)',
 };
 
-export function ReviewRow({ c, selected, lead, onSelect }: {
+export function ReviewRow({ c, selected, lead, compact, onSelect }: {
   c: CaseItem;
   selected?: boolean;
+  /** A case is open beside the list: the row keeps only what picks the next
+   *  one — who, how urgent, how long they have waited (DESIGN-REVIEW D15). */
+  compact?: boolean;
   /** The worst case in the Breached group: the only row drawn in red, so the
    *  one that genuinely needs attention first stands out (D13). */
   lead?: boolean;
@@ -22,7 +25,7 @@ export function ReviewRow({ c, selected, lead, onSelect }: {
   const concerns = c.flags.filter(f => f.severity !== 'info').length;
   return (
     <Card
-      className={[s.row, urgent && s.urgent, lead && s.breached].filter(Boolean).join(' ')}
+      className={[s.row, compact && s.rowCompact, urgent && s.urgent, lead && s.breached].filter(Boolean).join(' ')}
       level={selected ? 3 : 2}
       selected={selected}
       onClick={onSelect}
@@ -35,8 +38,19 @@ export function ReviewRow({ c, selected, lead, onSelect }: {
       />
       <div className={s.who}>
         <div className={s.patient}>{c.patient}</div>
-        <div className={s.dx}>{c.inferred?.[0] || c.demo}</div>
+        {!compact && <div className={s.dx}>{c.inferred?.[0] || c.demo}</div>}
       </div>
+      {compact ? (
+        <div className={s.compactTags}>
+          <StatusPill status={c.rec.urgency} />
+          {concerns > 0 && (
+            <span className={s.concerns}>
+              <Icon name="alert" size={11} />
+              {concerns}
+            </span>
+          )}
+        </div>
+      ) : (
       <div className={s.plan}>
         <div className={s.title}>{c.title}</div>
         <div className={s.tags}>
@@ -50,9 +64,10 @@ export function ReviewRow({ c, selected, lead, onSelect }: {
           )}
         </div>
       </div>
+      )}
       <div className={s.wait}>
-        <div className={s.waited}>{c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}</div>
-        {sla && (
+        <div className={s.waited}>{c.submittedAt ? waitAge(c.submittedAt) : c.meta}</div>
+        {sla && !compact && (
           <div className={s.sla} style={{ color: lead ? sla.tone : 'var(--vd-warn-fg)' }}>{sla.label}</div>
         )}
       </div>

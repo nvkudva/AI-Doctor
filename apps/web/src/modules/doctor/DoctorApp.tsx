@@ -12,7 +12,7 @@ import { DeskHeader } from './components/DeskHeader';
 import { QueueCard } from './components/QueueCard';
 import { ReviewRow } from './components/ReviewRow';
 import { AppointmentsScreen } from './components/AppointmentsScreen';
-import { CaseDetail, PatientPanel } from './components/CaseDetail';
+import { CaseDetail } from './components/CaseDetail';
 import { ApproveSheet } from './components/ApproveSheet';
 import { DeclineSheet } from './components/DeclineSheet';
 import { DoctorHome } from './components/DoctorHome';
@@ -271,6 +271,7 @@ function Desk({ tenantName }: { tenantName: string }) {
                             key={c.id}
                             c={c}
                             lead={group === 'breached' && i === 0}
+                            compact={split}
                             selected={c.id === paneCase?.id}
                             onSelect={() => selectCase(c.id)}
                           />
@@ -302,7 +303,7 @@ function Desk({ tenantName }: { tenantName: string }) {
                 <CaseDetail
                   ac={paneCase}
                   actionable={isActionable(paneCase)}
-                  asideInPanel={bp === 'desktop'}
+                  asideInPanel={false}
                   staged={review.approvalStaged}
                   onApprove={() => askApprove(paneCase.id)}
                   onDecline={() => askDecline(paneCase.id)}
@@ -313,11 +314,6 @@ function Desk({ tenantName }: { tenantName: string }) {
             </section>
           )}
 
-          {split && (
-            <aside className={s.side} aria-label="Patient">
-              {paneCase && <PatientPanel ac={paneCase} />}
-            </aside>
-          )}
         </div>
       </div>
       </>}

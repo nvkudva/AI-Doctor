@@ -88,7 +88,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             )}
         </Section>
 
-        <Section title="Appointment">
+        <Section title="Appointment" side>
           {pending
             ? <Skeleton lines={2} />
             : failed
@@ -109,7 +109,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
         {/* A dashboard tells you there is something to look at; the looking
             happens on Labs. One panel per row turned Home into a second copy
             of that screen. */}
-        <Section title="Results">
+        <Section title="Results" side>
           {pending
             ? <Skeleton />
             : failed
@@ -155,7 +155,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
           </Section>
         )}
 
-        <Section>
+        <Section side>
           <Card level={1} pad="13px 15px" onClick={onStart} aria-label="Start a consultation with Dr. Mira">
             <div className={s.ctaTitle}>Start a consultation</div>
             <div className={s.ctaBody}>
@@ -189,9 +189,9 @@ function startOfDay(at: number): number {
 
 // A heading is only worth a line of chrome when it groups something the cards
 // below it do not already say (D20).
-function Section({ title, children }: { title?: string; children: React.ReactNode }) {
+function Section({ title, side, children }: { title?: string; side?: boolean; children: React.ReactNode }) {
   return (
-    <section className={s.section}>
+    <section className={`${s.section} ${side ? s.colSide : s.colMain}`}>
       {title && <div className={s.sectionTitle}>{title}</div>}
       {children}
     </section>

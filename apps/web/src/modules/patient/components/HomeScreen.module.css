@@ -26,8 +26,20 @@
     align-items: start;
   }
 }
+
+/* Not three phone columns with the bottom half of the page blank: a wide
+   reading column for what the patient is being asked to do, and a narrower
+   standing column for what they can go and look at (DESIGN-REVIEW D22). */
 @media (min-width: 1160px) {
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; }
+  .grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 340px);
+    gap: 0 32px;
+    align-content: start;
+  }
+  /* Left, in order: the check-in, today's medication, the active plan. */
+  .colMain { grid-column: 1; }
+  /* Right, as one standing panel: results, appointments, the consult entry. */
+  .colSide { grid-column: 2; }
 }
 
 .section { min-width: 0; margin-bottom: var(--vd-space-4); }

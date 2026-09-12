@@ -54,15 +54,36 @@ export function AppointmentsScreen({ appointments, onSlotStatus }: {
         {dayOffset !== 0 && <Button variant="tertiary" onClick={() => setDay(0)}>Today</Button>}
       </div>
 
-      {ofDay.length === 0 ? (
-        <EmptyState
-          icon="clock"
-          title="No appointments this day"
-          body="Escalating a case from the review queue books a slot here."
-        />
-      ) : SESSIONS.map((session) => {
+      {/* The week the day sits in. A console that can only show one day at a
+          time, with 95% of a 1440 canvas blank, is a worse tool than a paper
+          day-sheet (DESIGN-REVIEW D22). */}
+      <div className={s.week} role="tablist" aria-label="This week">
+        {Array.from({ length: 7 }, (_, i) => {
+          const at = startOfDay(Date.now()) + (i - 3) * 86400000;
+          const count = appointments.filter(a => startOfDay(a.startsAt) === at && a.status === 'booked').length;
+          const on = at === day;
+          return (
+            <button
+              key={at}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setDay(Math.round((at - startOfDay(Date.now())) / 86400000))}
+              className={`${s.weekDay}${on ? ' ' + s.weekDayOn : ''}`}
+            >
+              <span className={s.weekName}>{new Date(at).toLocaleDateString(undefined, { weekday: 'short' })}</span>
+              <span className={s.weekNum}>{new Date(at).getDate()}</span>
+              <span className={s.weekCount}>{count || '—'}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Every session is drawn, whether or not it holds anything: free time is
+          information a clinician books into, so an empty afternoon says so
+          instead of collapsing out of the page. */}
+      {SESSIONS.map((session) => {
         const rows = ofDay.filter(a => hourOf(a.startsAt) >= session.from && hourOf(a.startsAt) < session.to);
-        if (!rows.length) return null;
         return (
           <div key={session.name}>
             <div className={s.band}>
@@ -73,9 +94,9 @@ export function AppointmentsScreen({ appointments, onSlotStatus }: {
               <span className={s.bandRule} />
             </div>
             <div className={s.slots}>
-              {rows.map(a => (
-                <Slot key={a.id} a={a} onSlotStatus={onSlotStatus} />
-              ))}
+              {rows.length > 0
+                ? rows.map(a => <Slot key={a.id} a={a} onSlotStatus={onSlotStatus} />)
+                : <div className={s.freeBand}>No appointments this session — {session.to - session.from} hours free.</div>}
             </div>
           </div>
         );

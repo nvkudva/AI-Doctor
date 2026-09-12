@@ -85,3 +85,39 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* A week strip above the day: seven days, their booking counts, one tap each. */
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--vd-space-2);
+  margin-bottom: var(--vd-space-4);
+}
+.weekDay {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  cursor: pointer;
+  border-radius: var(--vd-radius-md);
+  border: 1px solid var(--vd-border);
+  background: transparent;
+  color: var(--vd-ink-3);
+}
+.weekDayOn { border-color: var(--vd-brand-1); color: var(--vd-ink-1); background: var(--vd-surface-chip); }
+.weekName { composes: vd-t-caption from global; text-transform: uppercase; letter-spacing: 0.05em; }
+.weekNum { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.weekCount { composes: vd-t-caption from global; color: var(--vd-ink-4); }
+
+/* An empty session states the free time rather than vanishing. */
+.freeBand {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-4);
+  padding: 18px 16px;
+  border: 1px dashed var(--vd-border-strong);
+  border-radius: var(--vd-radius-lg);
+  text-align: center;
+}

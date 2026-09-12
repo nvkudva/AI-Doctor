@@ -51,7 +51,27 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
       />
 
       <div className={s.grid}>
-        {clinic.checkIn && (
+        {/* Answering replaces this card in place rather than leaving it asking
+            again — the patient could not tell whether their answer landed, and
+            answering twice sends the doctor conflicting signals (D27). */}
+        {clinic.justAnswered ? (
+          <Section>
+            <Card level={1} pad="13px 15px">
+              <div className={s.ctaTitle}>Thanks — your doctor has been told.</div>
+              <div className={s.ctaBody}>
+                You said you are feeling {ANSWER_WORD[clinic.justAnswered.answer]}
+                {clinic.justAnswered.title ? ` about ${clinic.justAnswered.title.toLowerCase()}` : ''}. Answered just now.
+              </div>
+              <Button
+                variant="tertiary"
+                onClick={() => clinic.undoCheckIn(clinic.justAnswered!.consultId)}
+                className={s.ctaAction}
+              >
+                Undo
+              </Button>
+            </Card>
+          </Section>
+        ) : clinic.checkIn && (
           <Section>
             {/* The button is the affordance, so the card itself is not also a
                 button — a control inside a clickable card is two hit targets
@@ -189,6 +209,12 @@ function startOfDay(at: number): number {
 
 // A heading is only worth a line of chrome when it groups something the cards
 // below it do not already say (D20).
+const ANSWER_WORD: Record<'better' | 'same' | 'worse', string> = {
+  better: 'better',
+  same: 'about the same',
+  worse: 'worse',
+};
+
 function Section({ title, side, children }: { title?: string; side?: boolean; children: React.ReactNode }) {
   return (
     <section className={`${s.section} ${side ? s.colSide : s.colMain}`}>

@@ -337,11 +337,12 @@ export function PatientFlow() {
         {screen === 'checkin' && (
           clinic.checkIn
             ? <CheckInSheet
+                consultId={clinic.checkIn.consultId}
                 title={clinic.checkIn.title}
                 plan={clinic.checkIn.plan}
                 alternatives={clinic.checkIn.alternatives}
-                onAnswer={(a, followUp) => {
-                  clinic.answerCheckIn(a);
+                onAnswer={(a, followUp, id) => {
+                  clinic.answerCheckIn(a, id);
                   nav('/patient');
                   if (followUp) setTimeout(() => { setMiraOpen(true); consult.send(CHECK_IN_LINE[a]); }, 0);
                 }}

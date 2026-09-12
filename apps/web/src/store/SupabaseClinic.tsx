@@ -20,7 +20,7 @@ import {
 } from '../lib/api';
 import { useAuth } from '../shell/auth';
 import { Ctx } from './context';
-import { buildSchedule, pendingCheckIn } from './doses';
+import { buildSchedule, pendingCheckIn, UNDO_WINDOW } from './doses';
 import type { AppointmentSlot, Clinic, ClinicSeeds, HealthProfile, LabValue, Notice, UserConsult, UserRx } from './types';
 
 /** §4.2 row 18: the documented fallback when the channel cannot be held. */
@@ -56,6 +56,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const [taken, setTaken] = useState<Record<string, boolean | number>>(() => restoreLocal()?.doses || {});
   const [skipped, setSkipped] = useState<Record<string, boolean>>(() => restoreLocal()?.skipped || {});
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
+  const [justAnswered, setJustAnswered] = useState<Clinic['justAnswered']>(null);
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -247,7 +248,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
 
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
-    load, retry,
+    load, retry, justAnswered,
 
     // The consult already exists server-side — `start_consult` opened it and
     // `ai-consult` wrote the draft. All this does is show it and pull the real
@@ -383,10 +384,28 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       });
     },
 
-    answerCheckIn: (answer) => {
-      if (!checkIn) return;
+    undoCheckIn: (consultId) => {
+      setJustAnswered(null);
       setCheckIns(c => {
-        const next = { ...c, [checkIn.consultId]: answer };
+        const next = { ...c };
+        delete next[consultId];
+        persistLocal({ checkIns: next });
+        return next;
+      });
+    },
+
+    answerCheckIn: (answer, consultId) => {
+      const id = consultId || checkIn?.consultId;
+      if (!id) return;
+      // The plan actually rated, which with several running is not necessarily
+      // the one the sheet opened on.
+      const rated = id === checkIn?.consultId
+        ? checkIn
+        : checkIn?.alternatives.find(a => a.id === id);
+      setJustAnswered({ consultId: id, title: rated?.title || '', answer });
+      setTimeout(() => setJustAnswered(j => (j && j.consultId === id ? null : j)), UNDO_WINDOW);
+      setCheckIns(c => {
+        const next = { ...c, [id]: answer };
         persistLocal({ checkIns: next });
         return next;
       });
@@ -448,7 +467,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // SLA warning, expiry and abandonment are `run_consult_timers()` on the
     // server (§4.3 row 33). The client does not sweep its own queue.
     slaTick: () => {},
-  }), [queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
+  }), [queue, appointments, labs, doses, checkIn, justAnswered, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

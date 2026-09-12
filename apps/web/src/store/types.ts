@@ -117,6 +117,11 @@ export interface Clinic {
   labs: LabValue[];
   doses: Dose[];
   checkIn: CheckIn | null;
+  /** The check-in answered in the last minute, so home can confirm it in place
+   *  and offer an undo rather than silently dropping the card (D27). */
+  justAnswered: { consultId: string; title: string; answer: 'better' | 'same' | 'worse' } | null;
+  /** Take back a check-in answer while the confirmation is still showing. */
+  undoCheckIn: (consultId: string) => void;
   consults: UserConsult[];
   prescriptions: UserRx[];
   notices: Notice[];
@@ -148,7 +153,9 @@ export interface Clinic {
   setDoseTaken: (id: string, taken: boolean) => void;
   /** Record a dose as deliberately not taken; false clears it. */
   setDoseSkipped: (id: string, skipped: boolean) => void;
-  answerCheckIn: (answer: 'better' | 'same' | 'worse') => void;
+  /** `consultId` names the plan rated, which with several running is not
+   *  necessarily the one the sheet opened on (DESIGN-REVIEW D27). */
+  answerCheckIn: (answer: 'better' | 'same' | 'worse', consultId?: string) => void;
   setProfile: (p: HealthProfile) => void;
   slaTick: () => void;
 }

@@ -20,13 +20,15 @@ const FOLLOW_UP: Record<CheckInAnswer, string> = {
   worse: 'Because it is worse, Dr. Mira will ask a few questions now and flag this to your doctor as a priority.',
 };
 
-export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismiss }: {
+export function CheckInSheet({ consultId: headId, title, plan, alternatives = [], onAnswer, onDismiss }: {
+  /** The consult the sheet opened on, when the patient does not pick another. */
+  consultId: string;
   title: string;
   /** The plan being rated, shown so the patient can see which one it is. */
   plan: string;
   /** Other plans also awaiting a check-in; non-empty forces a choice first. */
   alternatives?: { id: string; title: string; plan: string }[];
-  onAnswer: (a: CheckInAnswer, followUp: boolean) => void;
+  onAnswer: (a: CheckInAnswer, followUp: boolean, consultId: string) => void;
   onDismiss: () => void;
 }) {
   const [picked, setPicked] = useState<CheckInAnswer | null>(null);
@@ -77,7 +79,7 @@ export function CheckInSheet({ title, plan, alternatives = [], onAnswer, onDismi
               key={c.key}
               level={on ? 3 : 1}
               pad="16px 18px"
-              onClick={() => { setPicked(c.key); onAnswer(c.key, c.key !== 'better'); }}
+              onClick={() => { setPicked(c.key); onAnswer(c.key, c.key !== 'better', subject === 'head' ? headId : subject || headId); }}
               className={`${s.choice}${on ? ' ' + s.choiceOn : ''}`}
             >
               <span className={s.badge} style={{ background: c.bg, color: c.fg }}>{c.label[0]}</span>

@@ -116,3 +116,7 @@ export function doseForm(name: string, detail = ''): 'inhaler' | 'syringe' | 'dr
   if (/drops?\b|eye|ear|syrup|suspension|solution|\bml\b/.test(t)) return 'drop';
   return 'tablet';
 }
+
+
+/** How long a just-answered check-in stays undoable on home (D27). */
+export const UNDO_WINDOW = 60000;

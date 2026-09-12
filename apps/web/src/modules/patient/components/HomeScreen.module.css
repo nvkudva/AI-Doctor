@@ -86,3 +86,16 @@
 .summaryDetail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
 
 .ctaAction { margin-top: var(--vd-space-4); margin-left: auto; display: flex; }
+
+.failed {
+  composes: vd-t-footnote from global;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--vd-radius-lg);
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+  color: var(--vd-ink-2);
+}

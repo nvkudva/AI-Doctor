@@ -57,6 +57,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
   const [rejectReason, setRejectReason] = useState('');
 
   // The draft a decision must be signed against. §4.2 rows 21–24 all take the
@@ -182,11 +183,24 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     }
   }, [uid, user?.name]);
 
+  // The first fetch decides whether the screens may speak. A failure is said
+  // out loud rather than drawn as an empty, reassuring dashboard (D4); later
+  // background refreshes keep the rows already on screen and never re-blank it.
   const refresh = useCallback(() => {
     const run = isDoctor ? refreshQueue : refreshPatient;
-    run().catch(e => console.warn('[vd] clinic refresh failed:', e));
+    run()
+      .then(() => setLoad('ready'))
+      .catch(e => {
+        console.warn('[vd] clinic refresh failed:', e);
+        setLoad(prev => (prev === 'ready' ? prev : 'error'));
+      });
     if (uid) refreshAppointments(uid, isDoctor).catch(e => console.warn('[vd] appointments failed:', e));
   }, [isDoctor, uid, refreshQueue, refreshPatient, refreshAppointments]);
+
+  const retry = useCallback(() => {
+    setLoad('loading');
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!uid) return;
@@ -232,6 +246,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
 
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    load, retry,
 
     // The consult already exists server-side — `start_consult` opened it and
     // `ai-consult` wrote the draft. All this does is show it and pull the real
@@ -410,7 +425,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // SLA warning, expiry and abandonment are `run_consult_timers()` on the
     // server (§4.3 row 33). The client does not sweep its own queue.
     slaTick: () => {},
-  }), [queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, uid, user?.name, refresh, refreshAppointments]);
+  }), [queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

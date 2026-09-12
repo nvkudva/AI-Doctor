@@ -33,3 +33,25 @@
 .chevClosed { transform: rotate(-90deg); }
 
 .body { animation: vd-fade 0.25s ease both; }
+
+/* Skeleton: the final card's geometry, none of its claims. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 16px;
+  border-radius: var(--vd-radius-lg);
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+}
+
+.skeletonBar {
+  height: 12px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-chip);
+  animation: vd-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonBar { animation: none; }
+}

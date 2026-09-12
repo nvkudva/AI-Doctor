@@ -83,6 +83,8 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs: seedLabValues, doses, checkIn,
     consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    // Seeded from memory: there is never a moment when these rows are unknown.
+    load: 'ready', retry: () => {},
 
     addLiveCase: (c) => {
       setQueue(q => [c, ...q]);

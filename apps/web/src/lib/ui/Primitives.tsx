@@ -14,6 +14,20 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
+// Placeholder geometry for a card whose data has not arrived. It says nothing
+// about the data — which is the point: an empty state is a claim, and a claim
+// must not be made before the fetch answers (DESIGN-REVIEW D4).
+export function Skeleton({ lines = 2 }: { lines?: number }) {
+  const widths = ['60%', '40%', '52%'];
+  return (
+    <div className={s.skeleton} aria-hidden>
+      {Array.from({ length: lines }, (_, i) => (
+        <div key={i} className={s.skeletonBar} style={{ width: widths[i % widths.length] }} />
+      ))}
+    </div>
+  );
+}
+
 export function MicroLabel({ children, accent: acc = false }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <div className={s.microLabel} style={{ color: acc ? 'var(--vd-brand-1)' : 'var(--vd-ink-3)' }}>

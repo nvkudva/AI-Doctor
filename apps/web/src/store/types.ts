@@ -112,6 +112,12 @@ export interface Clinic {
   notices: Notice[];
   profile: HealthProfile;
   liveCaseId: string | null;
+  /** Whether the rows below can be believed yet. Screens must not render
+   *  empty-state copy — least of all reassuring copy — while this is
+   *  'loading' (DESIGN-REVIEW D4). */
+  load: 'loading' | 'ready' | 'error';
+  /** Re-run the failed fetch behind `load === 'error'`. */
+  retry: () => void;
   reviewStatus: string;
   rejectReason: string;
   addLiveCase: (c: CaseItem) => void;

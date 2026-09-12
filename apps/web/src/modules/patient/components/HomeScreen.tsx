@@ -3,7 +3,7 @@
 // a consult is the nav orb, so there is no hero here (DESIGN §11.5).
 import { useNavigate } from 'react-router';
 import { myCase, planStatus } from '../../../lib/core';
-import { AppHeader, Button, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
+import { AppHeader, Button, Card, Icon, Skeleton, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
 import { useAuth } from '../../../shell/auth';
@@ -30,7 +30,11 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
   // on Medicines, not on the dashboard.
   const nextDose = clinic.doses.find(d => !d.taken && doseState(d) !== 'missed');
   const missed = clinic.doses.filter(d => doseState(d) === 'missed').length;
-  const flagged = toPanels(clinic.labs).filter(p => p.worst !== 'normal');
+  const panels = toPanels(clinic.labs);
+  const flagged = panels.filter(p => p.worst !== 'normal');
+  // Nothing on this screen may assert anything until the rows are in.
+  const pending = clinic.load === 'loading';
+  const failed = clinic.load === 'error';
   const upcoming = clinic.appointments
     .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
     .sort((a, b) => a.startsAt - b.startsAt);
@@ -65,7 +69,11 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
         )}
 
         <Section title="Medication">
-          {!nextDose
+          {pending
+            ? <Skeleton />
+            : failed
+            ? <Failed what="your medicines" onRetry={clinic.retry} />
+            : !nextDose
             ? <Empty body="No doses due. An approved prescription puts its schedule here." />
             : (
               <Row
@@ -81,7 +89,11 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
         </Section>
 
         <Section title="Appointment">
-          {upcoming.length === 0
+          {pending
+            ? <Skeleton lines={2} />
+            : failed
+            ? <Failed what="your appointments" onRetry={clinic.retry} />
+            : upcoming.length === 0
             ? <Empty body="Nothing booked. Tests a doctor orders appear here." />
             : upcoming.map(a => (
               <Row
@@ -98,8 +110,14 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             happens on Labs. One panel per row turned Home into a second copy
             of that screen. */}
         <Section title="Results">
-          {flagged.length === 0
-            ? <Empty body="All results are within range." />
+          {pending
+            ? <Skeleton />
+            : failed
+            ? <Failed what="your results" onRetry={clinic.retry} />
+            : panels.length === 0
+            ? <Empty body="No results yet. Tests your doctor orders appear here once they are back." />
+            : flagged.length === 0
+            ? <Empty body="Every result so far is inside its reference range." />
             : (
               <Card
                 level={1}
@@ -198,6 +216,17 @@ function Row({ icon, title, detail, meta, tone, onClick, label }: {
         {onClick && <span className={s.rowChev}><Icon name="chevD" size={16} /></span>}
       </div>
     </Card>
+  );
+}
+
+// A failed fetch is never rendered as good news: the card says it could not
+// load and offers the retry, rather than falling through to an empty state.
+function Failed({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div className={s.failed} role="status">
+      <span>Couldn’t load {what}.</span>
+      <Button variant="tertiary" onClick={onRetry}>Retry</Button>
+    </div>
   );
 }
 

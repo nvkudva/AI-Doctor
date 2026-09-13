@@ -6,7 +6,7 @@ import {
   AppHeader, Card, NotifyButton, ProfileSection, SignOutButton, StatRow, SwitchRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
-import { isReviewable, slaCountdown } from '../../../lib/core';
+import { isNamedTenant, isReviewable, slaCountdown } from '../../../lib/core';
 import { useClinic } from '../../../store';
 import { seedDoctor } from '../../../store/seeds';
 import s from './ProfileScreen.module.css';
@@ -63,7 +63,10 @@ export function ProfileScreen({ tenantName, onSelectCase }: {
         <Card level={1} pad={12} className={s.card}>
           <Field label="Specialty" value={seedDoctor.specialty} />
           <Field label="Registration" value={seedDoctor.registration} />
-          <Field label="Hospital" value={tenantName} />
+          <Field
+            label="Hospital"
+            value={isNamedTenant(tenantName) ? tenantName : 'Not set for this workspace'}
+          />
           <Field label="Languages" value={seedDoctor.languages} />
         </Card>
       </div>

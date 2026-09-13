@@ -111,11 +111,18 @@ export function tenantDisplayName(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'AI Doctor';
 }
 
+/** Whether the tenant resolved to an actual hospital. `tenantDisplayName` falls
+ *  back to the product name, which must never be shown in a field labelled
+ *  "Hospital" — that is the two-names-for-one-service problem again (D24/D29). */
+export function isNamedTenant(hospital: string): boolean {
+  return !!hospital && hospital !== 'AI Doctor';
+}
+
 /** The window title. One product name, always present: the tab used to flip
  *  between "AI Doctor" and the hospital's name as the tenant resolved, so the
  *  service appeared to have two names (DESIGN-REVIEW D24). */
 export function windowTitle(hospital: string): string {
-  return hospital && hospital !== 'AI Doctor' ? `${hospital} · AI Doctor` : 'AI Doctor';
+  return isNamedTenant(hospital) ? `${hospital} · AI Doctor` : 'AI Doctor';
 }
 
 export * from './time';

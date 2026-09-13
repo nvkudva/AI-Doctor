@@ -29,6 +29,10 @@ export interface MiraTurn {
   at: number;
   /** A photo the person attached, as a data URL. Rendered in their own turn. */
   image?: string;
+  /** She was cut off part-way through saying this. The text is the whole
+   *  reply; the patient only heard the start of it, and the doctor reviewing
+   *  the transcript has to be able to tell the difference. */
+  interrupted?: boolean;
 }
 
 /** What the panel needs from a session. useConsult and useReview both satisfy it. */
@@ -78,12 +82,18 @@ function barHeight(i: number, state: VoiceState): number {
   return Math.max(4, Math.round(56 * falloff * jitter * peak));
 }
 
-function Waveform({ state, onTap }: { state: VoiceState; onTap: () => void }) {
+function Waveform({ state, onTap, offline }: { state: VoiceState; onTap: () => void; offline?: boolean }) {
+  const label = state === 'speaking' ? 'Interrupt Dr. Mira' : 'Talk to Dr. Mira';
   return (
     <div
-      {...pressProps(onTap, state === 'speaking' ? 'Interrupt Dr. Mira' : 'Talk to Dr. Mira')}
+      {...pressProps(onTap, offline ? `${label}. Natural voice unavailable — browser voice in use` : label)}
       className={s.wave}
     >
+      {/* The voice being the browser's is a property of her, not of the last
+          thing that went wrong, so it is marked on her and stays marked. The
+          notice under the composer says it once, in full; this says it for as
+          long as it is true. */}
+      {offline && <span className={s.waveOffline} aria-hidden="true">Browser voice</span>}
       {Array.from({ length: BARS }, (_, i) => (
         <span
           key={i}
@@ -253,7 +263,7 @@ export function MiraPanel({
             className={s.waveWrap}
             style={{ '--vd-wave-dur': WAVE_TEMPO[session.status] } as React.CSSProperties}
           >
-            <Waveform state={session.status} onTap={session.orbTap} />
+            <Waveform state={session.status} onTap={session.orbTap} offline={session.voiceOffline} />
             {/* Only rendered when there is something to say, so the wave sits
                 straight on top of the notes. */}
             {statusLine && (
@@ -297,6 +307,9 @@ export function MiraPanel({
                           />
                         )}
                         <div className={s.bubbleText}>{m.text}</div>
+                        {m.interrupted && (
+                          <div className={s.cutOff}>Interrupted — she did not finish saying this.</div>
+                        )}
                         {groupEnd && (
                           <div className={`${s.stamp}${mine ? ' ' + s.stampMine : ''}`}>
                             {mine ? youLabel : 'Dr. Mira'} · {relTime(m.at)}

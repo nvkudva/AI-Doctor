@@ -35,6 +35,11 @@ const SILENCE_MS = 1200;
 /** Residual guard: how long a transcript must stop growing before the turn is submitted. */
 const SETTLE_MS = 250;
 
+// A turn is only ever closed by a transcript arriving. A transcriber that
+// stalls after the patient stops speaking would otherwise hold them on
+// "Listening" forever, with the sentence already said and no way back.
+const TRANSCRIBE_MS = 6000;
+
 // The server serves one session at a time. A busy one accepts the socket and
 // then never sends session.created, so a connect with no deadline leaves the
 // consult wedged on "speaking" with no fallback — indistinguishable from a
@@ -127,7 +132,13 @@ function connect(): Promise<WebSocket> {
       if (opening) fail();
       // A link that drops mid-consult is the same to the patient as one that
       // never opened: the voice changes and nothing else explains it.
-      else if (wasLive) setDown(true);
+      else if (wasLive) {
+        setDown(true);
+        // A turn already in flight has no other way to learn the link died:
+        // speak would wait out a response that is never coming, and listen
+        // would leave the patient talking into nothing under "Listening".
+        for (const l of Array.from(listeners)) l({ type: 'socket.closed' });
+      }
       // Lazily warm the link back up: a consult mid-turn should not have to
       // pay the handshake again when the next utterance arrives.
       const now = Date.now();
@@ -221,6 +232,10 @@ function stopPlayback(): void {
 
 // ------------------------------------------------------------------ speak
 
+// How far past the line a response may run before it counts as improvising
+// rather than as punctuation the normaliser did not fold away.
+const SLACK = 12;
+
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 export function remoteSpeak(
@@ -252,6 +267,9 @@ export function remoteSpeak(
   let heard = '';
   const held: string[] = [];
   const bail = () => {
+    // The guard can now trip mid-line, with audio already playing; letting the
+    // queue drain would say the unvetted half of it out loud.
+    if (verdict === 'ok') stopPlayback();
     verdict = 'bad';
     held.length = 0;
     off();
@@ -268,6 +286,16 @@ export function remoteSpeak(
       bail();
       return;
     }
+    // Eighteen characters is enough to start on and not enough to trust for
+    // the rest of the line: a server that reads the opening correctly and then
+    // improvises would otherwise speak unvetted clinical text in Mira's voice.
+    // So the prefix is re-checked on every delta, and a reply that outgrows the
+    // line it was handed is improvising even if it has not diverged yet.
+    if (got.length > want.length + SLACK) {
+      bail();
+      return;
+    }
+    if (verdict !== 'pending') return;
     if (got.length < 18 && got.length < want.length) return;
     verdict = 'ok';
     for (const b of held.splice(0)) enqueue(b);
@@ -299,8 +327,12 @@ export function remoteSpeak(
           opts.onBarge!();
           return;
         }
+        if (ev.type === 'socket.closed') {
+          bail();
+          return;
+        }
         if (ev.type === 'response.output_audio_transcript.delta' && typeof ev.delta === 'string') {
-          if (verdict === 'pending') judge(ev.delta);
+          if (verdict !== 'bad') judge(ev.delta);
         } else if (ev.type === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
           if (verdict === 'pending') judgeFull(ev.transcript);
         } else if (ev.type === 'response.output_audio.delta' && typeof ev.delta === 'string') {
@@ -437,6 +469,17 @@ export function remoteListenOnce(opts: {
   let off = () => {};
   let heard = '';
   let settleAt: number | undefined;
+  let mute: number | undefined;
+
+  // The mic is ours but the server has stopped holding up its end — a dropped
+  // link, or a transcriber that went quiet. Same remedy either way: hand the
+  // stream back so the browser's own recogniser can take the turn.
+  const give = () => {
+    if (closed) return;
+    closeMic();
+    close(false);
+    opts.onUnavailable ? opts.onUnavailable() : opts.onError && opts.onError('other');
+  };
 
   // One utterance can still arrive as several transcription.completed events if
   // the patient pauses for longer than SILENCE_MS: each is a fresh turn whose
@@ -463,6 +506,7 @@ export function remoteListenOnce(opts: {
     if (closed) return;
     closed = true;
     if (settleAt) window.clearTimeout(settleAt);
+    if (mute) window.clearTimeout(mute);
     off();
     // The stream stays open for the rest of the consult; the turn only stops
     // sending. Closing it here is what made barge-in impossible.
@@ -483,16 +527,24 @@ export function remoteListenOnce(opts: {
       // Mic granted but no server: the caller falls back to the browser's own
       // recogniser, which opens a stream of its own, so ours is handed back
       // rather than left holding the capture indicator.
-      closeMic();
-      close(false);
-      opts.onUnavailable ? opts.onUnavailable() : opts.onError && opts.onError('other');
+      give();
       return;
     }
     if (closed) return;
     capturing = true;
 
     off = on(ev => {
+      if (ev.type === 'socket.closed') {
+        give();
+        return;
+      }
+      if (ev.type === 'input_audio_buffer.speech_stopped') {
+        if (mute) window.clearTimeout(mute);
+        mute = window.setTimeout(give, TRANSCRIBE_MS);
+        return;
+      }
       if (ev.type === 'conversation.item.input_audio_transcription.completed') {
+        if (mute) window.clearTimeout(mute);
         // The server answers every turn whether we asked or not; silence it
         // before it starts speaking over the Edge Function's reply.
         send(s, { type: 'response.cancel' });

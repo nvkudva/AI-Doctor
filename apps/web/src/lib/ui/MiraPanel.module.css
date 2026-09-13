@@ -60,6 +60,7 @@
 /* Waveform: 29 bars on one keyframe, staggered by delay. */
 @keyframes wave { 0%, 100% { transform: scaleY(0.18); } 50% { transform: scaleY(1); } }
 .wave {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,6 +76,21 @@
   transform-origin: center;
   animation: wave var(--vd-wave-dur) var(--vd-ease-spring) infinite both;
 }
+/* Sits on the wave itself, top-right, clear of the tallest bar. */
+.waveOffline {
+  composes: vd-t-micro from global;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 7px;
+  border-radius: var(--vd-radius-pill);
+  background: var(--vd-surface-chip);
+  color: var(--vd-ink-3);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  pointer-events: none;
+}
+
 .barIdle { background: var(--vd-border-strong); }
 @media (prefers-reduced-motion: reduce) {
   .bar { animation: none; transform: scaleY(0.4); }
@@ -170,6 +186,17 @@
 }
 .bubbleMine { background: var(--vd-surface-mine); border: none; }
 .bubbleText { word-wrap: break-word; }
+
+/* A reply she was cut off part-way through. Muted: it qualifies the turn above
+   it, and is not itself something that went wrong. */
+.cutOff {
+  composes: vd-t-micro from global;
+  margin-top: 4px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--vd-ink-3);
+  font-style: italic;
+}
 
 .stamp {
   composes: vd-t-micro from global;

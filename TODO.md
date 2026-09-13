@@ -33,3 +33,17 @@
 - [ ] Run supabase db reset + test db — first real execution of the SQL and the 35 pgTAP assertions
 - [ ] QA sweep against the DB-backed app (both modes: Supabase env set, and demo/localStorage)
 - [ ] Dev fixes the QA queue from that sweep
+- [ ] REVISIT: full speech-to-speech on the local Realtime server (ws://127.0.0.1:1235/v1/realtime) — push Mira persona + tools into session.instructions and let it run the turn end-to-end; needs the JSON contract, red-flag sweep and draft creation re-expressed as tool calls back into ai-consult. Rejected for now in favour of transport-only STT/TTS, which keeps the brain in the Edge Function.
+- [x] Merge or PR branch worktree-agent-aed50599b0cbddc08 — merged into main, no conflicts. The worktree and branch still exist; delete when you are done with them.
+- [ ] Verify the offline-voice notice renders in the Mira panel: stop the server on ws://127.0.0.1:1235, open a consult, expect one muted line "Mira's natural voice is unavailable". Logic verified, visual never seen.
+- [ ] Verify the spoken note path with a real mic: on a pending_review consult, speak → Mira says "Got it, I've added that for Dr. Whitfield to see." → she listens again. Only typechecked so far.
+- [x] Decide the fix for duplicate transcription: answered — different item_ids, so VAD over-segmentation. Each turn close re-transcribes the whole buffer, so the second transcript restated the first. Fixed by sending turn_detection.silence_duration_ms 1200 (the server honours it at runtime); SETTLE_MS cut 900 -> 250 as a residual guard.
+- [x] Check whether speech-to-speech exposes its Smart Turn v3.2 end-of-turn signal over the wire: it does not. The realtime surface emits only input_audio_buffer.speech_started/stopped and conversation.item.input_audio_transcription.*; Smart Turn runs internally to gate speculative turns and never reaches the client.
+- [ ] Evaluate LiveKit Agents (agents-js) as the voice transport — server-side worker, WebRTC, semantic turn detection; voice-token Edge Function already suits minting LiveKit tokens. Decide only after the item_id question above.
+- [ ] Nothing tells a doctor a patient note arrived on a consult awaiting review — it appears only when they next open the case. Decide: bump the queue, or fire a notification.
+- [ ] Demo mode (hasSupabase() false) speaks the note acknowledgement but records nothing — no consult row to attach to. Either add a local-store equivalent or stop claiming it was saved.
+- [ ] Reloading or deep-linking any /doctor/* URL bounces to /patient because the role is not resolved at route time.
+- [ ] supabase_edge_runtime_ai-doctor will not start (CLI lists it stopped and skips it); `supabase functions serve` is needed after every restart. Running the Deno.serve functions under plain deno would remove the dance.
+- [ ] Cut local Supabase memory: supabase start -x studio,imgproxy,mailpit,logflare,vector,supavisor,postgres-meta,realtime,edge-runtime. Docker plus the voice server's 3 pipelines exhausted swap and put Postgres into 167-second checkpoints, which made auth 504.
+- [ ] realtime.ts leftovers: reconnect-after-close path never exercised, and mic capture uses the deprecated ScriptProcessor rather than an AudioWorklet.
+- [x] VITE_VOICE_WS_URL added to the main checkout's apps/web/.env.local.

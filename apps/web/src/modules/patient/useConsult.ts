@@ -111,6 +111,13 @@ export function useConsult(opts: {
   // the panel, resetting the consult. Cancelling speech now always resolves, so
   // without this the continuation would re-open the mic on the way out.
   const abandonRef = useRef(false);
+  // The line currently being spoken, so that cutting her off can mark the turn
+  // it belongs to. Both ways of interrupting — talking over her, tapping —
+  // arrive with no idea which message they stopped.
+  const sayingRef = useRef('');
+  // The turn arrived by typing. A patient who is typing must not be handed a
+  // permission prompt and a hot mic after every reply (foundation 1).
+  const typedRef = useRef(false);
 
   // Silencing her cuts the current sentence off at once; the transcript keeps it.
   const setSpeakerOff = useCallback((v: boolean) => {
@@ -135,6 +142,25 @@ export function useConsult(opts: {
     }
   }, []);
 
+  // The transcript is what the reviewing doctor reads, and it holds the whole
+  // reply whether or not the patient heard it. An interruption four words in
+  // would otherwise reach review as advice delivered in full.
+  const markInterrupted = useCallback(() => {
+    const text = sayingRef.current;
+    if (!text) return;
+    sayingRef.current = '';
+    const msgs = messagesRef.current;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].role !== 'mira' || msgs[i].text !== text) continue;
+      if (msgs[i].interrupted) return;
+      const next = [...msgs];
+      next[i] = { ...next[i], interrupted: true };
+      messagesRef.current = next;
+      setMessages(next);
+      return;
+    }
+  }, []);
+
   const stopListening = useCallback(() => {
     listenRef.current?.abort();
     listenRef.current = null;
@@ -148,8 +174,10 @@ export function useConsult(opts: {
     }
     setStatus('speaking');
     abandonRef.current = false;
+    sayingRef.current = text;
     speakRef.current = speak(text, {
       onDone: () => {
+        sayingRef.current = '';
         if (abandonRef.current) return;
         after && after();
       },
@@ -160,9 +188,12 @@ export function useConsult(opts: {
       // Not armed while the mic is switched off: barge-in turns capture back
       // on, and a patient who has silenced their microphone has said they do
       // not want it live.
-      onBarge: micOffRef.current ? undefined : () => { speakRef.current?.cancel(); },
+      onBarge: micOffRef.current ? undefined : () => {
+        markInterrupted();
+        speakRef.current?.cancel();
+      },
     });
-  }, []);
+  }, [markInterrupted]);
 
   const listen = useCallback(() => {
     if (micOffRef.current) {
@@ -199,9 +230,13 @@ export function useConsult(opts: {
     return started.consult_id;
   }, []);
 
-  const handleUser = useCallback(async (text: string) => {
+  const handleUser = useCallback(async (text: string, typed = false) => {
     text = (text || '').trim();
     if (!text || finishedRef.current) return;
+    typedRef.current = typed;
+    // Spoken to, she answers and listens again; typed to, the composer already
+    // has the patient's attention and the turn simply ends.
+    const then = typed ? () => setStatus('idle') : () => listenRef2.current();
     stopListening();
     setFailed(false);
     setLastTurn(Date.now());
@@ -226,11 +261,11 @@ export function useConsult(opts: {
         messagesRef.current = ack;
         setMessages(ack);
         setThinking(false);
-        say(NOTE_ACK, () => listenRef2.current());
+        say(NOTE_ACK, then);
       } catch {
         setThinking(false);
         setFailed(true);
-        say(NOTE_FAILED, () => listenRef2.current());
+        say(NOTE_FAILED, then);
       }
       return;
     }
@@ -294,7 +329,7 @@ export function useConsult(opts: {
         say(reply, undefined, data.recommendation?.urgency === 'urgent');
         return;
       }
-      say(reply, () => listenRef2.current());
+      say(reply, then);
     } catch {
       const err = "Sorry — I couldn't reach my clinical service just then, so nothing has been sent. Could you tell me that again?";
       const next = [...msgs];
@@ -303,7 +338,7 @@ export function useConsult(opts: {
       setThinking(false);
       setStatus('idle');
       setFailed(true);
-      say(err, () => listenRef2.current());
+      say(err, then);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -387,6 +422,7 @@ export function useConsult(opts: {
       // The cancel resolves into the same continuation a finished sentence
       // would, so listening is not started a second time here — doing both ran
       // two capture streams at once and leaked the first.
+      markInterrupted();
       speakRef.current?.cancel();
     } else if (status === 'idle') {
       listenRef2.current();
@@ -394,7 +430,7 @@ export function useConsult(opts: {
       stopListening();
       setStatus('idle');
     }
-  }, [status, stopListening]);
+  }, [status, stopListening, markInterrupted]);
 
   useEffect(() => () => {
     stopListening();
@@ -407,19 +443,19 @@ export function useConsult(opts: {
   const pendingImage = useRef<string | undefined>(undefined);
   const attach = useCallback((image: string) => {
     pendingImage.current = image;
-    handleUserRef.current('I have attached a photo of the affected area.');
+    handleUserRef.current('I have attached a photo of the affected area.', true);
   }, []);
 
   const retry = useCallback(() => {
     const last = [...messagesRef.current].reverse().find(m => m.role === 'user');
-    if (last) handleUserRef.current(last.text);
+    if (last) handleUserRef.current(last.text, typedRef.current);
   }, []);
 
   return {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
     micDenied, clearMicDenied: () => setMicDenied(false), voiceOffline, failed, retry, started, lastTurn,
-    confidence, flags, start, note, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t),
+    confidence, flags, start, note, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t, true),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

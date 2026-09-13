@@ -111,11 +111,6 @@
   padding: 0 var(--vd-space-4) var(--vd-space-4);
 }
 
-.micCard { margin-bottom: var(--vd-space-3); border: 1px solid var(--vd-warn-bg); }
-.micTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
-.micBody { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }
-.micActions { display: flex; gap: 8px; margin-top: 10px; }
-
 .notesCard.notesCard {
   --card-pad: 0;
   --card-elev: var(--vd-elev-0);
@@ -185,17 +180,6 @@
   text-align: left;
 }
 .stampMine { color: var(--vd-ink-2); opacity: 0.75; text-align: right; }
-
-.failed {
-  margin-top: var(--vd-space-3);
-  background: var(--vd-bad-bg);
-  border-radius: var(--vd-radius-md);
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.failedText { composes: vd-t-footnote vd-w7 from global; flex: 1; color: var(--vd-bad-fg); }
 
 /* One scrolling row, sized so at least four chips are readable at 390px. The
    chips used to wrap onto several lines, which pushed the composer down the
@@ -367,4 +351,14 @@
   color: inherit;
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Degraded voice: a statement, not an alarm — muted, no border, no action. */
+.voiceNotice {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-3);
+  margin-top: var(--vd-space-2);
+  padding: 8px 12px;
+  border-radius: var(--vd-radius-sm);
+  background: var(--vd-surface-chip);
 }

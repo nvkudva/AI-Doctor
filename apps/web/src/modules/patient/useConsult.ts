@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Confidence, Recommendation } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
 import {
-  aiComplete, aiConsult, getConsult, hasSupabase, mintVoiceToken, persistLocal, resolveHospitalId,
+  addConsultNote, aiComplete, aiConsult, getConsult, hasSupabase, mintVoiceToken, persistLocal, resolveHospitalId,
   startConsult, type ChatMessage,
 } from '../../lib/api';
-import { listenOnce, speak, stopAllVoice, type ListenHandle, type SpeakHandle } from '../../lib/voice';
+import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type ListenHandle, type SpeakHandle } from '../../lib/voice';
 
 export type Turn = MiraTurn;
 
@@ -19,6 +19,11 @@ const OPENERS: Suggestion[] = [
   { label: 'Stomach pain', tone: 'warn' },
   { label: 'Feeling better', tone: 'ok' },
 ];
+// Spoken back when the plan is already with a doctor: what the patient just
+// said is on the record, and nothing about the plan has changed.
+const NOTE_ACK = 'Got it, I’ve added that for Dr. Whitfield to see.';
+const NOTE_FAILED = 'Sorry, I couldn’t save that just now. Tell me again in a moment.';
+
 const FOLLOWUPS: Suggestion[] = [
   { label: 'Since yesterday' },
   { label: 'About a week' },
@@ -81,6 +86,10 @@ export function useConsult(opts: {
   const speakerOffRef = useRef(false);
   const micOffRef = useRef(false);
   const [micDenied, setMicDenied] = useState(false);
+  // The voice server dropping out changes how Mira sounds but not what she can
+  // do, so it is reported once and never blocks the consult.
+  const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
+  useEffect(() => onVoiceHealth(setVoiceOffline), []);
   const [failed, setFailed] = useState(false);
   const [started, setStarted] = useState(false);
   const [lastTurn, setLastTurn] = useState(0);
@@ -95,14 +104,24 @@ export function useConsult(opts: {
   // One consult submits exactly once: neither a duplicate speech callback nor a
   // turn typed after the plan was produced may file a second case (UX-01).
   const finishedRef = useRef(false);
+  // The panel opened on a consult a doctor already has: it listens and records,
+  // but never runs a turn.
+  const noteOnlyRef = useRef(false);
+  // Set only when the turn is being abandoned rather than interrupted — closing
+  // the panel, resetting the consult. Cancelling speech now always resolves, so
+  // without this the continuation would re-open the mic on the way out.
+  const abandonRef = useRef(false);
 
   // Silencing her cuts the current sentence off at once; the transcript keeps it.
   const setSpeakerOff = useCallback((v: boolean) => {
     speakerOffRef.current = v;
     setSpeakerOffState(v);
     if (v) {
-      stopAllVoice();
-      setStatus('idle');
+      // Silencing her stops the sentence; it does not end the consult. The
+      // cancel resolves, so the turn carries on into listening rather than
+      // leaving Mira mute and deaf with nothing to restart her — and the
+      // microphone is not handed back, because the consult is still running.
+      speakRef.current?.cancel();
     }
   }, []);
 
@@ -128,10 +147,20 @@ export function useConsult(opts: {
       return;
     }
     setStatus('speaking');
+    abandonRef.current = false;
     speakRef.current = speak(text, {
       onDone: () => {
+        if (abandonRef.current) return;
         after && after();
       },
+      // Talking over her is almost always a correction — the wrong symptom, the
+      // wrong duration — so it is the highest-value thing the patient says.
+      // Cancelling resolves the turn, which hands straight on to listening, and
+      // the audio already in flight becomes that turn.
+      // Not armed while the mic is switched off: barge-in turns capture back
+      // on, and a patient who has silenced their microphone has said they do
+      // not want it live.
+      onBarge: micOffRef.current ? undefined : () => { speakRef.current?.cancel(); },
     });
   }, []);
 
@@ -186,6 +215,25 @@ export function useConsult(opts: {
     // Written every turn so a reload or a closed tab still leaves a trace of
     // the visit that was started (UX-15).
     persistLocal({ draftConsult: { messages: msgs, at: Date.now() } });
+    // The plan is already a doctor's to move: what the patient says now is
+    // recorded against the consult, not run as a turn. Mira acknowledges and
+    // keeps listening, so the conversation continues without anything
+    // clinical changing under the reviewer.
+    if (noteOnlyRef.current) {
+      try {
+        if (hasSupabase() && consultIdRef.current) await addConsultNote(consultIdRef.current, text, 'voice');
+        const ack = [...messagesRef.current, { role: 'mira' as const, text: NOTE_ACK, at: Date.now() }];
+        messagesRef.current = ack;
+        setMessages(ack);
+        setThinking(false);
+        say(NOTE_ACK, () => listenRef2.current());
+      } catch {
+        setThinking(false);
+        setFailed(true);
+        say(NOTE_FAILED, () => listenRef2.current());
+      }
+      return;
+    }
     try {
       const api: ChatMessage[] = msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
       let data: any;
@@ -270,7 +318,7 @@ export function useConsult(opts: {
     notesRef.current = notes;
   }, [notes]);
 
-  const start = useCallback(() => {
+  const start = useCallback((resumeId?: string) => {
     const first = (patientRef.current.name || '').trim().split(/\s+/)[0];
     const greeting =
       `Hi${first ? ' ' + first : ''}, I'm Dr. Mira, your AI doctor. Everything here is private, and a licensed doctor reviews my advice before it reaches you. So — how are you feeling today?`;
@@ -283,30 +331,43 @@ export function useConsult(opts: {
     setStarted(true);
     setLastTurn(Date.now());
     finishedRef.current = false;
-    consultIdRef.current = null;
+    noteOnlyRef.current = false;
+    // Resuming a consult that is still open server-side: turns append to it
+    // instead of opening a second visit for the same patient.
+    consultIdRef.current = resumeId ?? null;
     say(greeting, () => listenRef2.current());
   }, [say]);
 
   // A Mira line with no model call — used when the panel opens on a state that
   // has no consult to run (e.g. a plan already awaiting review, UX-11).
-  const note = useCallback((text: string) => {
+  // `consultId` is the visit this note is about: the panel then listens, and a
+  // spoken follow-up appends to that consult instead of starting a second one
+  // behind the first — which is what the line itself promises.
+  const note = useCallback((text: string, consultId?: string) => {
     const init = [{ role: 'mira' as const, text, at: Date.now() }];
     messagesRef.current = init;
     setMessages(init);
+    if (consultId) consultIdRef.current = consultId;
+    noteOnlyRef.current = true;
+    finishedRef.current = false;
     setStarted(true);
-    say(text);
+    say(text, () => listenRef2.current());
   }, [say]);
 
   // Stop talking and stop listening, but keep the conversation: closing the
   // panel must not silently end a consult the patient is part-way through.
   const silence = useCallback(() => {
+    abandonRef.current = true;
     stopListening();
+    speakRef.current?.cancel();
     stopAllVoice();
     setStatus('idle');
   }, [stopListening]);
 
   const reset = useCallback(() => {
+    abandonRef.current = true;
     stopListening();
+    speakRef.current?.cancel();
     stopAllVoice();
     finishedRef.current = false;
     consultIdRef.current = null;
@@ -323,8 +384,10 @@ export function useConsult(opts: {
 
   const orbTap = useCallback(() => {
     if (status === 'speaking') {
+      // The cancel resolves into the same continuation a finished sentence
+      // would, so listening is not started a second time here — doing both ran
+      // two capture streams at once and leaked the first.
       speakRef.current?.cancel();
-      listenRef2.current();
     } else if (status === 'idle') {
       listenRef2.current();
     } else if (status === 'listening') {
@@ -355,7 +418,7 @@ export function useConsult(opts: {
   return {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
-    micDenied, clearMicDenied: () => setMicDenied(false), failed, retry, started, lastTurn,
+    micDenied, clearMicDenied: () => setMicDenied(false), voiceOffline, failed, retry, started, lastTurn,
     confidence, flags, start, note, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };

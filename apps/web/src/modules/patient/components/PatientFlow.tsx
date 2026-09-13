@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
-import { isOpenConsult, myCase, planStatus } from '../../../lib/core';
+import { isOpenConsult, isReviewable, myCase, planStatus } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
 import { persistLocal, restoreLocal } from '../../../lib/api';
@@ -254,19 +254,24 @@ export function PatientFlow() {
   // navigation and never nothing at all (UX-11, UX-12).
   const openMira = () => {
     setMiraOpen(true);
-    const open = clinic.queue.find(c => c.mine && isOpenConsult(c.status));
-    if (open) {
-      // A plan is already with the doctor: explain the state rather than
-      // starting a second consult behind the first.
-      if (consult.messages.length === 0) setTimeout(() => consult.note(PENDING_NOTE), 0);
+    // Only a consult the doctor actually has is explained rather than
+    // continued. An `active` one is still the patient's to talk to, and
+    // isOpenConsult covers both — treating active as "with the doctor" put the
+    // panel into note-only mode on a consult the note endpoint rightly refuses.
+    const withDoctor = clinic.queue.find(c => c.mine && isReviewable(c.status));
+    if (withDoctor) {
+      if (consult.messages.length === 0) setTimeout(() => consult.note(PENDING_NOTE, withDoctor.id), 0);
       return;
     }
     // Reopening resumes a conversation still in progress; one that already
     // produced a plan starts over, so a follow-up is a fresh consult.
     if (consult.messages.length > 0 && !rec) return;
+    // A consult still open server-side is resumed by id: starting a second one
+    // would duplicate the visit, and consults_one_open would refuse it anyway.
+    const live = clinic.queue.find(c => c.mine && c.status === 'active');
     consult.reset();
     setRec(null);
-    setTimeout(() => consult.start(), 0);
+    setTimeout(() => consult.start(live?.id), 0);
   };
 
   const startConsult = () => {

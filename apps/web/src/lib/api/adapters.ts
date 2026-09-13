@@ -141,6 +141,7 @@ export function toCaseItem(args: {
   labs?: LabResultRow[];
   priorConsults?: PastConsult[];
   transcript?: string[];
+  addedAfter?: string[];
   outcome?: ReviewOutcomeRow | null;
   reviewerName?: string;
   mine?: boolean;
@@ -194,6 +195,7 @@ export function toCaseItem(args: {
     confidence: draft?.confidence ?? 'medium',
     flags,
     stated: args.transcript ?? [],
+    addedAfter: args.addedAfter ?? [],
     inferred: dx.length ? dx : [rec.title].filter(Boolean),
     observation: consult.channel_mix && consult.channel_mix.voice_turns
       ? `${consult.channel_mix.voice_turns} spoken turns in this consult.`

@@ -63,6 +63,18 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
           // disclosure the doctor has to know to open.
           <div className={s.summary}>{ac.summary}</div>
         )}
+        {/* Said after the plan was submitted, so the draft below was not built
+            from it. Shown with the rest of the patient's own account, and open
+            for the same reason: it is the one thing here the reviewer has not
+            already seen. */}
+        {(ac.addedAfter || []).length > 0 && (
+          <>
+            <MicroLabel>Added after submission</MicroLabel>
+            <ul className={s.said}>
+              {(ac.addedAfter || []).map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+          </>
+        )}
         <div className={s.assessment}>
           <b>Assessment:</b> {(ac.inferred || []).join('; ') || ac.rec.title}
         </div>

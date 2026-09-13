@@ -33,6 +33,8 @@ export interface CaseItem {
   summary: string; symptoms: string[]; history: string;
   confidence: Confidence; flags: SafetyFlag[];
   stated: string[]; inferred: string[]; observation: string;
+  /** What the patient said after the plan was submitted — notes, not consult turns. */
+  addedAfter?: string[];
   rec: Recommendation;
   relevantLabs: LabResult[]; pastLabs: LabResult[]; pastConsults: PastConsult[];
   reviewedBy?: string; reviewedAt?: number; decision?: string;

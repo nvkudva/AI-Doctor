@@ -52,6 +52,8 @@ export interface MiraSession {
   silence?: () => void;
   micDenied?: boolean;
   clearMicDenied?: () => void;
+  /** The natural voice server is unreachable; the browser's own voice is in use. */
+  voiceOffline?: boolean;
   failed?: boolean;
   retry?: () => void;
 }
@@ -385,6 +387,12 @@ export function MiraPanel({
                 >
                   Fix
                 </button>
+              </div>
+            ) : session.voiceOffline ? (
+              // Not a failure and nothing to act on, so it takes the slot only
+              // when nothing has actually gone wrong, and takes the muted style.
+              <div className={s.voiceNotice} role="status">
+                Mira’s natural voice is unavailable — using your browser’s voice. The consult works as normal.
               </div>
             ) : null}
 

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, aiReview, hasSupabase, type ChatMessage } from '../../lib/api';
-import { listenOnce, speak, stopAllVoice } from '../../lib/voice';
+import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type SpeakHandle } from '../../lib/voice';
 
 function parseAi(raw: string): any {
   if (!raw) return { reply: '', done: false, action: 'none' };
@@ -57,6 +57,11 @@ export function useReview(opts: {
   const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [messages, setMessages] = useState<MiraTurn[]>([]);
   const [failedCmd, setFailedCmd] = useState<string | null>(null);
+  // Same degradation the patient sees: the browser's voice stands in.
+  const speakRef = useRef<SpeakHandle | null>(null);
+  const abandonRef = useRef(false);
+  const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
+  useEffect(() => onVoiceHealth(setVoiceOffline), []);
   // Two separate switches: whether Mira speaks, and whether she listens.
   const [speakerOff, setSpeakerOffState] = useState(false);
   const [micOff, setMicOffState] = useState(false);
@@ -71,6 +76,8 @@ export function useReview(opts: {
   const [approvalStaged, setApprovalStaged] = useState(false);
 
   const stop = useCallback(() => {
+    abandonRef.current = true;
+    speakRef.current?.cancel();
     stopAllVoice();
     setActive(false);
     setStatus('idle');
@@ -83,7 +90,20 @@ export function useReview(opts: {
       return;
     }
     setStatus('speaking');
-    speak(text, { onDone: () => after && after() });
+    abandonRef.current = false;
+    // The handle is kept so an interrupt can resolve the turn rather than
+    // orphan it: cancelling now runs the continuation, which is how she starts
+    // listening again (D-voice 3).
+    speakRef.current = speak(text, {
+      onDone: () => {
+        if (abandonRef.current) return;
+        after && after();
+      },
+      // Not armed while the mic is switched off: barge-in turns capture back
+      // on, and a patient who has silenced their microphone has said they do
+      // not want it live.
+      onBarge: micOffRef.current ? undefined : () => { speakRef.current?.cancel(); },
+    });
   }, []);
 
   // Silencing her cuts the current sentence off at once; the transcript keeps it.
@@ -91,8 +111,7 @@ export function useReview(opts: {
     speakerOffRef.current = v;
     setSpeakerOffState(v);
     if (v) {
-      stopAllVoice();
-      setStatus('idle');
+      speakRef.current?.cancel();
     }
   }, []);
 
@@ -123,7 +142,9 @@ export function useReview(opts: {
     setMessages(m => [...m, { role: 'user', text, at: Date.now() }]);
     if (!ac) {
       setMessages(m => [...m, { role: 'mira', text: NO_CASE, at: Date.now() }]);
-      say(NO_CASE);
+      // Spoken to, she answers and keeps listening; typed to, the composer has
+      // the turn. Either way she never answers and then goes deaf.
+      say(NO_CASE, typed ? undefined : () => listenRef.current());
       return;
     }
     setStatus('thinking');
@@ -205,7 +226,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
     if (!ac) {
       setMessages([{ role: 'mira', text: NO_CASE, at: Date.now() }]);
       setActive(true);
-      say(NO_CASE);
+      say(NO_CASE, () => listenRef.current());
       return;
     }
     setApprovalStaged(false);
@@ -218,8 +239,9 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   const orbTap = useCallback(() => {
     if (status === 'speaking') {
-      stopAllVoice();
-      listenRef.current();
+      // Cancel resolves into the same continuation, so listening is not started
+      // twice here — that ran two capture streams and leaked the first.
+      speakRef.current?.cancel();
     } else if (status === 'idle') {
       if (active) listenRef.current();
       else start();
@@ -230,6 +252,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   return {
     active, status, messages, speakerOff, setSpeakerOff, micOff, setMicOff, start, stop, orbTap, failedCmd,
+    voiceOffline,
     silence: stop,
     approvalStaged,
     command: (t: string) => commandRef.current(t, true),

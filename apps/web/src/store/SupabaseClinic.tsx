@@ -37,6 +37,18 @@ function reviewStatusOf(s: DbConsultStatus): string {
   return 'pending';
 }
 
+/** The patient's own lines, split on whether they arrived after submission. */
+function patientSaid(bundle: any, after: boolean): string[] {
+  const cut = bundle?.consult?.submitted_at ? Date.parse(bundle.consult.submitted_at) : NaN;
+  return (bundle?.messages || [])
+    .filter((m: any) => m.sender === 'patient')
+    .filter((m: any) => {
+      if (!Number.isFinite(cut)) return !after;
+      return Date.parse(m.created_at) > cut ? after : !after;
+    })
+    .map((m: any) => m.content);
+}
+
 export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { children: ReactNode }) {
   const { user } = useAuth();
   const uid = user?.id || '';
@@ -127,7 +139,11 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
         priorConsults: (bundle.prior_consults || []).map(p => ({
           title: p.chief_complaint || 'Consult', date: shortDate(p.created_at), note: p.status,
         })),
-        transcript: (bundle.messages || []).filter(m => m.sender === 'patient').map(m => m.content),
+        // Anything the patient said after the plan was submitted is not part of
+        // the consult the draft was built from, so it is kept apart rather than
+        // folded into the transcript the doctor reads as the visit.
+        transcript: patientSaid(bundle, false),
+        addedAfter: patientSaid(bundle, true),
       }) : c)));
     }).catch(e => console.warn('[vd] could not open case:', e));
   }, [pathname, isDoctor, uid]);

@@ -37,7 +37,7 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
       <AppHeader
         title={user?.name || 'Alex Kumar'}
         subtitle={<span className={profile.email}>{user?.email || 'alex.kumar@gmail.com'}</span>}
-        actions={<><SignOutButton onClick={signOut} /><ThemeToggle /><PatientNotify /></>}
+        actions={<><ThemeToggle /><PatientNotify /></>}
         className={s.header}
       />
 
@@ -161,6 +161,8 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
           missing doses.
         </div>
       </Card>
+
+      <SignOutButton onClick={signOut} />
     </div>
   );
 }

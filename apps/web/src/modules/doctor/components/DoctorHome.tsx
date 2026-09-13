@@ -102,6 +102,8 @@ export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeRevie
                   line={c.flags.find(f => f.severity !== 'info')?.text || c.summary}
                   meta={c.submittedAt ? `waiting ${waitAge(c.submittedAt)}` : c.meta}
                   tag={<StatusPill status={c.rec.urgency} />}
+                  label={`Open ${c.patient}'s case — ${c.title}, ${c.rec.urgency}${
+                    c.flags.length ? `, ${c.flags.length} safety flag${c.flags.length > 1 ? 's' : ''}` : ''}`}
                   onClick={() => onSelect(c.id)}
                 />
               ))}
@@ -129,6 +131,7 @@ export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeRevie
                     title={a.patient}
                     line={a.location || 'No location on file'}
                     meta={whenLabel(a.startsAt)}
+                    label={`Open appointments — ${a.patient}, ${whenLabel(a.startsAt)}`}
                     onClick={onSeeAll}
                   />
                 ))}
@@ -188,17 +191,21 @@ function Stat({ value, label, tone, sub }: { value: string; label: string; tone:
   );
 }
 
-function AttnRow({ icon, tone, title, line, meta, tag, onClick }: {
+function AttnRow({ icon, tone, title, line, meta, tag, label, onClick }: {
   icon: 'alert' | 'person' | 'video' | 'cal';
   tone: 'bad' | 'warn' | 'info';
   title: string; line: string; meta: string;
   tag?: React.ReactNode;
+  /** What opening this row does, said in full: read out, the row's own parts
+   *  arrive as fragments and the urgency is a bare word (D32). */
+  label: string;
   onClick: () => void;
 }) {
   return (
     <div
       onClick={onClick}
       role="button"
+      aria-label={label}
       tabIndex={0}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       className={s.attn}

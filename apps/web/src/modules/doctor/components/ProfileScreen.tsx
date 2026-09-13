@@ -36,7 +36,6 @@ export function ProfileScreen({ tenantName, onSelectCase }: {
         subtitle={<span className={profile.email}>{user?.email || 'sara.whitfield@example.com'}</span>}
         actions={(
           <>
-            <SignOutButton onClick={signOut} />
             <ThemeToggle />
             <NotifyButton
               notices={clinic.notices}
@@ -100,6 +99,8 @@ export function ProfileScreen({ tenantName, onSelectCase }: {
           Your password is managed by your Google account.
         </div>
       </Card>
+
+      <SignOutButton onClick={signOut} />
       </div>
     </>
   );

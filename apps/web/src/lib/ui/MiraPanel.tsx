@@ -115,18 +115,24 @@ function readImage(file: File, done: (image: string) => void) {
 }
 
 // A dock switch. `off` tints it red, the way a call UI marks a disabled input.
-function DockBtn({ off, label, onClick, children }: {
-  off: boolean; label: string; onClick: () => void; children: React.ReactNode;
+// The caption is what makes it readable: three bare circles in one 200px band
+// is three guesses, and the one that ends the consult looks like the other two
+// (D32). `label` still carries the state for a screen reader.
+function DockBtn({ off, caption, label, onClick, children }: {
+  off: boolean; caption: string; label: string; onClick: () => void; children: React.ReactNode;
 }) {
   return (
-    <div
-      {...pressProps(onClick, label)}
-      title={label}
-      className={`${s.dockBtn}${off ? ' ' + s.dockBtnOff : ''}`}
-    >
-      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-        {children}
-      </svg>
+    <div className={s.dockItem}>
+      <div
+        {...pressProps(onClick, label)}
+        title={label}
+        className={`${s.dockBtn}${off ? ' ' + s.dockBtnOff : ''}`}
+      >
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          {children}
+        </svg>
+      </div>
+      <span className={s.dockCaption} aria-hidden="true">{caption}</span>
     </div>
   );
 }
@@ -386,6 +392,7 @@ export function MiraPanel({
               <div className={`vd-glass ${s.dock}`}>
                 <DockBtn
                   off={session.speakerOff}
+                  caption="Speaker"
                   label={session.speakerOff ? 'Let Dr. Mira speak' : 'Silence Dr. Mira'}
                   onClick={() => session.setSpeakerOff(!session.speakerOff)}
                 >
@@ -397,6 +404,7 @@ export function MiraPanel({
                 </DockBtn>
                 <DockBtn
                   off={session.micOff}
+                  caption="Mic"
                   label={session.micOff ? 'Turn microphone on' : 'Turn microphone off'}
                   onClick={() => session.setMicOff(!session.micOff)}
                 >
@@ -406,15 +414,18 @@ export function MiraPanel({
                 </DockBtn>
                 {/* The camera control was removed: nothing was ever captured,
                     and a patient with a rash would tap it and wait (UX-22). */}
-                <div
-                  {...pressProps(() => { session.silence?.(); onClose(); }, 'Close Dr. Mira')}
-                  title="Close Dr. Mira"
-                  className={`${s.dockBtn} ${s.dockClose}`}
-                >
-                  {/* Closes rather than minimizes: audio stops on the way out, so
-                      nothing keeps talking behind a hidden panel. The transcript
-                      survives, so reopening resumes where it left off. */}
-                  <Icon name="x" size={20} />
+                <div className={s.dockItem}>
+                  <div
+                    {...pressProps(() => { session.silence?.(); onClose(); }, 'Close Dr. Mira')}
+                    title="Close Dr. Mira"
+                    className={`${s.dockBtn} ${s.dockClose}`}
+                  >
+                    {/* Closes rather than minimizes: audio stops on the way out, so
+                        nothing keeps talking behind a hidden panel. The transcript
+                        survives, so reopening resumes where it left off. */}
+                    <Icon name="x" size={20} />
+                  </div>
+                  <span className={s.dockCaption} aria-hidden="true">End</span>
                 </div>
               </div>
             </div>

@@ -3,19 +3,23 @@
 // section titles, and the settings card.
 import { Button } from './Button';
 import { Card } from './Card';
-import { useBreakpoint } from '../../shell/viewport';
 import s from './Profile.module.css';
 
 /** Layout classes both modules' profile screens share. */
 export const profile = s;
 
 /** Header action. Icon-only on mobile, where the identity block takes the width. */
+// Signing out is the one destructive control on the page, so it does not sit in
+// the header's utility cluster wearing the same circle as theme and
+// notifications — it is a named row at the foot of the profile, where nothing
+// is next to it to mis-tap (D32).
 export function SignOutButton({ onClick }: { onClick: () => void }) {
-  const mobile = useBreakpoint() === 'mobile';
   return (
-    <Button variant="tertiary" icon="exit" onClick={onClick} aria-label="Sign out">
-      {mobile ? undefined : 'Sign out'}
-    </Button>
+    <div className={s.signOutRow}>
+      <Button variant="tertiary" icon="exit" fullWidth onClick={onClick}>
+        Sign out
+      </Button>
+    </div>
   );
 }
 

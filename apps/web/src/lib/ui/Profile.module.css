@@ -45,3 +45,7 @@
    down from the standard subtitle: it is an identifier, not prose. */
 .email { font-size: 12px; }
 @media (min-width: 800px) { .email { font-size: 13px; } }
+
+/* The sign-out row sits apart from the last card, so it does not read as one
+   more settings row (D32). */
+.signOutRow { margin-top: var(--vd-space-5); }

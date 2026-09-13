@@ -1,7 +1,7 @@
 // One row of the review worklist. Wider and flatter than the QueueCard the
 // mobile list uses: at a desk the doctor is scanning a column of decisions, so
 // what matters is who, what, and how long is left before the 2h target.
-import { slaCountdown, waitAge, type CaseItem } from '../../../lib/core';
+import { caseRowLabel, slaCountdown, waitAge, type CaseItem } from '../../../lib/core';
 import { Card, Icon, StatusPill } from '../../../lib/ui';
 import s from './ReviewRow.module.css';
 
@@ -29,6 +29,7 @@ export function ReviewRow({ c, selected, lead, compact, onSelect }: {
       level={selected ? 3 : 2}
       selected={selected}
       onClick={onSelect}
+      aria-label={caseRowLabel(c)}
       pad="15px 18px"
     >
       <span

@@ -111,6 +111,22 @@ export function tenantDisplayName(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'AI Doctor';
 }
 
+/** What activating a queue row does, said in full. Read out, a row's own parts
+ *  arrive as disconnected fragments — a name, a phrase, a bare "urgent" — so
+ *  both the phone card and the desk row name the case, the decision waiting on
+ *  it and what is flagged, in one sentence (DESIGN-REVIEW D32). The wait is
+ *  left out: it changes every render, and a name that keeps changing is
+ *  re-announced over whatever the reader was listening to. */
+export function caseRowLabel(c: {
+  patient: string; title: string; flags: { severity: string }[];
+  rec: { urgency: string };
+}): string {
+  const concerns = c.flags.filter(f => f.severity !== 'info').length;
+  const parts = [`${c.title}`, c.rec.urgency];
+  if (concerns) parts.push(`${concerns} safety flag${concerns === 1 ? '' : 's'}`);
+  return `Open ${c.patient}'s case — ${parts.join(', ')}`;
+}
+
 /** Whether the tenant resolved to an actual hospital. `tenantDisplayName` falls
  *  back to the product name, which must never be shown in a field labelled
  *  "Hospital" — that is the two-names-for-one-service problem again (D24/D29). */

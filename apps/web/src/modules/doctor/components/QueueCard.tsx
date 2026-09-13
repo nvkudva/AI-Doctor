@@ -3,7 +3,7 @@
 // have waited. The phone used to drop the flag count and the wait, and add a
 // PENDING REVIEW pill identical on every row — the queue is pending by
 // definition, so that pill carried no information at all (DESIGN-REVIEW D9).
-import { slaCountdown, waitAge, waitTone, type CaseItem } from '../../../lib/core';
+import { caseRowLabel, slaCountdown, waitAge, waitTone, type CaseItem } from '../../../lib/core';
 import { Card, Icon, StatusPill } from '../../../lib/ui';
 import s from './QueueCard.module.css';
 
@@ -21,6 +21,7 @@ export function QueueCard({ c, selected, onSelect }: { c: CaseItem; selected?: b
       level={selected ? 3 : 2}
       selected={selected}
       onClick={onSelect}
+      aria-label={caseRowLabel(c)}
       pad={16}
     >
       <div className={s.head}>

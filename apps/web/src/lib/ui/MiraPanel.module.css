@@ -290,3 +290,13 @@
 
 /* The close control reads as the way out, not as one more toggle. */
 .dockClose { color: var(--vd-bad-fg); }
+
+/* Degraded voice: a statement, not an alarm — muted, no border, no action. */
+.voiceNotice {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-3);
+  margin-bottom: var(--vd-space-3);
+  padding: 8px 12px;
+  border-radius: var(--vd-radius-sm);
+  background: var(--vd-surface-chip);
+}

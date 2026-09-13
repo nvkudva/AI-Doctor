@@ -370,6 +370,31 @@ export function aiConsult(
   }, onToken);
 }
 
+/**
+ * Record the patient's words against a consult that is already awaiting review.
+ * Not a turn: no model call, no draft, no status change — the doctor simply
+ * sees what was added after submission.
+ */
+export async function addConsultNote(
+  consultId: string,
+  text: string,
+  channel: 'voice' | 'text' = 'text',
+): Promise<{ message_id: string }> {
+  const res = await fetch(`${functionsBase()}/ai-consult`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ consult_id: consultId, text, channel, mode: 'note' }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiError({
+      ...(data as ApiErrorShape ?? { code: 'note_failed', message: 'could not add that to your consult' }),
+      status: res.status,
+    });
+  }
+  return data as { message_id: string };
+}
+
 /** §4.2 row 20 — ask Mira / dictate an edit. */
 export function aiReview(
   args: { consultId: string; text: string; mode: 'qa' | 'revise' },

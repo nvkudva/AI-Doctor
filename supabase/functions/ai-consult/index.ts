@@ -1,5 +1,7 @@
 // §4.1 row 7 — POST /functions/v1/ai-consult
-// Request:  { consult_id, text?, audio_ref?, channel }
+// Request:  { consult_id, text?, audio_ref?, channel, mode? }
+//           mode:'note' records the patient's words against a consult already
+//           awaiting review and returns JSON, not SSE — no model turn.
 // Response: SSE `token` events, then a `done` event carrying
 //           { message_id, slots_changed[], draft_id?, status }
 // Errors:   402 quota, 409 consult not active, 503 model unavailable.
@@ -19,6 +21,9 @@ import { concludeStep, loadState, readBackText, runConclude, runPatientTurn } fr
 /** Wrap-up caps. A consult that runs past these is closed out, not abandoned. */
 const CAPS = { maxTurns: 12, maxMinutes: 8 };
 
+/** Statuses where the consult is a doctor's to move, but still the patient's to add to. */
+const NOTE_STATUSES = ['pending_review', 'needs_human'];
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -36,6 +41,27 @@ Deno.serve(async (req) => {
     if (readErr) throw fromPostgrest(readErr);
     if (!consult) throw new ApiError(403, 'forbidden', 'not your consult');
     if (consult.patient_id !== user.id) throw new ApiError(403, 'forbidden', 'not your consult');
+    // A plan already with a doctor still accepts the patient's words — as a
+    // note, not a turn. Nothing clinical moves: no model call, no draft, no
+    // status change, so the draft cannot shift under the reviewing doctor. The
+    // insert runs as service_role because the patient's own RLS insert right
+    // stays pinned to `active` (consult_messages_patient_insert).
+    if (body.mode === 'note') {
+      if (!NOTE_STATUSES.includes(consult.status)) {
+        throw new ApiError(409, 'consult_not_reviewable', `consult is ${consult.status}`);
+      }
+      const note = text.trim();
+      if (!note) throw new ApiError(400, 'text_required', 'text is required');
+      const { data: saved, error: noteErr } = await serviceClient()
+        .from('consult_messages')
+        .insert({ consult_id: consultId, sender: 'patient', channel, content: note })
+        .select('id').single();
+      if (noteErr) throw fromPostgrest(noteErr);
+      return new Response(JSON.stringify({ message_id: saved.id, mode: 'note' }), {
+        headers: { ...cors, 'content-type': 'application/json' },
+      });
+    }
+
     if (consult.status !== 'active') {
       throw new ApiError(409, 'consult_not_active', `consult is ${consult.status}`);
     }

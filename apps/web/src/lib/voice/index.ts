@@ -3,6 +3,10 @@
 // the voice-token Edge Function (§4.1 #8 / §4.2 #27) — never a provider key in
 // this bundle, which is why the direct Google Cloud STT/TTS adapter is gone.
 
+import { realtimeConfigured, remoteListenOnce, remoteSpeak, remoteStopAll } from './realtime';
+
+export { onVoiceHealth, voiceDegraded } from './realtime';
+
 export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 // Web Speech API is not in TS's DOM lib — minimal structural declarations.
@@ -25,7 +29,7 @@ export interface ListenHandle {
 }
 
 export function voiceBackend(): 'browser' | 'remote' {
-  return 'browser';
+  return realtimeConfigured() ? 'remote' : 'browser';
 }
 
 export function pickVoice(voices: SpeechSynthesisVoice[] | undefined): SpeechSynthesisVoice | undefined {
@@ -51,6 +55,14 @@ export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
   // interrupts, which used to file the same consult twice (UX-01).
   let fired = false;
   const once = { onDone: () => { if (fired) return; fired = true; opts.onDone && opts.onDone(); } };
+  // The remote server will not generate until the conversation holds a patient
+  // turn, so Mira's opening line is still spoken by the browser.
+  if (realtimeConfigured()) {
+    // The remote voice hands the line back if the server strays from it.
+    let fell: SpeakHandle | null = null;
+    const remote = remoteSpeak(text, { ...once, onFallback: () => { fell = browserSpeak(text, once); } });
+    return { cancel: () => { remote.cancel(); fell && fell.cancel(); } };
+  }
   return browserSpeak(text, once);
 }
 
@@ -78,7 +90,22 @@ export function listenOnce(opts: {
   onError?: (kind: 'denied' | 'other') => void;
   onEnd?: () => void;
 }): ListenHandle | null {
-  return browserListenOnce(opts);
+  if (!realtimeConfigured()) return browserListenOnce(opts);
+  // The remote listener may only discover the server is gone after the mic is
+  // already open, so the handle it returns is a stand-in: if it hands back, the
+  // browser's own recogniser takes the same turn and the caller never knows.
+  let inner: ListenHandle | null = null;
+  let aborted = false;
+  inner = remoteListenOnce({
+    ...opts,
+    onUnavailable: () => {
+      if (aborted) return;
+      inner = browserListenOnce(opts);
+      if (!inner) opts.onError && opts.onError('other');
+    },
+  });
+  if (!inner) return null;
+  return { abort: () => { aborted = true; inner && inner.abort(); } };
 }
 
 function browserListenOnce(opts: {
@@ -117,6 +144,7 @@ function browserListenOnce(opts: {
 }
 
 export function stopAllVoice(): void {
+  if (realtimeConfigured()) remoteStopAll();
   try {
     window.speechSynthesis.cancel();
   } catch { /* noop */ }

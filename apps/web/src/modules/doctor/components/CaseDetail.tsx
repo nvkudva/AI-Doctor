@@ -75,6 +75,16 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
             {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
           </ul>
         </Disclosure>
+        {/* Said after the plan was submitted, so the draft above was not built
+            from it — open by default: it is the one thing here the reviewer has
+            not already seen. */}
+        {(ac.addedAfter || []).length > 0 && (
+          <Disclosure title="Added after submission" defaultOpen>
+            <ul className={s.said}>
+              {(ac.addedAfter || []).map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+          </Disclosure>
+        )}
         <div className={s.assessment}>
           <b>Assessment:</b> {(ac.inferred || []).join('; ') || ac.rec.title}
         </div>

@@ -80,11 +80,27 @@
   .bar { animation: none; transform: scaleY(0.4); }
 }
 
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: var(--vd-space-2);
+}
 .status {
   composes: vd-t-footnote vd-w6 from global;
   color: var(--vd-ink-3);
   text-align: center;
-  padding-bottom: var(--vd-space-2);
+}
+.interrupt {
+  composes: vd-t-footnote vd-w7 from global;
+  min-height: 32px;
+  padding: 5px 12px;
+  border-radius: var(--vd-radius-pill);
+  border: 1px solid var(--vd-glass-border);
+  background: transparent;
+  color: var(--vd-ink-on-glass);
+  cursor: pointer;
 }
 
 .body {
@@ -118,11 +134,16 @@
 }
 .grabber { width: 36px; height: 4px; border-radius: var(--vd-radius-pill); background: var(--vd-border-strong); }
 .notesLabel { composes: vd-t-micro from global; white-space: nowrap; color: var(--vd-ink-soft); margin-top: 5px; }
+/* Bottom-anchored: a short consultation used to leave the newest turn stranded
+   at the top with a few hundred pixels of nothing above the composer (D6). */
 .notes {
   composes: vd-scroll from global;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   padding: 0 var(--vd-space-4) var(--vd-space-3);
 }
 .notesEmpty {
@@ -291,11 +312,61 @@
 /* The close control reads as the way out, not as one more toggle. */
 .dockClose { color: var(--vd-bad-fg); }
 
+
+/* She is composing: three dots in a bubble of her own, in the transcript,
+   where the reply will land. */
+.typing { display: flex; gap: 5px; align-items: center; padding: 12px 14px; }
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vd-ink-3);
+  animation: vd-typing 1.2s ease-in-out infinite;
+}
+.dot:nth-child(2) { animation-delay: 0.15s; }
+.dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes vd-typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; opacity: 0.6; }
+}
+
+/* One notice per surface, under the composer: what failed, and the one
+   action that fixes it (DESIGN-REVIEW D7). */
+.notice {
+  composes: vd-t-footnote vd-w6 from global;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--vd-space-2);
+  padding: 8px 12px;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+}
+.noticeText { flex: 1; min-width: 0; }
+.noticeAction {
+  composes: vd-t-footnote vd-w7 from global;
+  flex: none;
+  min-height: 32px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--vd-radius-sm);
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Degraded voice: a statement, not an alarm — muted, no border, no action. */
 .voiceNotice {
   composes: vd-t-footnote from global;
   color: var(--vd-ink-3);
-  margin-bottom: var(--vd-space-3);
+  margin-top: var(--vd-space-2);
   padding: 8px 12px;
   border-radius: var(--vd-radius-sm);
   background: var(--vd-surface-chip);

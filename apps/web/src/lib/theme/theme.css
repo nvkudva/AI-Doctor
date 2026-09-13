@@ -9,30 +9,35 @@
 @layer vd-base, vd-type;
 
 :root {
-  --vd-bg-app: linear-gradient(180deg, #cdb6ec 0%, #d3c2ec 38%, #d8d0ea 72%, #d5d2e4 100%);
-  --vd-bg-desk: linear-gradient(180deg, #efe9fa 0%, #e4dbf3 100%);
-  --vd-desk-scrim: rgba(255, 255, 255, 0.72);
+  /* A near-neutral ground, not an inverted dark gradient. The page was a
+     saturated ~#D9C9F5 lavender with white cards on it, which pushed secondary
+     text under 4.5:1 and made clinical data unreadable on a phone in a bright
+     clinic. Purple stays, as an accent (DESIGN-REVIEW D23). */
+  --vd-bg-app: #f6f5f8;
+  --vd-bg-desk: #f2f1f6;
+  --vd-desk-scrim: rgba(255, 255, 255, 0.82);
 
   --vd-surface-card: #ffffff;
-  --vd-surface-panel: #f4f1fc;
-  --vd-surface-chip: #f0ecfb;
-  --vd-surface-mine: #cfb0f4;
-  --vd-surface-raised: #faf8ff;
+  --vd-surface-panel: #f2f1f6;
+  --vd-surface-chip: #eeedf3;
+  --vd-surface-mine: #e4dcf7;
+  --vd-surface-raised: #ffffff;
   /* Notepad: prescriptions and ordered tests are documents, so they get a
      paper surface with its own rule lines rather than a card. */
   --vd-paper-bg: #ffffff;
-  --vd-paper-rule: rgba(30, 50, 90, 0.07);
-  --vd-paper-edge: rgba(30, 50, 90, 0.13);
-  --vd-paper-ink: #241b45;
-  --vd-paper-ink-soft: #585379;
-  --vd-case-header: #e8d5ff;
+  --vd-paper-rule: rgba(20, 18, 28, 0.07);
+  --vd-paper-edge: rgba(20, 18, 28, 0.13);
+  --vd-paper-ink: #14121c;
+  --vd-paper-ink-soft: #5b5766;
+  --vd-case-header: #f0ecfa;
 
-  --vd-ink-1: #241b45;
-  --vd-ink-2: #3a2e5c;
-  --vd-ink-3: #4a5a72;
-  --vd-ink-soft: #585379;
-  --vd-ink-4: #67628a;
-  --vd-ink-on-glass: #3d3568;
+  /* Every one of these clears 4.5:1 on both #FFFFFF and #F6F5F8. */
+  --vd-ink-1: #14121c;
+  --vd-ink-2: #2c2937;
+  --vd-ink-3: #5b5766;
+  --vd-ink-soft: #5b5766;
+  --vd-ink-4: #6b6777;
+  --vd-ink-on-glass: #2c2937;
   --vd-accent-ink: var(--vd-ink-on-glass); /* deprecated alias */
   --vd-ink-on-approve: #06231a;
 
@@ -68,8 +73,8 @@
   --vd-tag-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%);
   --vd-tag-shadow: var(--vd-glass-hi), var(--vd-elev-1);
   --vd-tag-border: 20%;
-  --vd-border: rgba(30, 50, 90, 0.1);
-  --vd-border-strong: rgba(30, 50, 90, 0.2);
+  --vd-border: #e6e4ec;
+  --vd-border-strong: #d3d0dc;
   --vd-scrim: rgba(23, 19, 51, 0.45);
   --vd-focus: #7b4de0;
   --vd-selected-ring: oklch(0.6 0.2 290 / 0.7);
@@ -82,10 +87,14 @@
   --vd-elev-4: 0 14px 34px oklch(0.45 0.12 295 / 0.3), 0 2px 8px rgba(46, 37, 71, 0.14);
   --vd-elev-5: 0 24px 60px rgba(12, 20, 60, 0.35);
 
-  --vd-orb-deep: oklch(0.6 0.19 265);
-  --vd-orb-mid: oklch(0.72 0.18 250);
-  --vd-orb-glow: oklch(0.78 0.14 200);
-  --vd-orb-warm: oklch(0.75 0.17 350);
+  /* The brand mark is one mark: the same gradient in both themes. In light it
+     used to shift from purple to blue, so the orb was a different colour
+     depending on the time of day (DESIGN-REVIEW D23). Only the shadow and the
+     ground below differ, because those describe the surface behind it. */
+  --vd-orb-deep: oklch(0.55 0.2 270);
+  --vd-orb-mid: oklch(0.68 0.2 280);
+  --vd-orb-glow: oklch(0.75 0.16 260);
+  --vd-orb-warm: oklch(0.7 0.18 340);
   --vd-orb-shadow: 0 24px 48px oklch(0.35 0.15 270 / 0.55), 0 0 38px var(--vd-orb-glow);
   --vd-shadow-cta: 0 12px 30px oklch(0.42 0.2 290 / 0.55);
   --vd-ink-on-brand: #ffffff;
@@ -301,7 +310,10 @@
   .vd-scroll::-webkit-scrollbar { width: 0; }
 
   /* Section labels: 12/8 rhythm between sections, flush when first in a surface. */
-  .vd-microlabel { margin: var(--vd-space-4) 0 var(--vd-space-3); }
+  /* On the cards' own gutter, not flush to the screen edge beside content
+     inset by 20px — which is what clipped "LDL CHOLESTEROL OVER TIME" at the
+     left edge (DESIGN-REVIEW D20). */
+  .vd-microlabel { margin: var(--vd-space-4) var(--vd-space-4) var(--vd-space-3); }
   .vd-microlabel:first-child { margin-top: 0; }
 
   :focus-visible {

@@ -46,13 +46,39 @@ export function toPanels(all: LabValue[]): LabPanel[] {
 }
 
 /** Where the marker sits on the range bar, as a percentage. */
-export function rangePosition(v: LabValue): number | null {
+/** Where a value and its reference band actually sit on a plotted track. */
+export interface RangePlot {
+  /** Marker position, 0-100 across the track. */
+  pos: number;
+  /** Reference band edges, 0-100 across the same track. */
+  lowPct: number;
+  highPct: number;
+  /** The value is off the plotted scale: the marker is capped at the edge. */
+  over: boolean;
+  under: boolean;
+}
+
+// The old track put the reference range across its middle half and printed
+// refLow/refHigh at the two *ends*, so LDL 132 on a "0 … 100" axis landed
+// inside the track at ~88% and read as in range — the picture contradicting
+// the caption below it (DESIGN-REVIEW D5). The scale is now real: the axis
+// extends half a reference span past the band, or far enough to hold the
+// value, and the band is drawn where it genuinely falls.
+export function rangePlot(v: LabValue): RangePlot | null {
   if (v.value === null || v.refLow === null || v.refHigh === null || v.refHigh <= v.refLow) return null;
   const span = v.refHigh - v.refLow;
-  // The bar shows the reference range across its middle half, so a value well
-  // outside it still lands on the bar instead of falling off the end.
-  const pct = 25 + ((v.value - v.refLow) / span) * 50;
-  return Math.max(2, Math.min(98, pct));
+  const plotMin = Math.max(0, v.refLow - span * 0.5);
+  const plotMax = Math.max(v.refHigh + span * 0.5, v.value * 1.1);
+  const scale = plotMax - plotMin;
+  const at = (n: number) => ((n - plotMin) / scale) * 100;
+  const raw = at(v.value);
+  return {
+    pos: Math.max(1.5, Math.min(98.5, raw)),
+    lowPct: at(v.refLow),
+    highPct: at(v.refHigh),
+    over: raw > 98.5,
+    under: raw < 1.5,
+  };
 }
 
 export function formatValue(v: LabValue): string {

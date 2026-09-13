@@ -53,16 +53,50 @@ export function isOpenConsult(s: ConsultStatus): boolean {
   return OPEN.includes(s);
 }
 
+// One derivation of "where has this plan got to", so the home card, the plan
+// screen and History cannot disagree about the single most consequential fact
+// in the patient app (DESIGN-REVIEW D3). Every consult status collapses onto
+// one of these; nothing else is allowed to compute it.
+export type PlanStatus = 'pending_review' | 'approved' | 'changes' | 'rejected' | 'expired';
+
+export function planStatus(s: ConsultStatus | string | undefined): PlanStatus {
+  switch (s) {
+    case 'approved': return 'approved';
+    case 'changes': return 'changes';
+    case 'rejected': return 'rejected';
+    case 'expired': case 'abandoned': return 'expired';
+    default: return 'pending_review';
+  }
+}
+
+/** The patient's own case: the row every patient-side status must be read from. */
+export function myCase(queue: CaseItem[]): CaseItem | undefined {
+  return queue.find(c => c.mine);
+}
+
 export function isReviewable(s: ConsultStatus): boolean {
   return REVIEWABLE.includes(s);
 }
 
 export function urgencyRank(c: Pick<CaseItem, 'rec'>): number {
-  return c.rec && c.rec.urgency === 'urgent' ? 0 : 1;
+  const u = c.rec?.urgency;
+  return u === 'urgent' ? 0 : u === 'soon' ? 1 : 2;
 }
 
-export function sortQueue<T extends Pick<CaseItem, 'rec' | 'submittedAt'>>(q: T[]): T[] {
-  return [...q].sort((a, b) => urgencyRank(a) - urgencyRank(b) || ((a.submittedAt || 0) - (b.submittedAt || 0)));
+/** Unresolved safety flags — 'info' is a check that passed. */
+export function concernCount(c: Pick<CaseItem, 'flags'>): number {
+  return (c.flags || []).filter(f => f.severity !== 'info').length;
+}
+
+// Safety flags first, then urgency, then the longest wait — and the caption
+// above the list says exactly this. It used to claim "urgency, then longest
+// waiting" while ranking only urgent-vs-everything, so SOON and ROUTINE tied
+// and the order read as noise the doctor could not trust (DESIGN-REVIEW D13).
+export function sortQueue<T extends Pick<CaseItem, 'rec' | 'submittedAt' | 'flags'>>(q: T[]): T[] {
+  return [...q].sort((a, b) =>
+    concernCount(b) - concernCount(a)
+    || urgencyRank(a) - urgencyRank(b)
+    || ((a.submittedAt || 0) - (b.submittedAt || 0)));
 }
 
 // Tenant parsing only — subdomain wiring lands with hosting (ARCH Phase 6).
@@ -76,8 +110,14 @@ export function resolveTenantSlug(hostname: string, search: string): string {
 
 export function tenantDisplayName(slug: string): string {
   if (slug === 'demo') return 'AI Doctor';
-  const pretty = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  return (pretty || 'AI Doctor') + ' · AI Doctor';
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'AI Doctor';
+}
+
+/** The window title. One product name, always present: the tab used to flip
+ *  between "AI Doctor" and the hospital's name as the tenant resolved, so the
+ *  service appeared to have two names (DESIGN-REVIEW D24). */
+export function windowTitle(hospital: string): string {
+  return hospital && hospital !== 'AI Doctor' ? `${hospital} · AI Doctor` : 'AI Doctor';
 }
 
 export * from './time';

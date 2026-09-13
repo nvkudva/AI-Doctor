@@ -2,8 +2,7 @@
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
 import type { Recommendation } from '../../../lib/core';
-import { Button, Card, MicroLabel, MiraPresence, Paper, PaperItem, StatusPill } from '../../../lib/ui';
-import { tints } from '../../../lib/theme';
+import { Button, Card, Icon, MicroLabel, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './RecommendationScreen.module.css';
 
@@ -38,7 +37,6 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
   const headline = approved
     ? `Dr. Whitfield reviewed your ${isRx ? 'prescription' : 'plan'} — here it is.`
     : 'Sent to Dr. Whitfield for a quick review.';
-  const kind = isRx ? tints.rx : tints.investigation;
 
   const steps: { t: string; d: string; state: 'done' | 'active' | 'todo' }[] = [
     { t: 'Consult complete', d: 'Dr. Mira prepared your plan', state: 'done' },
@@ -57,7 +55,6 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
       </div>
 
       <div className={s.hero}>
-        <MiraPresence size={mobile ? 70 : bp === 'tablet' ? 88 : 96} />
         <div className={s.heroLine}>{headline}</div>
       </div>
 
@@ -98,28 +95,42 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
 
           <Card className={s.planCard}>
             <div className={s.badges}>
-              <span className={s.badge} style={{ background: kind.bg, color: kind.fg }}>
-                {isRx ? 'Prescription' : 'Investigation'}
-              </span>
-              <span className={s.badge} style={{ background: rec.urgency === 'urgent' ? 'var(--vd-bad-bg)' : rec.urgency === 'soon' ? 'var(--vd-warn-bg)' : 'var(--vd-ok-bg)', color: rec.urgency === 'urgent' ? 'var(--vd-bad-fg)' : rec.urgency === 'soon' ? 'var(--vd-warn-fg)' : 'var(--vd-ok-fg)' }}>
-                {rec.urgency === 'urgent' ? 'Urgent' : rec.urgency === 'soon' ? 'Soon' : 'Routine'}
-              </span>
+              <StatusPill status={isRx ? 'prescription' : 'investigation'} />
+              {/* Through the one map, so routine is the neutral default here
+                  too rather than a second shade of "good" (D19). */}
+              <StatusPill status={rec.urgency} />
             </div>
             <div className={s.planTitle}>{rec.title}</div>
             <div className={s.planSummary}>{rec.summary}</div>
             {rx.length > 0 && (
-              <Paper icon="pill" title="Prescription" meta={`${rx.length} item${rx.length === 1 ? '' : 's'}`} className={s.pad}>
-                {rx.map((it, i) => (
-                  <PaperItem
-                    key={i}
-                    icon="pill"
-                    last={i === rx.length - 1}
-                    name={it.name}
-                    lead={[it.dosage, it.timing].filter(Boolean).join(' · ')}
-                    why={it.why || it.notes}
-                  />
-                ))}
-              </Paper>
+              <>
+                {/* An unsigned draft is not a prescription. Until a doctor has
+                    approved it, the doses are shown as what is *proposed* and
+                    the patient is told plainly not to start them (D3). */}
+                {!approved && (
+                  <div className={s.notActive} role="status">
+                    <b>Not yet active — do not start these medicines.</b> They become
+                    your prescription only once Dr. Whitfield has approved the plan.
+                  </div>
+                )}
+                <Paper
+                  icon="pill"
+                  title={approved ? 'Prescription' : 'Proposed medicines'}
+                  meta={`${rx.length} item${rx.length === 1 ? '' : 's'}`}
+                  className={approved ? s.pad : `${s.pad} ${s.draft}`}
+                >
+                  {rx.map((it, i) => (
+                    <PaperItem
+                      key={i}
+                      icon="pill"
+                      last={i === rx.length - 1}
+                      name={it.name}
+                      lead={[it.dosage, it.timing].filter(Boolean).join(' · ')}
+                      why={it.why || it.notes}
+                    />
+                  ))}
+                </Paper>
+              </>
             )}
             {tests.length > 0 && (
               <Paper icon="flask" title="Tests ordered" meta={`${tests.length} item${tests.length === 1 ? '' : 's'}`} className={s.pad}>
@@ -140,8 +151,11 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
             )}
             {rec.advice && (
               <div className={s.adviceBox}>
-                <div className={s.adviceLabel}>When to seek help</div>
-                <div className={s.adviceText}>{rec.advice}</div>
+                <span className={s.adviceIcon}><Icon name="alert" size={18} /></span>
+                <div>
+                  <div className={s.adviceLabel}>When to seek help</div>
+                  <div className={s.adviceText}>{rec.advice}</div>
+                </div>
               </div>
             )}
             <div className={s.safety}>

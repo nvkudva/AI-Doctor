@@ -152,3 +152,8 @@
 .chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chipRx { background: var(--vd-rx-bg); color: var(--vd-rx-fg); }
 .chipTest { background: var(--vd-inv-bg); color: var(--vd-inv-fg); }
+
+
+/* The result the panel is about, on the row, so the list answers the question
+   without a tap (DESIGN-REVIEW D26). */
+.labHeadline { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }

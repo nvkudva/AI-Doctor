@@ -1,0 +1,67 @@
+.who {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--vd-border);
+}
+.patient { composes: vd-t-title3 vd-w7 from global; color: var(--vd-ink-1); }
+.demo { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+.section { padding-top: 14px; }
+
+.label {
+  composes: vd-t-caption2 vd-w7 from global;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vd-ink-3);
+  margin-bottom: 6px;
+}
+.labelDanger { color: var(--vd-bad-fg); }
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 6px 0;
+}
+.itemName { composes: vd-t-callout vd-w6 from global; color: var(--vd-ink-1); }
+.itemDose { composes: vd-t-footnote from global; color: var(--vd-ink-2); }
+.flagText { composes: vd-t-footnote from global; color: var(--vd-ink-3); flex: 1 1 100%; }
+.empty { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
+
+/* The gate. It is a control, so it is 44 high and reads as unticked at a
+   glance — the doctor should have to mean it. */
+.accept {
+  composes: vd-t-footnote vd-w6 from global;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--vd-ink-1);
+  background: var(--vd-surface-chip);
+  border: 1px solid var(--vd-border);
+  border-radius: var(--vd-radius-md);
+  cursor: pointer;
+}
+
+.box {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  /* A square box, not the pill the radius token gives at this size: a circle
+     reads as a radio, and this is a thing you tick, not a thing you choose. */
+  border-radius: 6px;
+  border: 1.5px solid var(--vd-ink-3);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+}
+.boxOn { background: var(--vd-ok-fg); border-color: var(--vd-ok-fg); color: var(--vd-bg-app); }

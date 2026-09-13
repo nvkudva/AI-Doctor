@@ -1,6 +1,5 @@
 /* Day-3 check-in (patient-todo P1 #20). Care, not a survey. */
 .screen { display: flex; flex-direction: column; gap: var(--vd-space-4); align-items: stretch; }
-.orb { display: flex; justify-content: center; margin: var(--vd-space-4) 0; }
 .title { composes: vd-t-largeTitle from global; color: var(--vd-ink-1); text-align: center; }
 .lede {
   composes: vd-t-callout from global; color: var(--vd-ink-soft);
@@ -28,3 +27,21 @@
   background: none; border: none; cursor: pointer;
   color: var(--vd-ink-4); padding: var(--vd-space-3);
 }
+
+/* The plan being rated, named under the question (DESIGN-REVIEW D8). */
+.planName {
+  composes: vd-t-callout from global;
+  color: var(--vd-ink-3);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.plans { display: flex; flex-direction: column; gap: var(--vd-space-3); margin-bottom: var(--vd-space-4); }
+.planRow { text-align: left; cursor: pointer; }
+.planRowOn { outline: 2px solid var(--vd-focus); outline-offset: 1px; }
+.planRowTitle { composes: vd-t-callout vd-w6 from global; color: var(--vd-ink-1); }
+.planRowSub { composes: vd-t-footnote from global; color: var(--vd-ink-3); }
+
+/* Said up front, so nothing appears under the thumb after the tap. */
+.outcomes { display: flex; flex-direction: column; gap: 6px; margin-top: var(--vd-space-2); }
+.outcome { composes: vd-t-footnote from global; color: var(--vd-ink-4); }

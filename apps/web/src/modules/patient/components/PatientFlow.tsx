@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import type { CaseItem, Confidence, Recommendation } from '../../../lib/core';
-import { isOpenConsult, isReviewable } from '../../../lib/core';
+import { isOpenConsult, isReviewable, myCase, planStatus } from '../../../lib/core';
 import { speak } from '../../../lib/voice';
 import { useClinic } from '../../../store';
 import { persistLocal, restoreLocal } from '../../../lib/api';
@@ -22,7 +22,7 @@ import { CheckInSheet } from './CheckInSheet';
 import { EmptyRecommendation } from './EmptyRecommendation';
 import s from './PatientFlow.module.css';
 
-type Screen = 'home' | 'recommendation' | 'records' | 'profile' | 'labs' | 'book' | 'medicines' | 'checkin';
+type Screen = 'home' | 'recommendation' | 'records' | 'profile' | 'labs' | 'book' | 'medicines' | 'checkin' | 'plan';
 
 // The doctor's case pane shows a result as one line, not a range bar.
 function toLabRow(v: LabValue) {
@@ -51,15 +51,18 @@ function statusToReview(s: string): string {
   return s === 'approved' ? 'approved' : s === 'rejected' ? 'rejected' : s === 'changes' ? 'changes' : 'pending';
 }
 
-const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin'];
+const SCREENS: Screen[] = ['home', 'recommendation', 'records', 'profile', 'labs', 'book', 'medicines', 'checkin', 'plan'];
 const TABS: RecordsTab[] = ['history', 'labs'];
 
-type NavTab = 'home' | 'history' | 'labs' | 'profile';
+type NavTab = 'home' | 'records' | 'medicines' | 'profile';
 
+// One destination per thing, in one order, at every breakpoint. History and
+// Labs were two tabs that opened the same Records screen, so History was
+// reachable two ways and Medicines not at all (D18).
 const NAV_ITEMS: NavItem[] = [
   { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'history', label: 'History', icon: 'clock' },
-  { key: 'labs', label: 'Labs', icon: 'drop' },
+  { key: 'records', label: 'Records', icon: 'clock' },
+  { key: 'medicines', label: 'Medicines', icon: 'drop' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
 
@@ -77,7 +80,11 @@ export function PatientFlow() {
   // /patient/labs/:panel and /patient/book/:test carry their subject in the URL,
   // so a reload or a deep link lands on the same result or the same test.
   const subject = parts[3] ? decodeURIComponent(parts[3]) : '';
+  // /patient/plan/:id names the plan, so one can be bookmarked or sent to
+  // someone; /patient/recommendation stays as the id-less current plan
+  // (DESIGN-REVIEW D17).
   const screen: Screen = (SCREENS.includes(seg as Screen) ? seg : 'home') as Screen;
+  const planId = screen === 'plan' ? subject : '';
   const tabParam = params.get('tab');
   const recordsTab: RecordsTab = (TABS.includes(tabParam as RecordsTab) ? tabParam : 'history') as RecordsTab;
   const setRecordsTab = (t: RecordsTab) => {
@@ -122,6 +129,12 @@ export function PatientFlow() {
 
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [miraOpen, setMiraOpen] = useState(false);
+  // The plan screen reads the case row, not the mirrored reviewStatus: the
+  // mirror only tracked the *live* consult, so a case decided outside that
+  // window left home saying Approved and the plan saying Pending (D3).
+  // clinic.reviewStatus still answers for a consult that has no row yet.
+  const mineCase = (planId && clinic.queue.find(c => c.mine && c.id === planId)) || myCase(clinic.queue);
+  const planReviewStatus = mineCase ? planStatus(mineCase.status) : clinic.reviewStatus;
 
   // Mira is told exactly what the patient has on file — nothing more (UX-25).
   const hp = clinic.profile;
@@ -191,7 +204,8 @@ export function PatientFlow() {
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current || rec) return;
-    const mine = clinic.queue.find(c => c.mine);
+    // A /patient/plan/:id link opens that plan, not whichever is newest.
+    const mine = mineCase;
     if (!mine) return;
     restored.current = true;
     setRec(mine.rec);
@@ -281,8 +295,8 @@ export function PatientFlow() {
 
   const goTab = (t: NavTab) => {
     if (t === 'home') nav('/patient');
-    else if (t === 'profile') nav('/patient/profile');
-    else nav(`/patient/records?tab=${t}`);
+    else if (t === 'records') nav(`/patient/records?tab=${recordsTab}`);
+    else nav(`/patient/${t}`);
   };
 
   return (
@@ -291,10 +305,9 @@ export function PatientFlow() {
           History, Labs, Profile and Mira stay reachable while waiting (UX-20). */}
       <NavBar
         items={NAV_ITEMS}
-        active={screen === 'records' ? recordsTab : screen === 'home' || screen === 'profile' ? screen : ''}
+        active={screen === 'labs' ? 'records' : NAV_ITEMS.some(i => i.key === screen) ? screen : ''}
         onSelect={k => goTab(k as NavTab)}
         orb={{ label: 'Dr. Mira', voiceState: consult.status, onClick: toggleMira }}
-        railTop="profile"
       />
 
       <MiraPanel
@@ -324,14 +337,17 @@ export function PatientFlow() {
           />
         )}
         {screen === 'medicines' && (
-          <MedicinesScreen doses={clinic.doses} onTaken={clinic.setDoseTaken} />
+          <MedicinesScreen doses={clinic.doses} onTaken={clinic.setDoseTaken} onSkipped={clinic.setDoseSkipped} />
         )}
         {screen === 'checkin' && (
           clinic.checkIn
             ? <CheckInSheet
+                consultId={clinic.checkIn.consultId}
                 title={clinic.checkIn.title}
-                onAnswer={(a, followUp) => {
-                  clinic.answerCheckIn(a);
+                plan={clinic.checkIn.plan}
+                alternatives={clinic.checkIn.alternatives}
+                onAnswer={(a, followUp, id) => {
+                  clinic.answerCheckIn(a, id);
                   nav('/patient');
                   if (followUp) setTimeout(() => { setMiraOpen(true); consult.send(CHECK_IN_LINE[a]); }, 0);
                 }}
@@ -339,11 +355,11 @@ export function PatientFlow() {
               />
             : <EmptyRecommendation onHome={() => nav('/patient')} />
         )}
-        {screen === 'recommendation' && rec && (
+        {(screen === 'recommendation' || screen === 'plan') && rec && (
           <RecommendationScreen
             rec={rec}
-            reviewStatus={clinic.reviewStatus}
-            rejectReason={clinic.rejectReason}
+            reviewStatus={planReviewStatus}
+            rejectReason={mineCase?.rejectReason || clinic.rejectReason}
             allergies={hp.allergies}
             onFollowUp={openMira}
             onBack={() => nav('/patient')}
@@ -355,7 +371,7 @@ export function PatientFlow() {
             }}
           />
         )}
-        {screen === 'recommendation' && !rec && (
+        {(screen === 'recommendation' || screen === 'plan') && !rec && (
           <EmptyRecommendation onHome={() => nav('/patient')} />
         )}
         {screen === 'profile' && <ProfileScreen prescriptions={clinic.prescriptions} />}

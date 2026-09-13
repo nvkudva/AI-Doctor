@@ -3,7 +3,7 @@
 // to be worth acting on. "Same" or "worse" opens Mira with the answer already
 // said, so the patient never has to start a fresh consult to be heard.
 import { useState } from 'react';
-import { Button, Card, Icon, MiraPresence } from '../../../lib/ui';
+import { Card } from '../../../lib/ui';
 import s from './CheckInSheet.module.css';
 
 export type CheckInAnswer = 'better' | 'same' | 'worse';
@@ -20,20 +20,57 @@ const FOLLOW_UP: Record<CheckInAnswer, string> = {
   worse: 'Because it is worse, Dr. Mira will ask a few questions now and flag this to your doctor as a priority.',
 };
 
-export function CheckInSheet({ title, onAnswer, onDismiss }: {
+export function CheckInSheet({ consultId: headId, title, plan, alternatives = [], onAnswer, onDismiss }: {
+  /** The consult the sheet opened on, when the patient does not pick another. */
+  consultId: string;
   title: string;
-  onAnswer: (a: CheckInAnswer, followUp: boolean) => void;
+  /** The plan being rated, shown so the patient can see which one it is. */
+  plan: string;
+  /** Other plans also awaiting a check-in; non-empty forces a choice first. */
+  alternatives?: { id: string; title: string; plan: string }[];
+  onAnswer: (a: CheckInAnswer, followUp: boolean, consultId: string) => void;
   onDismiss: () => void;
 }) {
   const [picked, setPicked] = useState<CheckInAnswer | null>(null);
+  // With more than one plan running, the patient says which they are rating
+  // before they are offered better/same/worse — an answer attached to the
+  // wrong plan reaches the doctor as priority evidence about it (D8).
+  const plans = [{ id: 'head', title, plan }, ...alternatives];
+  const [subject, setSubject] = useState<string | null>(alternatives.length ? null : 'head');
+  const active = plans.find(p => p.id === subject);
   return (
     <div className={s.screen}>
-      <div className={s.orb}><MiraPresence size={96} /></div>
-      <div className={s.title}>How is it going with {title.toLowerCase()}?</div>
+      {active ? (
+        <>
+          <div className={s.title}>How is it going with {active.title.toLowerCase()}?</div>
+          {active.plan && <div className={s.planName}>{active.plan}</div>}
+        </>
+      ) : (
+        <div className={s.title}>Which plan would you like to update?</div>
+      )}
       <div className={s.lede}>
-        It has been a few days since your doctor approved this plan. One tap is enough.
+        It has been a few days since your doctor approved this plan.
+        Choose the one that fits.
       </div>
 
+      {plans.length > 1 && (
+        <div className={s.plans}>
+          {plans.map(p => (
+            <Card
+              key={p.id}
+              level={p.id === subject ? 3 : 1}
+              pad="12px 14px"
+              onClick={() => { setSubject(p.id); setPicked(null); }}
+              className={`${s.planRow}${p.id === subject ? ' ' + s.planRowOn : ''}`}
+            >
+              <div className={s.planRowTitle}>{p.title}</div>
+              {p.plan && <div className={s.planRowSub}>{p.plan}</div>}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {active && (
       <div className={s.choices}>
         {CHOICES.map(c => {
           const on = picked === c.key;
@@ -42,7 +79,7 @@ export function CheckInSheet({ title, onAnswer, onDismiss }: {
               key={c.key}
               level={on ? 3 : 1}
               pad="16px 18px"
-              onClick={() => setPicked(c.key)}
+              onClick={() => { setPicked(c.key); onAnswer(c.key, c.key !== 'better', subject === 'head' ? headId : subject || headId); }}
               className={`${s.choice}${on ? ' ' + s.choiceOn : ''}`}
             >
               <span className={s.badge} style={{ background: c.bg, color: c.fg }}>{c.label[0]}</span>
@@ -54,21 +91,21 @@ export function CheckInSheet({ title, onAnswer, onDismiss }: {
           );
         })}
       </div>
-
-      {picked && (
-        <Card tone="panel" bordered={false} className={s.note}>
-          <span className={s.noteIcon}><Icon name="alert" size={18} /></span>
-          <div className={s.noteText}>{FOLLOW_UP[picked]}</div>
-        </Card>
       )}
 
-      <Button
-        fullWidth
-        disabled={!picked}
-        onClick={() => picked && onAnswer(picked, picked !== 'better')}
-      >
-        Continue
-      </Button>
+      {/* What happens next, stated before the tap rather than inserted under
+          the thumb after it. The copy promised one tap and charged three, and
+          the callout pushed the CTA ~60px down mid-gesture (D25). */}
+      {active && (
+        <div className={s.outcomes}>
+          {CHOICES.map(c => (
+            <div key={c.key} className={s.outcome}>
+              <b>{c.label}:</b> {FOLLOW_UP[c.key]}
+            </div>
+          ))}
+        </div>
+      )}
+
       <button type="button" className={s.later} onClick={onDismiss}>Not now — remind me tomorrow</button>
     </div>
   );

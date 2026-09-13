@@ -2,7 +2,6 @@
 //   mobile   — horizontal glass pill fixed at the bottom, orb in the centre
 //   tablet   — 76px vertical icon rail, orb pinned at the bottom
 //   desktop  — 248px labelled sidebar, collapsible back to the icon rail
-// In either vertical form the `railTop` item floats to the top of the rail.
 import { useSyncExternalStore } from 'react';
 import { Icon, pressProps, type IconName } from './Primitives';
 import { MiraOrb, STATE_RING, type VoiceState } from './Mira';
@@ -51,23 +50,22 @@ export function useRailOffset(): number {
   return gutter + (bp === 'desktop' && !isCollapsed ? 248 : 76);
 }
 
-export function NavBar({ items, active, onSelect, orb, railTop }: {
+export function NavBar({ items, active, onSelect, orb }: {
   /** Exactly four. On mobile the first two sit left of the orb, the last two right. */
   items: NavItem[];
   active: string;
   onSelect: (key: string) => void;
   /** The centre FAB on mobile, the bottom FAB in the rail. */
   orb: { label: string; onClick: () => void; voiceState?: VoiceState };
-  /** Key of the item that leads the rail — the profile entry in both modules. */
-  railTop?: string;
 }) {
   const bp = useBreakpoint();
   const collapsed = useCollapsed();
   if (bp === 'mobile') return <BottomBar items={items} active={active} onSelect={onSelect} orb={orb} />;
   const wide = bp === 'desktop' && !collapsed;
-  const ordered = railTop
-    ? [...items].sort((a, b) => Number(b.key === railTop) - Number(a.key === railTop))
-    : items;
+  // Users build muscle memory from position. The rail used to float Profile to
+  // the top, so the same four items sat in a different order on desktop than on
+  // a phone — a guaranteed mis-click (DESIGN-REVIEW D18).
+  const ordered = items;
   return (
     <nav className={`vd-glass ${s.rail} ${wide ? s.wide : s.narrow}`} aria-label="Primary">
       {bp === 'desktop' && (
@@ -126,13 +124,19 @@ function BottomBar({ items, active, onSelect, orb }: {
       <div className={s.dockInner}>
         <nav className={`vd-glass ${s.bar}`} aria-label="Primary">
           {items.slice(0, 2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
-          <div className={s.fabGap} />
+          {/* Mira is a tab like the others: labelled, on the bar, at the same
+              target size. As a raised 62px disc she was the app's most
+              prominent control with no visible name, and she permanently
+              covered the last card on every screen (DESIGN-REVIEW D21). */}
+          <div {...pressProps(orb.onClick, orb.label)} className={s.tab}>
+            <span className={s.orbTabIcon}>
+              <VoiceAura state={orb.voiceState ?? 'idle'} />
+              <MiraOrb size={26} voiceState={orb.voiceState ?? 'idle'} />
+            </span>
+            <span className={s.tabLabel}>{orb.label}</span>
+          </div>
           {items.slice(2).map(i => <Tab key={i.key} item={i} active={active === i.key} onSelect={onSelect} />)}
         </nav>
-        <div {...pressProps(orb.onClick, orb.label)} className={s.fab}>
-          <VoiceAura state={orb.voiceState ?? 'idle'} />
-          <MiraOrb size={62} voiceState={orb.voiceState ?? 'idle'} />
-        </div>
       </div>
     </div>
   );

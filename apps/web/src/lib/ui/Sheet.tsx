@@ -75,6 +75,39 @@ export function Popover({
   );
 }
 
+// A settings row whose state is the control: a labelled switch, not a link that
+// looks like one. Use wherever a row turns something on rather than going
+// somewhere (DESIGN-REVIEW D1, D16).
+export function SwitchRow({
+  children, checked, onChange, icon, detail,
+}: {
+  children: React.ReactNode;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  icon?: IconName;
+  /** Secondary line under the label — what turning it on does. */
+  detail?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={s.row}
+    >
+      {icon && <Icon name={icon} size={18} />}
+      <span className={s.rowLabel}>
+        {children}
+        {detail && <span className={s.rowDetail}>{detail}</span>}
+      </span>
+      <span aria-hidden className={`${s.track}${checked ? ' ' + s.trackOn : ''}`}>
+        <span className={s.thumb} />
+      </span>
+    </button>
+  );
+}
+
 // A 44-high popover row. `danger` tints the label for destructive actions.
 export function MenuRow({
   children, onClick, icon, danger, detail, disabled, style,

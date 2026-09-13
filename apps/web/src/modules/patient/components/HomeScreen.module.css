@@ -26,16 +26,36 @@
     align-items: start;
   }
 }
+
+/* Not three phone columns with the bottom half of the page blank: a wide
+   reading column for what the patient is being asked to do, and a narrower
+   standing column for what they can go and look at (DESIGN-REVIEW D22). */
 @media (min-width: 1160px) {
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; }
+  .grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 340px);
+    gap: 0 32px;
+    align-content: start;
+  }
+  /* Left, in order: the check-in, today's medication, the active plan. */
+  .colMain { grid-column: 1; }
+  /* Right, as one standing panel: results, appointments, the consult entry. */
+  .colSide { grid-column: 2; }
 }
 
 .section { min-width: 0; margin-bottom: var(--vd-space-4); }
+/* A section label must not outrank the card it labels, and must sit on the
+   card's own gutter. It used to be set larger and heavier than the titles
+   beneath it, 4px off the content inset (DESIGN-REVIEW D20). */
 .sectionTitle {
-  composes: vd-t-subhead vd-w7 from global;
-  color: var(--vd-ink-1);
-  margin: var(--vd-space-3) 4px var(--vd-space-3);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vd-ink-3);
+  margin: 24px var(--vd-space-4) 8px;
 }
+.section:first-child .sectionTitle { margin-top: 0; }
 
 .row { margin-bottom: 8px; }
 .rowInner { display: flex; gap: 12px; align-items: flex-start; }
@@ -86,3 +106,16 @@
 .summaryDetail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
 
 .ctaAction { margin-top: var(--vd-space-4); margin-left: auto; display: flex; }
+
+.failed {
+  composes: vd-t-footnote from global;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--vd-radius-lg);
+  background: var(--vd-surface-card);
+  border: 1px solid var(--vd-border);
+  color: var(--vd-ink-2);
+}

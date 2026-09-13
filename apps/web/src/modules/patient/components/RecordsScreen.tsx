@@ -2,7 +2,7 @@
 // Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
 import { AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill, ThemeToggle } from '../../../lib/ui';
-import type { LabPanel } from '../../../store/labs';
+import { formatValue, type LabPanel } from '../../../store/labs';
 import { PatientNotify } from './PatientNotify';
 import { tints } from '../../../lib/theme';
 import type { UserConsult } from '../../../store';
@@ -116,7 +116,10 @@ function ConsultCard({ c }: { c: UserConsult }) {
         <div className={s.consultHead}>
           <span className={s.consultIcon}><Icon name="stethoscope" size={17} /></span>
           <div className={s.consultTitle}>{c.title}</div>
-          <span className={s.consultPill}><StatusPill status={c.status === 'Approved' ? 'approved' : c.status} /></span>
+          {/* History carries completed/cancelled consults as well as plan
+              states, so it lower-cases into the shared label map rather than
+              through planStatus, which is only about plans under review. */}
+          <span className={s.consultPill}><StatusPill status={c.status.toLowerCase()} /></span>
         </div>
         <div className={s.consultMeta}>{c.date} · Dr. Mira</div>
         <div className={s.consultNote}>{c.note}</div>
@@ -169,13 +172,17 @@ function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
   const ok = p.worst === 'normal';
   const t = ok ? tints.labOk : tints.labWarn;
   return (
+    // The flask was identical on all seven rows: 44px of horizontal space
+    // spent on nothing, pushing the text that does vary further right. The
+    // headline result takes its place, so the list answers the question the
+    // patient came with before they tap (DESIGN-REVIEW D26).
     <Card level={1} pad="13px 15px" className={s.lab} onClick={onOpen} aria-label={`Open ${p.panel}`}>
-      <span className={s.labIcon}><Icon name="flask" size={18} /></span>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div className={s.labName}>{p.panel}</div>
+        <div className={s.labHeadline}>{headline(p)}</div>
         <div className={s.labDate}>
           {new Date(p.observedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-          {' · '}{p.values.map(v => v.analyte).join(', ')}
+          {' · '}{p.values.length} value{p.values.length === 1 ? '' : 's'}
         </div>
       </div>
       <span className={`vd-tag ${s.labResult}`} style={{ background: t.bg, color: t.fg }}>
@@ -183,4 +190,12 @@ function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
       </span>
     </Card>
   );
+}
+
+
+// The value the panel is actually about: the worst one out of range, or the
+// first if everything is fine.
+function headline(p: LabPanel): string {
+  const worst = p.values.find(v => v.abnormal !== 'normal') || p.values[0];
+  return worst ? `${worst.analyte} ${formatValue(worst)}` : '';
 }

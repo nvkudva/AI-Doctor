@@ -67,3 +67,40 @@
   text-decoration: none;
 }
 .skip:focus-visible { transform: none; }
+
+/* The banner takes its 44px out of the module's own height rather than adding
+   to it: --vd-app-h is what every module and the nav rail size themselves by,
+   so shrinking it here is what keeps the banner on screen instead of scrolled
+   off the top. */
+.shellBorrowed { --vd-app-h: calc(100dvh - 44px); }
+@media (min-width: 1160px) {
+  .shellBorrowed { --vd-app-h: calc(min(900px, 100dvh) - 44px); }
+}
+
+/* Borrowed-view banner: pinned above every screen for as long as a doctor is
+   looking at the patient module, with the way back in the same place. */
+.borrowed {
+  composes: vd-t-footnote vd-w7 from global;
+  flex: 0 0 auto;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+}
+
+.borrowedBack {
+  composes: vd-t-footnote vd-w7 from global;
+  min-height: 32px;
+  padding: 6px 10px;
+  margin: -6px -10px -6px 0;
+  border: none;
+  border-radius: var(--vd-radius-sm);
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

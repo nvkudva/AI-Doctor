@@ -22,26 +22,102 @@
   width: 56px; flex: none; text-align: right; font-weight: 400;
   color: var(--vd-ink-4); padding-top: 15px;
 }
-.card { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--vd-space-4); }
+/* The attendance control drops to its own line rather than squeezing the
+   patient's name to nothing on a narrow pane. */
+.card { flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: var(--vd-space-3) var(--vd-space-4); }
 .dim { opacity: 0.6; }
 
 .kind { color: var(--vd-ink-4); display: flex; flex: none; }
-.body { flex: 1; min-width: 0; }
+/* A floor, so the row wraps the control onto its own line instead of
+   crushing the patient's name to nothing. */
+.body { flex: 1 1 150px; min-width: 150px; }
 .patient { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
 .struck { text-decoration: line-through; }
 .where { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
 
-.actions { display: flex; gap: var(--vd-space-2); flex: none; }
-.markOk, .markBad, .undo {
-  composes: vd-t-caption from global;
-  border-radius: var(--vd-radius-pill); padding: 6px 12px; cursor: pointer;
-  border: 1px solid var(--vd-border-strong); color: var(--vd-ink-2);
-  white-space: nowrap;
-}
-.markOk { border-color: var(--vd-ok-bg); color: var(--vd-ok-fg); }
-.markBad { border-color: var(--vd-bad-bg); color: var(--vd-bad-fg); }
+
 
 @media (max-width: 799px) {
   .actions { display: none; }
   .time { width: 46px; }
+}
+
+
+/* Status is a read-only fact, so it reads as text with a leading dot beside
+   the patient — never as a pill the size and shape of the two irreversible
+   controls next to it (DESIGN-REVIEW D11). */
+.statusLine {
+  composes: vd-t-caption vd-w7 from global;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vd-ink-4);
+  margin-bottom: 2px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vd-ink-4); }
+.dot_booked { background: var(--vd-info-fg); }
+.dot_completed { background: var(--vd-ok-fg); }
+.dot_no_show { background: var(--vd-bad-fg); }
+.dot_cancelled { background: var(--vd-ink-4); }
+
+/* One control, behind which the three outcomes live. */
+.markWrap { position: relative; flex: none; margin-left: auto; }
+.markBtn { min-height: 44px; }
+
+.marked {
+  composes: vd-t-caption vd-w6 from global;
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--vd-ink-3);
+}
+.undoBtn {
+  composes: vd-t-caption vd-w7 from global;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--vd-ink-1);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* A week strip above the day: seven days, their booking counts, one tap each. */
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--vd-space-2);
+  margin-bottom: var(--vd-space-4);
+}
+.weekDay {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  cursor: pointer;
+  border-radius: var(--vd-radius-md);
+  border: 1px solid var(--vd-border);
+  background: transparent;
+  color: var(--vd-ink-3);
+}
+.weekDayOn { border-color: var(--vd-brand-1); color: var(--vd-ink-1); background: var(--vd-surface-chip); }
+.weekName { composes: vd-t-caption from global; text-transform: uppercase; letter-spacing: 0.05em; }
+.weekNum { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
+.weekCount { composes: vd-t-caption from global; color: var(--vd-ink-4); }
+
+/* An empty session states the free time rather than vanishing. */
+.freeBand {
+  composes: vd-t-footnote from global;
+  color: var(--vd-ink-4);
+  padding: 18px 16px;
+  border: 1px dashed var(--vd-border-strong);
+  border-radius: var(--vd-radius-lg);
+  text-align: center;
 }

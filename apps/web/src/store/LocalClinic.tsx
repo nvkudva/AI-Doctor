@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CaseItem, ConsultStatus } from '../lib/core';
 import { persistLocal, restoreLocal, type LocalSnapshot, type ReviewDecision } from '../lib/api';
 import { Ctx } from './context';
-import { buildSchedule, pendingCheckIn } from './doses';
+import { buildSchedule, pendingCheckIn, UNDO_WINDOW } from './doses';
 import { seedDoctorSlots, seedLabValues } from './seeds';
 import { slaSweep } from './sla';
 import type { AppointmentSlot, Clinic, ClinicSeeds, ConsultDetail, HealthProfile, Notice, UserConsult, UserRx } from './types';
@@ -49,8 +49,10 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   const [appointments, setAppointments] = useState<AppointmentSlot[]>(() => [
     ...seedDoctorSlots, ...((saved?.booked as AppointmentSlot[]) || []),
   ]);
-  const [taken, setTaken] = useState<Record<string, boolean>>(() => saved?.doses || {});
+  const [taken, setTaken] = useState<Record<string, boolean | number>>(() => saved?.doses || {});
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => saved?.skipped || {});
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => saved?.checkIns || {});
+  const [justAnswered, setJustAnswered] = useState<Clinic['justAnswered']>(null);
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
   const [rejectReason, setRejectReason] = useState('');
@@ -62,7 +64,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   useEffect(() => { persistLocal({ checkIns }); }, [checkIns]);
   useEffect(() => { persistLocal({ booked: appointments.filter(a => a.id.startsWith('bk-')) }); }, [appointments]);
 
-  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
   const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
   useEffect(() => {
     persistLocal({ consultsAdd: consults.filter(c => c.user) });
@@ -83,6 +85,9 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs: seedLabValues, doses, checkIn,
     consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    // Seeded from memory: there is never a moment when these rows are unknown.
+    load: 'ready', retry: () => {},
+    justAnswered,
 
     addLiveCase: (c) => {
       setQueue(q => [c, ...q]);
@@ -174,11 +179,37 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
       startsAt, minutes: 15, location, status: 'booked',
     }]),
 
-    setDoseTaken: (id, t) => setTaken(d => ({ ...d, [id]: t })),
+    // The value is when it was recorded, so the row can say so afterwards.
+    setDoseTaken: (id, t) => {
+      setSkipped(sk => (sk[id] ? { ...sk, [id]: false } : sk));
+      setTaken(d => ({ ...d, [id]: t ? Date.now() : false }));
+    },
+    setDoseSkipped: (id, sk) => {
+      setTaken(d => (d[id] ? { ...d, [id]: false } : d));
+      setSkipped(s => ({ ...s, [id]: sk }));
+    },
 
-    answerCheckIn: (answer) => {
-      if (!checkIn) return;
-      setCheckIns(c => ({ ...c, [checkIn.consultId]: answer }));
+    undoCheckIn: (consultId) => {
+      setJustAnswered(null);
+      setCheckIns(c => {
+        const next = { ...c };
+        delete next[consultId];
+        
+        return next;
+      });
+    },
+
+    answerCheckIn: (answer, consultId) => {
+      const id = consultId || checkIn?.consultId;
+      if (!id) return;
+      // The plan actually rated, which with several running is not necessarily
+      // the one the sheet opened on.
+      const rated = id === checkIn?.consultId
+        ? checkIn
+        : checkIn?.alternatives.find(a => a.id === id);
+      setJustAnswered({ consultId: id, title: rated?.title || '', answer });
+      setTimeout(() => setJustAnswered(j => (j && j.consultId === id ? null : j)), UNDO_WINDOW);
+      setCheckIns(c => ({ ...c, [id]: answer }));
     },
 
     // Escalation is a decision like any other: the case leaves the queue and a
@@ -209,7 +240,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
         setReviewStatus('expired');
       }
     },
-  }), [queue, appointments, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason]);
+  }), [queue, appointments, doses, checkIn, justAnswered, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -31,7 +31,8 @@ export function prefetchModule(role?: Role): void {
 function RoleLanding() {
   const { user } = useAuth();
   const { search } = useLocation();
-  return <Navigate to={(user?.role === 'doctor' ? '/doctor' : '/patient') + search} replace />;
+  // Reviews is the doctor's job, so it is where a doctor lands (D18).
+  return <Navigate to={(user?.role === 'doctor' ? '/doctor/reviews' : '/patient') + search} replace />;
 }
 
 // Unknown path: land the user home, but say the destination did not exist.
@@ -60,9 +61,15 @@ export function SignedOutRoutes({ tenantName }: { tenantName: string }) {
 // review desk (another patient's record + working Approve controls), and a
 // doctor session has no patient module of its own.
 function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, viewAs } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== role) return <Navigate to={user.role === 'doctor' ? '/doctor' : '/patient'} replace />;
+  // The one exception: a doctor may borrow the patient module, but only through
+  // the explicit Patient view switch, and the banner above says so the whole
+  // time. Every other mismatch — including a stale URL — goes home.
+  const borrowed = role === 'patient' && user.role === 'doctor' && viewAs === 'patient';
+  if (user.role !== role && !borrowed) {
+    return <Navigate to={user.role === 'doctor' ? '/doctor' : '/patient'} replace />;
+  }
   return <>{children}</>;
 }
 

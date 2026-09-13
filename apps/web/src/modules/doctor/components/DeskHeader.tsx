@@ -5,7 +5,9 @@ import { useAuth } from '../../../shell/auth';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './DeskHeader.module.css';
 
-export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotifs, onCloseNotifs, onSelectCase, filter }: {
+export function DeskHeader({ title, tenantName, pendingCount, showNotifs, onToggleNotifs, onCloseNotifs, onSelectCase, filter }: {
+  /** The screen's own name. Only Home is headed by the greeting (D18). */
+  title?: string;
   tenantName: string; pendingCount: number;
   showNotifs: boolean; onToggleNotifs: () => void; onCloseNotifs: () => void;
   onSelectCase: (id: string) => void;
@@ -17,7 +19,7 @@ export function DeskHeader({ tenantName, pendingCount, showNotifs, onToggleNotif
   const mobile = useBreakpoint() === 'mobile';
   return (
     <AppHeader
-      title={greeting(user?.name || 'Dr. Sara Whitfield')}
+      title={title || greeting(user?.name || 'Dr. Sara Whitfield')}
       className={s.header}
       subtitle={mobile ? undefined : `${tenantName} · ${pendingCount} pending`}
       actions={(

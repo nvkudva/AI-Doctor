@@ -1,8 +1,9 @@
 // The doctor's book: a day on a real time axis, grouped by clinic session, with
 // free time visible between the bookings. This is the screen that used to be a
 // second copy of the review queue.
-import { useMemo, useState } from 'react';
-import { Button, Card, EmptyState, Icon, MicroLabel, StatusPill, pressProps } from '../../../lib/ui';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, EmptyState, Icon, MenuRow, MicroLabel, Popover } from '../../../lib/ui';
+import { statusPill } from '../../../lib/theme';
 import type { AppointmentSlot, SlotStatus } from '../../../store/types';
 import s from './AppointmentsScreen.module.css';
 
@@ -53,15 +54,36 @@ export function AppointmentsScreen({ appointments, onSlotStatus }: {
         {dayOffset !== 0 && <Button variant="tertiary" onClick={() => setDay(0)}>Today</Button>}
       </div>
 
-      {ofDay.length === 0 ? (
-        <EmptyState
-          icon="clock"
-          title="No appointments this day"
-          body="Escalating a case from the review queue books a slot here."
-        />
-      ) : SESSIONS.map((session) => {
+      {/* The week the day sits in. A console that can only show one day at a
+          time, with 95% of a 1440 canvas blank, is a worse tool than a paper
+          day-sheet (DESIGN-REVIEW D22). */}
+      <div className={s.week} role="tablist" aria-label="This week">
+        {Array.from({ length: 7 }, (_, i) => {
+          const at = startOfDay(Date.now()) + (i - 3) * 86400000;
+          const count = appointments.filter(a => startOfDay(a.startsAt) === at && a.status === 'booked').length;
+          const on = at === day;
+          return (
+            <button
+              key={at}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setDay(Math.round((at - startOfDay(Date.now())) / 86400000))}
+              className={`${s.weekDay}${on ? ' ' + s.weekDayOn : ''}`}
+            >
+              <span className={s.weekName}>{new Date(at).toLocaleDateString(undefined, { weekday: 'short' })}</span>
+              <span className={s.weekNum}>{new Date(at).getDate()}</span>
+              <span className={s.weekCount}>{count || '—'}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Every session is drawn, whether or not it holds anything: free time is
+          information a clinician books into, so an empty afternoon says so
+          instead of collapsing out of the page. */}
+      {SESSIONS.map((session) => {
         const rows = ofDay.filter(a => hourOf(a.startsAt) >= session.from && hourOf(a.startsAt) < session.to);
-        if (!rows.length) return null;
         return (
           <div key={session.name}>
             <div className={s.band}>
@@ -72,9 +94,9 @@ export function AppointmentsScreen({ appointments, onSlotStatus }: {
               <span className={s.bandRule} />
             </div>
             <div className={s.slots}>
-              {rows.map(a => (
-                <Slot key={a.id} a={a} onSlotStatus={onSlotStatus} />
-              ))}
+              {rows.length > 0
+                ? rows.map(a => <Slot key={a.id} a={a} onSlotStatus={onSlotStatus} />)
+                : <div className={s.freeBand}>No appointments this session — {session.to - session.from} hours free.</div>}
             </div>
           </div>
         );
@@ -83,11 +105,34 @@ export function AppointmentsScreen({ appointments, onSlotStatus }: {
   );
 }
 
+const MARK_LABEL: Record<string, string> = {
+  completed: 'Attended',
+  no_show: 'Did not attend',
+  cancelled: 'Cancelled',
+};
+
 function Slot({ a, onSlotStatus }: { a: AppointmentSlot; onSlotStatus: (id: string, status: SlotStatus) => void }) {
   // Attendance is only knowable once the slot has started; before that the
   // controls would be asking the doctor to predict the future.
   const started = a.startsAt <= Date.now();
   const canMark = a.status === 'booked' && started;
+  const [menu, setMenu] = useState(false);
+  // What was just recorded, so a mis-tap can be taken back. Marking a patient
+  // who attended as a no-show has billing and follow-up consequences and had
+  // no undo (DESIGN-REVIEW D11).
+  const [justMarked, setJustMarked] = useState<SlotStatus | null>(null);
+  useEffect(() => {
+    if (!justMarked) return;
+    const t = setTimeout(() => setJustMarked(null), 8000);
+    return () => clearTimeout(t);
+  }, [justMarked]);
+
+  const mark = (next: SlotStatus) => {
+    setMenu(false);
+    setJustMarked(next);
+    onSlotStatus(a.id, next);
+  };
+
   return (
     <div className={s.slot}>
       <div className={s.time}>{timeLabel(a.startsAt)}</div>
@@ -98,23 +143,41 @@ function Slot({ a, onSlotStatus }: { a: AppointmentSlot; onSlotStatus: (id: stri
       >
         <span className={s.kind}><Icon name={KIND_ICON[a.kind]} size={18} /></span>
         <div className={s.body}>
+          {/* Status reads as text beside the time, never as a pill shaped like
+              the irreversible controls next to it (D11). */}
+          <div className={s.statusLine}>
+            <span className={`${s.dot} ${s['dot_' + a.status] || ''}`} />
+            {statusPill[a.status]?.label || a.status}
+          </div>
           <div className={`${s.patient}${a.status === 'cancelled' ? ' ' + s.struck : ''}`}>{a.patient}</div>
           <div className={s.where}>{[a.location, `${a.minutes} min`].filter(Boolean).join(' · ')}</div>
         </div>
-        {canMark && (
-          <div className={s.actions}>
-            <span {...pressProps(() => onSlotStatus(a.id, 'completed'), 'Mark attended')} className={s.markOk}>
-              Attended
-            </span>
-            <span {...pressProps(() => onSlotStatus(a.id, 'no_show'), 'Mark no-show')} className={s.markBad}>
-              No-show
-            </span>
+        {justMarked ? (
+          <div className={s.marked} role="status">
+            Marked as {MARK_LABEL[justMarked]?.toLowerCase() || justMarked}
+            <button type="button" className={s.undoBtn} onClick={() => { setJustMarked(null); onSlotStatus(a.id, 'booked'); }}>
+              Undo
+            </button>
           </div>
-        )}
-        {a.status === 'no_show' && (
-          <span {...pressProps(() => onSlotStatus(a.id, 'booked'), 'Undo no-show')} className={s.undo}>Undo</span>
-        )}
-        <StatusPill status={a.status} />
+        ) : canMark ? (
+          <div className={s.markWrap}>
+            <Button
+              variant="secondary"
+              iconRight="chevD"
+              onClick={() => setMenu(o => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menu}
+              className={s.markBtn}
+            >
+              Mark…
+            </Button>
+            <Popover open={menu} onClose={() => setMenu(false)} label="Record attendance" align="right" width={220}>
+              <MenuRow icon="check" onClick={() => mark('completed')}>Attended</MenuRow>
+              <MenuRow icon="x" onClick={() => mark('no_show')}>Did not attend</MenuRow>
+              <MenuRow icon="x" danger onClick={() => mark('cancelled')}>Cancelled</MenuRow>
+            </Popover>
+          </div>
+        ) : null}
       </Card>
     </div>
   );

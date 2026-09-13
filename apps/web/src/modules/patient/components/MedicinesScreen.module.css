@@ -1,10 +1,18 @@
 /* Dose schedule with check-off (patient-todo P1 #18, #19). */
 .adherence { }
 .tallyRow { display: flex; align-items: baseline; gap: var(--vd-space-3); }
-.tally { composes: vd-t-largeTitle from global; color: var(--vd-ok-fg); line-height: 1; }
+/* Neutral at zero: nothing taken is not a good outcome to colour green. */
+.tally { composes: vd-t-largeTitle from global; color: var(--vd-ink-2); line-height: 1; }
+.tallyDone { color: var(--vd-ok-fg); }
 .tallyLabel { composes: vd-t-callout from global; color: var(--vd-ink-3); }
+.tallyMissed { color: var(--vd-bad-fg); font-weight: 600; }
+
 .bars { display: flex; gap: 5px; margin-top: var(--vd-space-4); }
-.bar { flex: 1; height: 7px; border-radius: var(--vd-radius-pill); }
+/* Filled for taken, hollow with a red outline for missed, empty for still to
+   come — so the meter counts what the label counts. */
+.bar { flex: 1; height: 7px; border-radius: var(--vd-radius-pill); background: var(--vd-surface-chip); }
+.barTaken { background: var(--vd-ok-fg); }
+.barMissed { background: transparent; box-shadow: inset 0 0 0 1.5px var(--vd-bad-fg); }
 .adherenceNote { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }
 
 .list { display: flex; flex-direction: column; gap: var(--vd-space-3); }
@@ -28,20 +36,24 @@
 .name { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
 .detail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
 
-.take, .late, .undo {
-  border-radius: var(--vd-radius-pill); cursor: pointer; flex: none;
-  white-space: nowrap; font-size: 13px; font-weight: 700;
-}
+/* Recording a dose is the primary act of this screen, so it is a 56px target
+   at the end of the row — not a text link, and not only on missed doses. */
 .take {
-  height: 38px; padding: 0 18px; border: none;
-  background: var(--vd-grad-primary); color: var(--vd-ink-on-brand);
+  width: 56px; height: 56px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%; cursor: pointer;
+  border: 1.5px solid var(--vd-border-strong);
+  background: transparent; color: var(--vd-ink-3);
 }
-.late {
-  height: 36px; padding: 0 14px;
-  border: 1px solid var(--vd-bad-bg); background: transparent; color: var(--vd-bad-fg);
+.takeDue { border-color: transparent; background: var(--vd-grad-primary); color: var(--vd-ink-on-brand); }
+
+/* Skip and undo live behind the overflow: neither is the daily action. */
+.moreWrap { position: relative; flex: none; }
+.more {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: var(--vd-radius-pill); cursor: pointer;
+  border: none; background: transparent; color: var(--vd-ink-4);
 }
-.undo {
-  height: 36px; padding: 0 14px;
-  border: 1px solid var(--vd-border-strong); background: transparent; color: var(--vd-ink-3);
-  font-weight: 600;
-}
+
+.stamp { composes: vd-t-caption vd-w6 from global; color: var(--vd-ink-4); margin-top: 2px; }

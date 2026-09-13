@@ -20,7 +20,7 @@ import {
 } from '../lib/api';
 import { useAuth } from '../shell/auth';
 import { Ctx } from './context';
-import { buildSchedule, pendingCheckIn } from './doses';
+import { buildSchedule, pendingCheckIn, UNDO_WINDOW } from './doses';
 import type { AppointmentSlot, Clinic, ClinicSeeds, HealthProfile, LabValue, Notice, UserConsult, UserRx } from './types';
 
 /** §4.2 row 18: the documented fallback when the channel cannot be held. */
@@ -65,10 +65,13 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   const [labs, setLabs] = useState<LabValue[]>([]);
   // No schema records a swallowed dose or a check-in answer, so both stay on
   // this device until one does (see store/doses.ts).
-  const [taken, setTaken] = useState<Record<string, boolean>>(() => restoreLocal()?.doses || {});
+  const [taken, setTaken] = useState<Record<string, boolean | number>>(() => restoreLocal()?.doses || {});
+  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => restoreLocal()?.skipped || {});
   const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
+  const [justAnswered, setJustAnswered] = useState<Clinic['justAnswered']>(null);
   const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('idle');
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
   const [rejectReason, setRejectReason] = useState('');
 
   // The draft a decision must be signed against. §4.2 rows 21–24 all take the
@@ -198,11 +201,24 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     }
   }, [uid, user?.name]);
 
+  // The first fetch decides whether the screens may speak. A failure is said
+  // out loud rather than drawn as an empty, reassuring dashboard (D4); later
+  // background refreshes keep the rows already on screen and never re-blank it.
   const refresh = useCallback(() => {
     const run = isDoctor ? refreshQueue : refreshPatient;
-    run().catch(e => console.warn('[vd] clinic refresh failed:', e));
+    run()
+      .then(() => setLoad('ready'))
+      .catch(e => {
+        console.warn('[vd] clinic refresh failed:', e);
+        setLoad(prev => (prev === 'ready' ? prev : 'error'));
+      });
     if (uid) refreshAppointments(uid, isDoctor).catch(e => console.warn('[vd] appointments failed:', e));
   }, [isDoctor, uid, refreshQueue, refreshPatient, refreshAppointments]);
+
+  const retry = useCallback(() => {
+    setLoad('loading');
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!uid) return;
@@ -243,11 +259,12 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     return () => clearInterval(t);
   }, [uid, isDoctor, queue, refresh]);
 
-  const doses = useMemo(() => buildSchedule(prescriptions, taken), [prescriptions, taken]);
+  const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
   const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
 
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
+    load, retry, justAnswered,
 
     // The consult already exists server-side — `start_consult` opened it and
     // `ai-consult` wrote the draft. All this does is show it and pull the real
@@ -355,16 +372,56 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       startsAt, minutes: 15, location, status: 'booked',
     }]),
 
-    setDoseTaken: (id, t) => setTaken(d => {
-      const next = { ...d, [id]: t };
-      persistLocal({ doses: next });
-      return next;
-    }),
+    // The value is when it was recorded, so the row can say so afterwards.
+    setDoseTaken: (id, t) => {
+      setSkipped(sk => {
+        if (!sk[id]) return sk;
+        const next = { ...sk, [id]: false };
+        persistLocal({ skipped: next });
+        return next;
+      });
+      setTaken(d => {
+        const next = { ...d, [id]: t ? Date.now() : false };
+        persistLocal({ doses: next });
+        return next;
+      });
+    },
+    setDoseSkipped: (id, sk) => {
+      setTaken(d => {
+        if (!d[id]) return d;
+        const next = { ...d, [id]: false };
+        persistLocal({ doses: next });
+        return next;
+      });
+      setSkipped(s => {
+        const next = { ...s, [id]: sk };
+        persistLocal({ skipped: next });
+        return next;
+      });
+    },
 
-    answerCheckIn: (answer) => {
-      if (!checkIn) return;
+    undoCheckIn: (consultId) => {
+      setJustAnswered(null);
       setCheckIns(c => {
-        const next = { ...c, [checkIn.consultId]: answer };
+        const next = { ...c };
+        delete next[consultId];
+        persistLocal({ checkIns: next });
+        return next;
+      });
+    },
+
+    answerCheckIn: (answer, consultId) => {
+      const id = consultId || checkIn?.consultId;
+      if (!id) return;
+      // The plan actually rated, which with several running is not necessarily
+      // the one the sheet opened on.
+      const rated = id === checkIn?.consultId
+        ? checkIn
+        : checkIn?.alternatives.find(a => a.id === id);
+      setJustAnswered({ consultId: id, title: rated?.title || '', answer });
+      setTimeout(() => setJustAnswered(j => (j && j.consultId === id ? null : j)), UNDO_WINDOW);
+      setCheckIns(c => {
+        const next = { ...c, [id]: answer };
         persistLocal({ checkIns: next });
         return next;
       });
@@ -426,7 +483,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // SLA warning, expiry and abandonment are `run_consult_timers()` on the
     // server (§4.3 row 33). The client does not sweep its own queue.
     slaTick: () => {},
-  }), [queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, uid, user?.name, refresh, refreshAppointments]);
+  }), [queue, appointments, labs, doses, checkIn, justAnswered, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

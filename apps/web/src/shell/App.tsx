@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from 'react';
 import { MiraPresence } from '../lib/ui';
-import { resolveTenantSlug, tenantDisplayName } from '../lib/core';
+import { resolveTenantSlug, tenantDisplayName, windowTitle } from '../lib/core';
 import { setDocumentTitle } from '../lib/platform';
 import { hasSupabase } from '../lib/api/env';
 import { AppShell } from './AppShell';
@@ -36,7 +36,7 @@ function GatedApp() {
     // otherwise title itself after the subdomain ("Ai Doctor 8ai").
     const fallback = tenantDisplayName(slug);
     setTenantName(fallback);
-    setDocumentTitle(fallback);
+    setDocumentTitle(windowTitle(fallback));
     if (!hasSupabase()) return;
     let live = true;
     // Imported here rather than at the top: lib/api/client pulls the Supabase
@@ -47,7 +47,7 @@ function GatedApp() {
       .then((name) => {
         if (!live || !name) return;
         setTenantName(name);
-        setDocumentTitle(name);
+        setDocumentTitle(windowTitle(name));
       })
       .catch(() => { /* the hostname guess stands */ });
     return () => { live = false; };

@@ -1,8 +1,6 @@
 // Full case view: AI consult summary, decision actions, patient side panel.
-import { useState } from 'react';
 import type { CaseItem, SafetyFlag } from '../../../lib/core';
-import { Button, Card, Disclosure, Icon, MenuRow, MicroLabel, Popover, StatusPill } from '../../../lib/ui';
-import { useBreakpoint } from '../../../shell/viewport';
+import { Button, Card, Disclosure, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
 import { tints } from '../../../lib/theme';
 import s from './CaseDetail.module.css';
 
@@ -22,18 +20,12 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
   /** Book the patient in instead of signing the plan (§4.2 row 24). */
   onEscalate: () => void;
 }) {
-  const mobile = useBreakpoint() === 'mobile';
-  const [menu, setMenu] = useState(false);
   const tests = ac.rec.items.filter(i => !(i.dosage && i.dosage.trim()));
   const rx = ac.rec.items.filter(i => !!(i.dosage && i.dosage.trim()));
-
-  const decisions = (
-    <>
-      <MenuRow icon="clock" onClick={() => { setMenu(false); onEscalate(); }}>Escalate to appointment…</MenuRow>
-      <MenuRow icon="doc" onClick={() => { setMenu(false); onEdit(); }}>Send back for changes</MenuRow>
-      <MenuRow icon="x" danger onClick={() => { setMenu(false); onDecline(); }}>Decline…</MenuRow>
-    </>
-  );
+  // A plan the validators blocked is not the doctor's to wave through: the
+  // block has to be dealt with upstream, so the control says so instead of
+  // taking the press (DESIGN-REVIEW D2).
+  const blocking = ac.flags.filter(f => f.severity === 'block');
 
   return (
     <div className={s.col}>
@@ -43,47 +35,45 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
           <div className={s.small}>{ac.demo} · {ac.meta}</div>
         </div>
         <StatusPill status={ac.status} />
-        {actionable && !mobile && (
-          <div className={`${s.decide}${staged ? ' ' + s.decideStaged : ''}`}>
-            <Button variant="approve" half="left" onClick={onApprove}>Approve &amp; send</Button>
-            <Button
-              variant="approve"
-              half="right"
-              icon="chevD"
-              width={36}
-              onClick={() => setMenu(o => !o)}
-              aria-label="More decision actions"
-              aria-haspopup="menu"
-              aria-expanded={menu}
-            />
-            <Popover open={menu} onClose={() => setMenu(false)} label="Decision actions" align="right" top={56} width={240}>
-              {decisions}
-            </Popover>
-          </div>
-        )}
       </div>
 
+      <div className={s.split}>
       <Card level={2} className={s.card}>
         <div className={s.cardHead}>
           <span className={s.kindIcon}><Icon name="stethoscope" size={17} /></span>
           <MicroLabel>AI consultation</MicroLabel>
           <StatusPill status={ac.confidence} />
         </div>
-        <div className={s.summary}>{ac.summary}</div>
-        <Disclosure title="What the patient said" defaultOpen={false}>
-          <ul className={s.said}>
-            {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
-          </ul>
-        </Disclosure>
-        {/* Said after the plan was submitted, so the draft above was not built
-            from it — open by default: it is the one thing here the reviewer has
-            not already seen. */}
+        {/* The source above the conclusion, and open. Hiding what the patient
+            reported while highlighting what the AI concluded from it trains
+            the reviewer to rubber-stamp (DESIGN-REVIEW D10). */}
+        <MicroLabel>What the patient reported</MicroLabel>
+        {ac.stated.length > 0 ? (
+          <>
+            <ul className={s.said}>
+              {ac.stated.map((line, i) => <li key={i}>{line}</li>)}
+            </ul>
+            <Disclosure title="How Dr. Mira summarised it" defaultOpen={false}>
+              <div className={s.summary}>{ac.summary}</div>
+            </Disclosure>
+          </>
+        ) : (
+          // No verbatim account on this consult: the summary is the only
+          // record of what the patient said, so it is not hidden behind a
+          // disclosure the doctor has to know to open.
+          <div className={s.summary}>{ac.summary}</div>
+        )}
+        {/* Said after the plan was submitted, so the draft below was not built
+            from it. Shown with the rest of the patient's own account, and open
+            for the same reason: it is the one thing here the reviewer has not
+            already seen. */}
         {(ac.addedAfter || []).length > 0 && (
-          <Disclosure title="Added after submission" defaultOpen>
+          <>
+            <MicroLabel>Added after submission</MicroLabel>
             <ul className={s.said}>
               {(ac.addedAfter || []).map((line, i) => <li key={i}>{line}</li>)}
             </ul>
-          </Disclosure>
+          </>
         )}
         <div className={s.assessment}>
           <b>Assessment:</b> {(ac.inferred || []).join('; ') || ac.rec.title}
@@ -120,32 +110,37 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
       </Card>
 
       {!asideInPanel && <PatientPanel ac={ac} />}
+      </div>
 
-      {actionable && mobile && (
-        <div className={`vd-glass ${s.dock}${staged ? ' ' + s.decideStaged : ''}`}>
-          <Button variant="approve" onClick={onApprove}>Approve &amp; send</Button>
-          <div className={s.dockMenu}>
-            <button
-              type="button"
-              onClick={() => setMenu(o => !o)}
-              aria-label="More decision actions"
-              aria-haspopup="menu"
-              aria-expanded={menu}
-              className={s.dockMore}
+      {actionable && (
+        // Last in the column on purpose: the decision sits after the tests, the
+        // advice and the safety checks, not above them. It sticks to the foot
+        // of the pane once it has been reached, so it stays in hand while the
+        // doctor re-reads, but it cannot be pressed before the plan is passed.
+        <div className={`vd-glass ${s.decide}${staged ? ' ' + s.decideStaged : ''}`}>
+          {blocking.length > 0 && (
+            <div className={s.blocked} role="status">
+              <Icon name="alert" size={15} />
+              Cannot be approved — {blocking.map(f => f.code.replace(/_/g, ' ')).join(', ')}.
+            </div>
+          )}
+          <div className={s.decideRow}>
+            <Button variant="secondary" onClick={onEdit} className={s.decideBtn}>Request changes</Button>
+            <Button variant="secondary" onClick={onDecline} className={`${s.decideBtn} ${s.decideDecline}`}>
+              Decline
+            </Button>
+            <Button
+              variant="approve"
+              disabled={blocking.length > 0}
+              onClick={onApprove}
+              className={`${s.decideBtn} ${s.decideApprove}`}
             >
-              <Icon name="chevD" size={20} />
-            </button>
-            <Popover
-              open={menu}
-              onClose={() => setMenu(false)}
-              label="Decision actions"
-              align="right"
-              width={240}
-              style={{ top: 'auto', bottom: 52 }}
-            >
-              {decisions}
-            </Popover>
+              Approve &amp; send
+            </Button>
           </div>
+          <Button variant="tertiary" icon="clock" onClick={onEscalate} className={s.decideAlt}>
+            Book an appointment instead
+          </Button>
         </div>
       )}
     </div>

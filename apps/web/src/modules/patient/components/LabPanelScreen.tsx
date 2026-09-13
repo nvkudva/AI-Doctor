@@ -2,7 +2,7 @@
 // honest sentence about where it sits, and the readings before it. Nothing here
 // diagnoses — it says what was measured and defers to the doctor for the rest.
 import { Button, Card, MicroLabel } from '../../../lib/ui';
-import { explain, formatValue, rangeLabel, rangePosition, trendNote, type LabPanel } from '../../../store/labs';
+import { explain, formatValue, rangeLabel, rangePlot, trendNote, type LabPanel } from '../../../store/labs';
 import type { LabValue } from '../../../store/types';
 import s from './LabPanelScreen.module.css';
 
@@ -82,7 +82,7 @@ export function LabPanelScreen({ panel, doctorNote, onBack }: {
 }
 
 function ValueRow({ v, history }: { v: LabValue; history: LabValue[] }) {
-  const pos = rangePosition(v);
+  const plot = rangePlot(v);
   const tone = TONE[v.abnormal];
   const trend = trendNote(history);
   return (
@@ -91,16 +91,25 @@ function ValueRow({ v, history }: { v: LabValue; history: LabValue[] }) {
         <div className={s.analyte}>{v.analyte}</div>
         <div className={s.reading} style={{ color: tone.fg }}>{formatValue(v)}</div>
       </div>
-      {pos !== null ? (
+      {plot ? (
         <>
-          <div className={s.bar}>
-            <span className={s.marker} style={{ left: `${pos}%` }} />
+          {/* Three zones at their true positions: below the band, the band
+              itself, above it. A high value now sits visibly past the green. */}
+          <div
+            className={s.bar}
+            style={{ '--lo': `${plot.lowPct}%`, '--hi': `${plot.highPct}%` } as React.CSSProperties}
+          >
+            <span className={s.band} />
+            <span
+              className={plot.over ? `${s.marker} ${s.markerOver}` : plot.under ? `${s.marker} ${s.markerUnder}` : s.marker}
+              style={{ left: `${plot.pos}%` }}
+            />
           </div>
           <div className={s.scale}>
-            <span>{v.refLow}</span>
-            <span>normal range</span>
-            <span>{v.refHigh}</span>
+            <span className={s.tick} style={{ left: `${plot.lowPct}%` }}>{v.refLow}</span>
+            <span className={s.tick} style={{ left: `${plot.highPct}%` }}>{v.refHigh}</span>
           </div>
+          <div className={s.scaleNote}>Normal {v.refLow}–{v.refHigh}{v.unit ? ` ${v.unit}` : ''}</div>
         </>
       ) : (
         <div className={s.noRange}>{rangeLabel(v)}</div>

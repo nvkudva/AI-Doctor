@@ -1,5 +1,6 @@
 // Login module: Google / demo sign-in.
 // One column on mobile; brand column + sign-in card at ≥800 (DESIGN §10.9).
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Card, Icon, MiraPresence } from '../../lib/ui';
 import { useAuth, type Role } from '../../shell/auth';
@@ -17,9 +18,21 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
   const nav = useNavigate();
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
+  // A dead click is the worst thing the first screen can do, so the tile shows
+  // that it was pressed, and says so if it fails (DESIGN-REVIEW D24).
+  const [pending, setPending] = useState<Role | null>(null);
+  const [failed, setFailed] = useState(false);
   const demo = (role: Role) => {
-    signInDemo(role);
-    nav(role === 'doctor' ? '/doctor' : '/patient');
+    setFailed(false);
+    setPending(role);
+    try {
+      signInDemo(role);
+      nav(role === 'doctor' ? '/doctor/reviews' : '/patient');
+    } catch {
+      setFailed(true);
+    } finally {
+      setPending(null);
+    }
   };
 
   const google = async () => {
@@ -79,26 +92,61 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
           </div>
 
           <div className={s.demos}>
-            <DemoCard onClick={() => demo('patient')} label="Patient" who="Alex Kumar" />
-            <DemoCard onClick={() => demo('doctor')} label="Doctor" who="Dr. Whitfield" />
+            <DemoCard
+              onClick={() => demo('patient')}
+              label="Patient"
+              who="Alex Kumar"
+              busy={pending === 'patient'}
+              disabled={!!pending}
+            />
+            <DemoCard
+              onClick={() => demo('doctor')}
+              label="Doctor"
+              who="Dr. Whitfield"
+              busy={pending === 'doctor'}
+              disabled={!!pending}
+            />
           </div>
+
+          {failed && (
+            <div role="alert" className={s.error}>Couldn’t sign in. Try again.</div>
+          )}
         </Card>
+
+        <div className={s.legal}>
+          <a href="/terms">Terms</a>
+          <span aria-hidden>·</span>
+          <a href="/privacy">Privacy</a>
+          <span aria-hidden>·</span>
+          <a href="/help">Trouble signing in?</a>
+        </div>
       </div>
     </div>
   );
 }
 
-function DemoCard({ onClick, label, who }: { onClick: () => void; label: string; who: string }) {
+// A real <button> with a real name: a screen reader used to announce two
+// unlabelled buttons here.
+function DemoCard({ onClick, label, who, busy, disabled }: {
+  onClick: () => void; label: string; who: string; busy?: boolean; disabled?: boolean;
+}) {
   return (
-    <Card
+    <button
+      type="button"
       onClick={onClick}
-      pad="14px 10px"
-      className={s.demoCard}
+      disabled={disabled}
+      aria-busy={busy || undefined}
+      aria-label={`Sign in as ${who}, ${label.toLowerCase()}`}
+      className={`${s.demoCard}${disabled ? ' ' + s.demoCardOff : ''}`}
     >
-      <span className={s.demoIcon}><Icon name="person" size={22} /></span>
-      <span className={s.demoLabel}>{who}</span>
+      {busy ? (
+        <span className={s.spinner} aria-hidden />
+      ) : (
+        <span className={s.demoIcon}><Icon name="person" size={22} /></span>
+      )}
+      <span className={s.demoLabel}>{busy ? 'Signing in…' : who}</span>
       <span className={s.demoWho}>{label}</span>
-    </Card>
+    </button>
   );
 }
 

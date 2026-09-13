@@ -12,7 +12,8 @@ import { DeskHeader } from './components/DeskHeader';
 import { QueueCard } from './components/QueueCard';
 import { ReviewRow } from './components/ReviewRow';
 import { AppointmentsScreen } from './components/AppointmentsScreen';
-import { CaseDetail, PatientPanel } from './components/CaseDetail';
+import { CaseDetail } from './components/CaseDetail';
+import { ApproveSheet } from './components/ApproveSheet';
 import { DeclineSheet } from './components/DeclineSheet';
 import { DoctorHome } from './components/DoctorHome';
 import { ProfileScreen } from './components/ProfileScreen';
@@ -21,11 +22,12 @@ import s from './DoctorApp.module.css';
 type Filter = 'all' | 'urgent' | 'breached';
 type DeskTab = 'home' | 'appointments' | 'reviews';
 
-// Home · Appointments · [Mira] · Reviews · Profile (DESIGN §10.8).
+// Reviews first, in this order at every breakpoint: the desk rail used to put
+// Profile first and Reviews last, burying the doctor's actual job (D18).
 const NAV_ITEMS: NavItem[] = [
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'appointments', label: 'Appointments', icon: 'clock' },
   { key: 'reviews', label: 'Reviews', icon: 'doc' },
+  { key: 'appointments', label: 'Appointments', icon: 'clock' },
+  { key: 'home', label: 'Home', icon: 'home' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
 
@@ -71,6 +73,10 @@ function Desk({ tenantName }: { tenantName: string }) {
     'Needs an in-person examination — please show this consult at the hospital front desk.',
   );
   const [declineFor, setDeclineFor] = useState<string | null>(null);
+  // Approving is a two-step signature, never a tap: the sheet restates what is
+  // being signed and the acceptance has to be given each time (D2).
+  const [approveFor, setApproveFor] = useState<string | null>(null);
+  const [accepted, setAccepted] = useState(false);
   // What was just sent, to whom — the most repeated moment in the desk (UX-24).
   const [sent, setSent] = useState<{ text: string; nextId?: string } | null>(null);
   useEffect(() => {
@@ -101,6 +107,7 @@ function Desk({ tenantName }: { tenantName: string }) {
   const pendingCount = reviewable.length;
   const breachedCount = reviewable.filter(c => c.submittedAt && slaCountdown(c.submittedAt).breached).length;
   const urgentCount = reviewable.filter(c => c.rec.urgency === 'urgent').length;
+  const isBreached = (c: CaseItem) => !!c.submittedAt && slaCountdown(c.submittedAt).breached;
   const filtered = visible.length !== reviewable.length;
   const queueLabel = `Awaiting a decision · ${pendingCount}`;
   const counts: Record<Filter, number> = { all: pendingCount, urgent: urgentCount, breached: breachedCount };
@@ -123,16 +130,23 @@ function Desk({ tenantName }: { tenantName: string }) {
     review.stop();
     nav(tabPath(tab));
   };
+  const approveCase = approveFor ? queue.find(c => c.id === approveFor) : undefined;
   const isActionable = (c?: CaseItem) => !!c && isReviewable(c.status);
   const announce = (id: string, text: string) => {
     const rest = queue.filter(c => c.id !== id && isReviewable(c.status));
     setSent({ text, nextId: rest[0]?.id });
+  };
+  const askApprove = (id: string) => {
+    setAccepted(false);
+    setApproveFor(id);
   };
   const approveId = (id: string) => {
     const c = queue.find(x => x.id === id);
     review.stop();
     clinic.decide(id, 'approved');
     announce(id, `Approved and sent to ${c?.patient || 'the patient'}.`);
+    setApproveFor(null);
+    setAccepted(false);
   };
   const confirmDecline = () => {
     if (!declineFor) return;
@@ -196,11 +210,11 @@ function Desk({ tenantName }: { tenantName: string }) {
           nav(k === 'profile' ? '/doctor/profile' : tabPath(k as DeskTab));
         }}
         orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: toggleMira }}
-        railTop="profile"
       />
       <div className={s.column}>
       {onProfile ? <ProfileScreen onSelectCase={selectCase} /> : <>
       <DeskHeader
+        title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : undefined}
         tenantName={tenantName}
         pendingCount={pendingCount}
         showNotifs={showNotifs}
@@ -238,17 +252,34 @@ function Desk({ tenantName }: { tenantName: string }) {
                   {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} counts={counts} />}
                   <div className={s.queueHead}>
                     <MicroLabel>{queueLabel}</MicroLabel>
-                    <span className={s.queueSort}>urgency, then longest waiting</span>
+                    <span className={s.queueSort}>safety flags, then urgency, then longest waiting</span>
                   </div>
-                  {breachedCount > 0 && (
-                    <div className={s.breachBanner} role="status">
-                      <Icon name="alert" size={16} />
-                      {breachedCount === 1 ? '1 case has' : `${breachedCount} cases have`} passed the 2-hour review target.
-                    </div>
-                  )}
-                  {visible.map(c => (
-                    <ReviewRow key={c.id} c={c} selected={c.id === paneCase?.id} onSelect={() => selectCase(c.id)} />
-                  ))}
+                  {/* Two groups instead of a banner and six identically red
+                      rows: the heading carries the count, and only the case at
+                      the top of Breached gets the red treatment (D13). */}
+                  {(['breached', 'ontarget'] as const).map(group => {
+                    const rows = visible.filter(c => isBreached(c) === (group === 'breached'));
+                    if (rows.length === 0) return null;
+                    return (
+                      <div key={group}>
+                        <div className={s.queueGroup}>
+                          {group === 'breached'
+                            ? `Breached · ${rows.length}`
+                            : `Within target · ${rows.length}`}
+                        </div>
+                        {rows.map((c, i) => (
+                          <ReviewRow
+                            key={c.id}
+                            c={c}
+                            lead={group === 'breached' && i === 0}
+                            compact={split}
+                            selected={c.id === paneCase?.id}
+                            onSelect={() => selectCase(c.id)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                   {visible.length === 0 && (
                     <div className={s.queueEmpty}>
                       {filtered && reviewable.length > 0 ? 'No cases match this filter.' : 'Nothing awaiting a decision.'}
@@ -273,9 +304,9 @@ function Desk({ tenantName }: { tenantName: string }) {
                 <CaseDetail
                   ac={paneCase}
                   actionable={isActionable(paneCase)}
-                  asideInPanel={bp === 'desktop'}
+                  asideInPanel={false}
                   staged={review.approvalStaged}
-                  onApprove={() => approveId(paneCase.id)}
+                  onApprove={() => askApprove(paneCase.id)}
                   onDecline={() => askDecline(paneCase.id)}
                   onEdit={() => clinic.decide(paneCase.id, 'changes')}
                   onEscalate={() => escalate(paneCase.id)}
@@ -284,15 +315,21 @@ function Desk({ tenantName }: { tenantName: string }) {
             </section>
           )}
 
-          {split && (
-            <aside className={s.side} aria-label="Patient">
-              {paneCase && <PatientPanel ac={paneCase} />}
-            </aside>
-          )}
         </div>
       </div>
       </>}
       </div>
+
+      {approveCase && (
+        <ApproveSheet
+          ac={approveCase}
+          open
+          accepted={accepted}
+          onAccept={setAccepted}
+          onCancel={() => { setApproveFor(null); setAccepted(false); }}
+          onConfirm={() => approveId(approveCase.id)}
+        />
+      )}
 
       {declineFor && (
         <DeclineSheet

@@ -164,6 +164,14 @@ export function MiraPanel({
   const notesRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [, tick] = useState(0);
+  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
+  useEffect(() => {
+    const on = () => setOffline(false);
+    const off = () => setOffline(true);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
 
   // Relative timestamps stay fresh while the panel is open.
   useEffect(() => {
@@ -206,10 +214,14 @@ export function MiraPanel({
     setInput('');
   };
 
+  // The chip must be true: a failed turn is not a live session, and neither is
+  // one with no network behind it (D7).
+  const connection = offline ? 'Offline' : session.failed ? 'Reconnecting…' : session.status === 'idle' ? 'Idle' : 'Live';
+
   const statusLine =
     session.status === 'listening' ? 'Listening — speak naturally…'
       : session.status === 'thinking' ? 'Thinking…'
-        : session.status === 'speaking' ? 'Dr. Mira is speaking — tap the wave to interrupt'
+        : session.status === 'speaking' ? 'Dr. Mira is speaking'
           // Idle needs no prompt; the waveform and composer speak for themselves.
           : '';
 
@@ -226,8 +238,8 @@ export function MiraPanel({
         <Card className={s.surface}>
           <div className={s.title}>
             <span className={s.titleName}>Dr. Mira · </span>
-            <span className={`${s.titleState}${session.status === 'idle' ? ' ' + s.titleIdle : ''}`}>
-              {session.status === 'idle' ? 'Idle' : 'Live'}
+            <span className={`${s.titleState}${connection === 'Live' ? '' : ' ' + s.titleIdle}`}>
+              {connection}
             </span>
           </div>
 
@@ -239,35 +251,24 @@ export function MiraPanel({
             {/* Only rendered when there is something to say, so the wave sits
                 straight on top of the notes. */}
             {statusLine && (
-              <div aria-live="polite" className={s.status}>
-                {statusLine}
+              <div className={s.statusRow}>
+                <span aria-live="polite" className={s.status}>{statusLine}</span>
+                {/* "Tap the wave" was the only way to stop her, and nothing on
+                    screen said so. Interrupting is a button (D6). */}
+                {session.status === 'speaking' && (
+                  <button type="button" onClick={session.orbTap} className={s.interrupt}>
+                    Interrupt
+                  </button>
+                )}
               </div>
             )}
           </div>
 
           <div className={s.body}>
-            {session.voiceOffline && !session.micDenied && (
-              // One quiet line, no action: the consult works exactly as before,
-              // only the voice is the browser's rather than Mira's own.
-              <div className={s.voiceNotice} role="status">
-                Mira’s natural voice is unavailable — using your browser’s voice. The consult works as normal.
-              </div>
-            )}
-            {session.micDenied && (
-              <Card level={1} pad="12px 14px" className={s.micCard}>
-                <div className={s.micTitle}>Microphone is blocked</div>
-                <div className={s.micBody}>Allow mic access to talk — or keep typing, that works fully.</div>
-                <div className={s.micActions}>
-                  <Button variant="secondary" fullWidth onClick={() => { session.clearMicDenied?.(); session.orbTap(); }}>Try again</Button>
-                  <Button variant="tertiary" fullWidth onClick={() => session.clearMicDenied?.()}>Keep typing</Button>
-                </div>
-              </Card>
-            )}
-
             <Card tone="panel" bordered={false} className={s.notesCard}>
               <div className={s.notesHead}>
                 <div className={s.grabber} />
-                <span className={s.notesLabel}>Consultation notes</span>
+                <span className={s.notesLabel}>Transcript</span>
               </div>
               <div ref={notesRef} className={s.notes}>
                 {session.messages.length === 0 && (
@@ -299,15 +300,15 @@ export function MiraPanel({
                     </div>
                   );
                 })}
+                {session.status === 'thinking' && (
+                  <div className={s.turn} aria-label="Dr. Mira is replying">
+                    <div className={`${s.bubble} ${s.typing}`}>
+                      <span className={s.dot} /><span className={s.dot} /><span className={s.dot} />
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
-
-            {session.failed && (
-              <div className={s.failed}>
-                <div className={s.failedText}>That didn’t go through</div>
-                <Button variant="secondary" onClick={() => session.retry?.()}>Try again</Button>
-              </div>
-            )}
 
             {session.suggestions.length > 0 && (
               <div className={s.pills}>
@@ -359,6 +360,35 @@ export function MiraPanel({
                 <Icon name="send" size={18} />
               </div>
             </div>
+
+            {/* One inline notice per surface, under the composer, saying what
+                failed and offering the one action that fixes it (D7). The mic
+                notice is a line, not a card with two competing Try agains. */}
+            {session.failed ? (
+              <div className={s.notice} role="status">
+                <Icon name="alert" size={15} />
+                <span className={s.noticeText}>Your message didn’t send.</span>
+                <button type="button" className={s.noticeAction} onClick={() => session.retry?.()}>Resend</button>
+              </div>
+            ) : session.micDenied ? (
+              <div className={s.notice} role="status">
+                <Icon name="alert" size={15} />
+                <span className={s.noticeText}>Mic blocked — typing works.</span>
+                <button
+                  type="button"
+                  className={s.noticeAction}
+                  onClick={() => { session.clearMicDenied?.(); session.orbTap(); }}
+                >
+                  Fix
+                </button>
+              </div>
+            ) : session.voiceOffline ? (
+              // Not a failure and nothing to act on, so it takes the slot only
+              // when nothing has actually gone wrong, and takes the muted style.
+              <div className={s.voiceNotice} role="status">
+                Mira’s natural voice is unavailable — using your browser’s voice. The consult works as normal.
+              </div>
+            ) : null}
 
             <div className={s.dockRow}>
               <div className={`vd-glass ${s.dock}`}>

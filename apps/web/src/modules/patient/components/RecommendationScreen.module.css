@@ -6,7 +6,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 20px 20px 34px;
+  padding: 20px 20px calc(110px + env(safe-area-inset-bottom));
 }
 @media (min-width: 800px) {
   .screen { max-width: 980px; margin: 0 auto; width: 100%; padding: 24px 28px 34px; }
@@ -84,31 +84,37 @@
 @media (min-width: 800px) { .planTitle { font-size: 17px; } }
 .planSummary { composes: read; color: var(--vd-ink-3); margin-bottom: 12px; max-width: 68ch; }
 
+/* "When to seek help" is the most urgent block on the plan; it used to be the
+   calmest colour on the screen. It is `critical` now (DESIGN-REVIEW D19). */
 .adviceBox {
-  background: var(--vd-advice-bg);
+  display: flex;
+  gap: 10px;
+  background: var(--vd-bad-bg);
+  border-left: 3px solid var(--vd-bad-fg);
   border-radius: var(--vd-radius-sm);
   padding: 12px 15px;
   margin-top: 4px;
 }
+.adviceIcon { flex: none; color: var(--vd-bad-fg); margin-top: 1px; }
 .adviceLabel {
   composes: vd-t-micro from global;
   letter-spacing: 0.08em;
-  color: var(--vd-advice-fg);
+  color: var(--vd-bad-fg);
   margin-bottom: 5px;
 }
 .adviceText { composes: read; max-width: 68ch; }
 
+/* Reassurance is informational, not a confirmed-good clinical state: it does
+   not get a green card competing with the approval badge above it. */
 .safety {
   display: flex;
   align-items: center;
   gap: 9px;
-  background: var(--vd-safety-bg);
-  border-radius: var(--vd-radius-sm);
-  padding: 11px 14px;
+  padding: 11px 0 0;
   margin-top: 10px;
 }
-.safetyIcon { flex: none; color: var(--vd-safety-fg); }
-.safetyText { composes: vd-t-footnote vd-w6 from global; color: var(--vd-safety-fg); }
+.safetyIcon { flex: none; color: var(--vd-ink-4); }
+.safetyText { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
 
 .sideCard.sideCard { --card-pad: 16px; margin-top: 16px; }
 @media (min-width: 800px) { .sideCard.sideCard { --card-pad: 18px; margin-top: 0; } }
@@ -181,3 +187,15 @@
 
 /* Notepads sit inside the plan card with their own breathing room. */
 .pad { margin-top: var(--vd-space-5); }
+
+/* An unapproved plan states its own inertness above the doses, and the card
+   below it is visibly a draft rather than a prescription (DESIGN-REVIEW D3). */
+.notActive {
+  composes: vd-t-footnote from global;
+  margin-top: var(--vd-space-4);
+  padding: 12px 14px;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-warn-bg);
+  color: var(--vd-warn-fg);
+}
+.draft { opacity: 0.82; border-style: dashed; }

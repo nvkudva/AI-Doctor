@@ -46,7 +46,6 @@
 .small { composes: vd-t-footnote from global; color: var(--vd-ink-soft); }
 @media (min-width: 800px) { .small { font-size: 13px; } }
 
-.decide { position: relative; display: flex; gap: 2px; flex: none; }
 
 .card { display: flex; flex-direction: column; }
 .cardHead { display: flex; gap: var(--vd-space-3); align-items: center; }
@@ -54,12 +53,13 @@
 .summary { composes: read; margin-bottom: var(--vd-space-3); }
 .said { composes: read; margin: 0; padding-left: 18px; }
 
+/* The AI's conclusion, same type size as the patient's words and no filled
+   background: it is one input to the decision, not the decision (D10). */
 .assessment {
   composes: read;
-  background: var(--vd-assessment-bg);
-  border: 1px solid var(--vd-assessment-bd);
-  border-radius: var(--vd-radius-sm);
-  padding: var(--vd-space-4);
+  border-left: 3px solid var(--vd-assessment-bd);
+  border-radius: 0;
+  padding: var(--vd-space-2) 0 var(--vd-space-2) var(--vd-space-4);
 }
 
 .mini {
@@ -77,34 +77,43 @@
 .audit { composes: small; color: var(--vd-ink-3); margin-top: var(--vd-space-3); }
 .declined { composes: read; color: var(--vd-bad-fg); margin-top: var(--vd-space-3); }
 
-.dock {
-  position: fixed;
-  left: var(--vd-space-5);
-  right: var(--vd-space-5);
-  z-index: 6;
-  /* Clears the nav bar (62px) plus the Mira FAB, which overhangs it by 30px —
-     78px let the orb sit on top of "Approve & send" and swallow taps (QA-03). */
+/* The decision bar. Last in the column, so it is reached rather than met, and
+   sticky from there so it stays in hand while the doctor re-reads. Declining
+   and requesting changes are the same size and weight as approving: the shape
+   of the row must not argue for one outcome (DESIGN-REVIEW D2). */
+.decide {
+  position: sticky;
   bottom: calc(116px + env(safe-area-inset-bottom));
-  height: 60px;
-  border-radius: var(--vd-radius-2xl);
-  padding: 0 var(--vd-space-4);
+  z-index: 6;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   gap: var(--vd-space-3);
+  padding: var(--vd-space-4);
+  border-radius: var(--vd-radius-2xl);
 }
-.dockMenu { position: relative; flex: none; }
-.dockMore {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--vd-radius-pill);
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--vd-glass-border);
-  color: var(--vd-ink-on-glass);
+@media (min-width: 800px) { .decide { bottom: var(--vd-space-4); } }
+
+.decideRow { display: flex; gap: var(--vd-space-3); }
+.decideBtn { flex: 1 1 0; min-width: 0; min-height: 48px; }
+/* The one asymmetry that is honest: signing is the widest because it is the
+   longest label, not because it is the recommended answer. */
+.decideApprove { flex: 1.4 1 0; min-width: 180px; }
+.decideDecline { color: var(--vd-bad-fg); }
+.decideAlt { align-self: center; }
+
+.blocked {
+  composes: vd-t-footnote vd-w6 from global;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  color: var(--vd-bad-fg);
+}
+
+@media (max-width: 559px) {
+  .decideRow { flex-wrap: wrap; }
+  /* Wrapped, not promoted: signing takes the second row, under the two
+     alternatives, so the stack does not re-argue for approval. */
+  .decideApprove { flex: 1 0 100%; min-width: 0; }
 }
 
 /* Patient side panel — pane 3 at desktop, inline below the case otherwise. */
@@ -163,4 +172,18 @@
   width: 30px; height: 30px; border-radius: var(--vd-radius-pill); flex: none;
   background: var(--vd-surface-chip); color: var(--vd-ink-3);
   display: flex; align-items: center; justify-content: center;
+}
+
+
+/* Inside the case column: the plan keeps a readable measure and the patient's
+   record sits beside it as a 300px sidebar, stacking above ~1100px worth of
+   room rather than becoming a third top-level column (DESIGN-REVIEW D15). */
+@media (min-width: 1100px) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 720px) 300px;
+    gap: var(--vd-space-5);
+    align-items: start;
+  }
+  .split > .panel { position: sticky; top: 0; }
 }

@@ -2,7 +2,8 @@
 // appointment, results flagged for review, and notes from the doctor. Starting
 // a consult is the nav orb, so there is no hero here (DESIGN §11.5).
 import { useNavigate } from 'react-router';
-import { AppHeader, Button, Card, Icon, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
+import { myCase, planStatus } from '../../../lib/core';
+import { AppHeader, Button, Card, Icon, Skeleton, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
 import { useAuth } from '../../../shell/auth';
@@ -29,11 +30,15 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
   // on Medicines, not on the dashboard.
   const nextDose = clinic.doses.find(d => !d.taken && doseState(d) !== 'missed');
   const missed = clinic.doses.filter(d => doseState(d) === 'missed').length;
-  const flagged = toPanels(clinic.labs).filter(p => p.worst !== 'normal');
+  const panels = toPanels(clinic.labs);
+  const flagged = panels.filter(p => p.worst !== 'normal');
+  // Nothing on this screen may assert anything until the rows are in.
+  const pending = clinic.load === 'loading';
+  const failed = clinic.load === 'error';
   const upcoming = clinic.appointments
     .filter(a => a.status === 'booked' && a.startsAt >= Date.now())
     .sort((a, b) => a.startsAt - b.startsAt);
-  const latest = clinic.queue.find(c => c.mine);
+  const latest = myCase(clinic.queue);
 
   return (
     <div className={s.screen}>
@@ -46,15 +51,35 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
       />
 
       <div className={s.grid}>
-        {clinic.checkIn && (
-          <Section title="A quick check">
+        {/* Answering replaces this card in place rather than leaving it asking
+            again — the patient could not tell whether their answer landed, and
+            answering twice sends the doctor conflicting signals (D27). */}
+        {clinic.justAnswered ? (
+          <Section>
+            <Card level={1} pad="13px 15px">
+              <div className={s.ctaTitle}>Thanks — your doctor has been told.</div>
+              <div className={s.ctaBody}>
+                You said you are feeling {ANSWER_WORD[clinic.justAnswered.answer]}
+                {clinic.justAnswered.title ? ` about ${clinic.justAnswered.title.toLowerCase()}` : ''}. Answered just now.
+              </div>
+              <Button
+                variant="tertiary"
+                onClick={() => clinic.undoCheckIn(clinic.justAnswered!.consultId)}
+                className={s.ctaAction}
+              >
+                Undo
+              </Button>
+            </Card>
+          </Section>
+        ) : clinic.checkIn && (
+          <Section>
             {/* The button is the affordance, so the card itself is not also a
                 button — a control inside a clickable card is two hit targets
                 for one action, and screen readers announce the nesting. */}
             <Card level={1} pad="13px 15px">
               <div className={s.ctaTitle}>How is it going?</div>
               <div className={s.ctaBody}>
-                It has been a few days since your plan was approved. One tap tells your doctor how you are doing.
+                It has been a few days since your plan was approved. Answer one question so your doctor knows how you are doing.
               </div>
               <Button variant="secondary" onClick={onCheckIn} className={s.ctaAction}>
                 Answer
@@ -64,7 +89,11 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
         )}
 
         <Section title="Medication">
-          {!nextDose
+          {pending
+            ? <Skeleton />
+            : failed
+            ? <Failed what="your medicines" onRetry={clinic.retry} />
+            : !nextDose
             ? <Empty body="No doses due. An approved prescription puts its schedule here." />
             : (
               <Row
@@ -79,8 +108,12 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             )}
         </Section>
 
-        <Section title="Appointment">
-          {upcoming.length === 0
+        <Section title="Appointment" side>
+          {pending
+            ? <Skeleton lines={2} />
+            : failed
+            ? <Failed what="your appointments" onRetry={clinic.retry} />
+            : upcoming.length === 0
             ? <Empty body="Nothing booked. Tests a doctor orders appear here." />
             : upcoming.map(a => (
               <Row
@@ -96,9 +129,15 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
         {/* A dashboard tells you there is something to look at; the looking
             happens on Labs. One panel per row turned Home into a second copy
             of that screen. */}
-        <Section title="Results">
-          {flagged.length === 0
-            ? <Empty body="All results are within range." />
+        <Section title="Results" side>
+          {pending
+            ? <Skeleton />
+            : failed
+            ? <Failed what="your results" onRetry={clinic.retry} />
+            : panels.length === 0
+            ? <Empty body="No results yet. Tests your doctor orders appear here once they are back." />
+            : flagged.length === 0
+            ? <Empty body="Every result so far is inside its reference range." />
             : (
               <Card
                 level={1}
@@ -124,11 +163,11 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             <Card
               level={1}
               pad="13px 15px"
-              onClick={() => nav('/patient/recommendation')}
+              onClick={() => nav(`/patient/plan/${encodeURIComponent(latest.id)}`)}
               aria-label={`Open your plan: ${latest.title}`}
             >
               <div className={s.planRow}>
-                <StatusPill status={latest.status} />
+                <StatusPill status={planStatus(latest.status)} />
                 <div className={s.planMeta}>{latest.meta}</div>
               </div>
               <div className={s.planTitle}>{latest.title}</div>
@@ -136,7 +175,7 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
           </Section>
         )}
 
-        <Section title="Feeling unwell?">
+        <Section side>
           <Card level={1} pad="13px 15px" onClick={onStart} aria-label="Start a consultation with Dr. Mira">
             <div className={s.ctaTitle}>Start a consultation</div>
             <div className={s.ctaBody}>
@@ -168,10 +207,18 @@ function startOfDay(at: number): number {
   return d.getTime();
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// A heading is only worth a line of chrome when it groups something the cards
+// below it do not already say (D20).
+const ANSWER_WORD: Record<'better' | 'same' | 'worse', string> = {
+  better: 'better',
+  same: 'about the same',
+  worse: 'worse',
+};
+
+function Section({ title, side, children }: { title?: string; side?: boolean; children: React.ReactNode }) {
   return (
-    <section className={s.section}>
-      <div className={s.sectionTitle}>{title}</div>
+    <section className={`${s.section} ${side ? s.colSide : s.colMain}`}>
+      {title && <div className={s.sectionTitle}>{title}</div>}
       {children}
     </section>
   );
@@ -197,6 +244,17 @@ function Row({ icon, title, detail, meta, tone, onClick, label }: {
         {onClick && <span className={s.rowChev}><Icon name="chevD" size={16} /></span>}
       </div>
     </Card>
+  );
+}
+
+// A failed fetch is never rendered as good news: the card says it could not
+// load and offers the retry, rather than falling through to an empty state.
+function Failed({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div className={s.failed} role="status">
+      <span>Couldn’t load {what}.</span>
+      <Button variant="tertiary" onClick={onRetry}>Retry</Button>
+    </div>
   );
 }
 

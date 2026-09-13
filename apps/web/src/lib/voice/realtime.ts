@@ -35,6 +35,12 @@ const SILENCE_MS = 1200;
 /** Residual guard: how long a transcript must stop growing before the turn is submitted. */
 const SETTLE_MS = 250;
 
+// The server serves one session at a time. A busy one accepts the socket and
+// then never sends session.created, so a connect with no deadline leaves the
+// consult wedged on "speaking" with no fallback — indistinguishable from a
+// server that is simply down, and the patient is told neither.
+const CONNECT_MS = 4000;
+
 const REPEAT =
   'Repeat the following text exactly, word for word. Output only that text, nothing else.\n';
 
@@ -100,16 +106,28 @@ function connect(): Promise<WebSocket> {
       reject(err);
       return;
     }
+    let settled = false;
     const fail = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(deadline);
       opening = null;
       if (socket === s) socket = null;
       setDown(true);
       reject(new Error('voice socket closed'));
     };
+    const deadline = window.setTimeout(() => {
+      try { s.close(); } catch { /* noop */ }
+      fail();
+    }, CONNECT_MS);
     s.onerror = fail;
     s.onclose = () => {
+      const wasLive = socket === s;
       if (socket === s) socket = null;
       if (opening) fail();
+      // A link that drops mid-consult is the same to the patient as one that
+      // never opened: the voice changes and nothing else explains it.
+      else if (wasLive) setDown(true);
       // Lazily warm the link back up: a consult mid-turn should not have to
       // pay the handshake again when the next utterance arrives.
       const now = Date.now();
@@ -129,6 +147,8 @@ function connect(): Promise<WebSocket> {
         s.send(JSON.stringify(sessionUpdate()));
         socket = s;
         opening = null;
+        settled = true;
+        window.clearTimeout(deadline);
         setDown(false);
         resolve(s);
       }
@@ -298,8 +318,11 @@ export function remoteSpeak(
       cancelled = true;
       stopPlayback();
       if (socket) send(socket, { type: 'response.cancel' });
-      off();
-      if (timer) window.clearTimeout(timer);
+      // Resolving on cancel is what keeps the conversation alive: the caller's
+      // continuation is how Mira starts listening again, and dropping it on
+      // every interrupt is how she went permanently deaf. `once` in the facade
+      // makes this idempotent against a natural end that already fired.
+      finish();
     },
   };
 }

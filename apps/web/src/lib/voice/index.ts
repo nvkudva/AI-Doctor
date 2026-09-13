@@ -61,7 +61,7 @@ export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
     // The remote voice hands the line back if the server strays from it.
     let fell: SpeakHandle | null = null;
     const remote = remoteSpeak(text, { ...once, onFallback: () => { fell = browserSpeak(text, once); } });
-    return { cancel: () => { remote.cancel(); fell && fell.cancel(); } };
+    return { cancel: () => { remote.cancel(); fell && fell.cancel(); once.onDone(); } };
   }
   return browserSpeak(text, once);
 }
@@ -78,7 +78,15 @@ function browserSpeak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
     u.onend = done;
     u.onerror = done;
     window.speechSynthesis.speak(u);
-    return { cancel: () => { try { window.speechSynthesis.cancel(); } catch { /* noop */ } } };
+    // Cancelling resolves here too, so the fallback voice takes turns by the
+    // same contract as the server's: cancel(), then the caller's continuation
+    // listens. `once` upstream absorbs the `end` the cancel itself fires.
+    return {
+      cancel: () => {
+        try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+        done();
+      },
+    };
   } catch {
     done();
     return { cancel: () => {} };

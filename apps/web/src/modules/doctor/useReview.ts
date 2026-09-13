@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, aiReview, hasSupabase, type ChatMessage } from '../../lib/api';
-import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded } from '../../lib/voice';
+import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type SpeakHandle } from '../../lib/voice';
 
 function parseAi(raw: string): any {
   if (!raw) return { reply: '', done: false, action: 'none' };
@@ -58,6 +58,8 @@ export function useReview(opts: {
   const [messages, setMessages] = useState<MiraTurn[]>([]);
   const [failedCmd, setFailedCmd] = useState<string | null>(null);
   // Same degradation the patient sees: the browser's voice stands in.
+  const speakRef = useRef<SpeakHandle | null>(null);
+  const abandonRef = useRef(false);
   const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
   useEffect(() => onVoiceHealth(setVoiceOffline), []);
   // Two separate switches: whether Mira speaks, and whether she listens.
@@ -74,6 +76,8 @@ export function useReview(opts: {
   const [approvalStaged, setApprovalStaged] = useState(false);
 
   const stop = useCallback(() => {
+    abandonRef.current = true;
+    speakRef.current?.cancel();
     stopAllVoice();
     setActive(false);
     setStatus('idle');
@@ -86,7 +90,16 @@ export function useReview(opts: {
       return;
     }
     setStatus('speaking');
-    speak(text, { onDone: () => after && after() });
+    abandonRef.current = false;
+    // The handle is kept so an interrupt can resolve the turn rather than
+    // orphan it: cancelling now runs the continuation, which is how she starts
+    // listening again (D-voice 3).
+    speakRef.current = speak(text, {
+      onDone: () => {
+        if (abandonRef.current) return;
+        after && after();
+      },
+    });
   }, []);
 
   // Silencing her cuts the current sentence off at once; the transcript keeps it.
@@ -94,8 +107,8 @@ export function useReview(opts: {
     speakerOffRef.current = v;
     setSpeakerOffState(v);
     if (v) {
+      speakRef.current?.cancel();
       stopAllVoice();
-      setStatus('idle');
     }
   }, []);
 
@@ -223,8 +236,9 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   const orbTap = useCallback(() => {
     if (status === 'speaking') {
-      stopAllVoice();
-      listenRef.current();
+      // Cancel resolves into the same continuation, so listening is not started
+      // twice here — that ran two capture streams and leaked the first.
+      speakRef.current?.cancel();
     } else if (status === 'idle') {
       if (active) listenRef.current();
       else start();

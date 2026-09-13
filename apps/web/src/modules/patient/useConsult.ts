@@ -107,14 +107,21 @@ export function useConsult(opts: {
   // The panel opened on a consult a doctor already has: it listens and records,
   // but never runs a turn.
   const noteOnlyRef = useRef(false);
+  // Set only when the turn is being abandoned rather than interrupted — closing
+  // the panel, resetting the consult. Cancelling speech now always resolves, so
+  // without this the continuation would re-open the mic on the way out.
+  const abandonRef = useRef(false);
 
   // Silencing her cuts the current sentence off at once; the transcript keeps it.
   const setSpeakerOff = useCallback((v: boolean) => {
     speakerOffRef.current = v;
     setSpeakerOffState(v);
     if (v) {
+      // Silencing her stops the sentence; it does not end the consult. The
+      // cancel resolves, so the turn carries on into listening rather than
+      // leaving Mira mute and deaf with nothing to restart her.
+      speakRef.current?.cancel();
       stopAllVoice();
-      setStatus('idle');
     }
   }, []);
 
@@ -140,8 +147,10 @@ export function useConsult(opts: {
       return;
     }
     setStatus('speaking');
+    abandonRef.current = false;
     speakRef.current = speak(text, {
       onDone: () => {
+        if (abandonRef.current) return;
         after && after();
       },
     });
@@ -340,13 +349,17 @@ export function useConsult(opts: {
   // Stop talking and stop listening, but keep the conversation: closing the
   // panel must not silently end a consult the patient is part-way through.
   const silence = useCallback(() => {
+    abandonRef.current = true;
     stopListening();
+    speakRef.current?.cancel();
     stopAllVoice();
     setStatus('idle');
   }, [stopListening]);
 
   const reset = useCallback(() => {
+    abandonRef.current = true;
     stopListening();
+    speakRef.current?.cancel();
     stopAllVoice();
     finishedRef.current = false;
     consultIdRef.current = null;
@@ -363,8 +376,10 @@ export function useConsult(opts: {
 
   const orbTap = useCallback(() => {
     if (status === 'speaking') {
+      // The cancel resolves into the same continuation a finished sentence
+      // would, so listening is not started a second time here — doing both ran
+      // two capture streams at once and leaked the first.
       speakRef.current?.cancel();
-      listenRef2.current();
     } else if (status === 'idle') {
       listenRef2.current();
     } else if (status === 'listening') {

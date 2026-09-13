@@ -90,19 +90,26 @@
 .consultTitle { composes: vd-t-headline vd-w6 from global; color: var(--vd-ink-1); flex: 1; min-width: 0; }
 .consultPill { flex: none; }
 .consultMeta { composes: vd-t-subhead from global; font-weight: 400; color: var(--vd-ink-3); margin-top: 3px; }
-.consultNote { composes: vd-t-callout from global; color: var(--vd-ink-3); margin-top: 8px; }
-
-.more {
-  composes: vd-t-footnote vd-w7 from global;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 44px;
-  color: var(--vd-ink-soft);
-  margin-top: 6px;
+.consultNote {
+  composes: vd-t-callout from global;
+  color: var(--vd-ink-3);
+  margin-top: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.moreChev { display: inline-flex; transition: transform var(--vd-dur-3) var(--vd-ease-spring); }
-.moreChevOpen { transform: rotate(180deg); }
+.consultNoteOpen { composes: vd-t-callout from global; color: var(--vd-ink-3); margin-top: 8px; }
+
+/* The one affordance the card carries, in its head: the row itself is the
+   target, so this says "there is more" without being a second control. */
+.consultChev {
+  flex: none;
+  display: inline-flex;
+  color: var(--vd-ink-soft);
+  transition: transform var(--vd-dur-3) var(--vd-ease-spring);
+}
+.consultChevOpen { transform: rotate(180deg); }
 
 .detail { margin-top: 10px; border-top: 1px solid var(--vd-border); padding-top: 10px; }
 .detailText { composes: vd-t-callout from global; color: var(--vd-ink-2); }

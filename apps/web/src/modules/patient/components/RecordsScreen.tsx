@@ -66,7 +66,7 @@ export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
       {tab === 'history' && (
         <>
           <SectionTitle>Consultation history</SectionTitle>
-          <SectionSub>Your past visits with Dr. Mira · tap to view details</SectionSub>
+          <SectionSub>Your past visits with Dr. Mira</SectionSub>
           {consults.length === 0
             ? <EmptyState icon="clock" title="No visits yet" body="Your visits will appear here after your first consult." />
             : <div className={s.list}>{consults.map(c => <ConsultCard key={c.id} c={c} />)}</div>}
@@ -95,6 +95,9 @@ function SectionSub({ children }: { children: React.ReactNode }) {
   return <div className={s.sectionSub}>{children}</div>;
 }
 
+/** Outcomes a history list implies, and so does not badge. */
+const ORDINARY = new Set(['completed', 'closed']);
+
 function ConsultCard({ c }: { c: UserConsult }) {
   const [open, setOpen] = useState(false);
   const d = c.detail;
@@ -116,13 +119,24 @@ function ConsultCard({ c }: { c: UserConsult }) {
         <div className={s.consultHead}>
           <span className={s.consultIcon}><Icon name="stethoscope" size={17} /></span>
           <div className={s.consultTitle}>{c.title}</div>
-          {/* History carries completed/cancelled consults as well as plan
-              states, so it lower-cases into the shared label map rather than
-              through planStatus, which is only about plans under review. */}
-          <span className={s.consultPill}><StatusPill status={c.status.toLowerCase()} /></span>
+          {/* A history list is closed by definition, so the ordinary outcome
+              carries no badge: badging every row makes the one row that ended
+              differently invisible. History also carries plan states, so it
+              lower-cases into the shared label map rather than through
+              planStatus, which is only about plans under review (D30). */}
+          {!ORDINARY.has(c.status.toLowerCase()) && (
+            <span className={s.consultPill}><StatusPill status={c.status.toLowerCase()} /></span>
+          )}
+          {d && (
+            <span className={`${s.consultChev}${open ? ' ' + s.consultChevOpen : ''}`}>
+              <Icon name="chevD" size={16} />
+            </span>
+          )}
         </div>
         <div className={s.consultMeta}>{c.date} · Dr. Mira</div>
-        <div className={s.consultNote}>{c.note}</div>
+        {/* Two lines closed: the advice paragraph at full length made three
+            entries fill two and a half screens and the list unscannable. */}
+        <div className={open ? s.consultNoteOpen : s.consultNote}>{c.note}</div>
         {/* What was actually prescribed or ordered, on the closed card: the
             thing people scan their history for is the drug name, and having to
             open every entry to find it made the list useless for that. */}
@@ -138,14 +152,6 @@ function ConsultCard({ c }: { c: UserConsult }) {
                 <Icon name="flask" size={13} />{x.name}
               </span>
             ))}
-          </div>
-        )}
-        {d && (
-          <div className={s.more}>
-            {open ? 'Show less' : 'View details'}
-            <span className={`${s.moreChev}${open ? ' ' + s.moreChevOpen : ''}`}>
-              <Icon name="chevD" size={14} />
-            </span>
           </div>
         )}
       </div>

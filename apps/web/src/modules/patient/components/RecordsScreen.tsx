@@ -76,7 +76,7 @@ export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
       {tab === 'labs' && (
         <>
           <SectionTitle>Lab tests</SectionTitle>
-          <SectionSub>Results from your previous blood work &amp; tests</SectionSub>
+          <SectionSub>Results from your tests</SectionSub>
           {panels.length === 0
             ? <EmptyState icon="drop" title="No lab results yet" body="Results ordered through a consult land here." />
             : <div className={s.grid}>{panels.map(p => <PanelRow key={p.panel} p={p} onOpen={() => onPanel(p.panel)} />)}</div>}
@@ -192,7 +192,7 @@ function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
         </div>
       </div>
       <span className={`vd-tag ${s.labResult}`} style={{ background: t.bg, color: t.fg }}>
-        {ok ? 'In range' : 'Needs a look'}
+        {ok ? 'In range' : 'Out of range'}
       </span>
     </Card>
   );

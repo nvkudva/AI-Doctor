@@ -8,8 +8,8 @@ import s from './LabPanelScreen.module.css';
 
 const TONE: Record<LabValue['abnormal'], { bg: string; fg: string; label: string }> = {
   normal: { bg: 'var(--vd-lab-ok-bg)', fg: 'var(--vd-lab-ok-fg)', label: 'In range' },
-  low: { bg: 'var(--vd-lab-warn-bg)', fg: 'var(--vd-lab-warn-fg)', label: 'Needs a look' },
-  high: { bg: 'var(--vd-lab-warn-bg)', fg: 'var(--vd-lab-warn-fg)', label: 'Needs a look' },
+  low: { bg: 'var(--vd-lab-warn-bg)', fg: 'var(--vd-lab-warn-fg)', label: 'Out of range' },
+  high: { bg: 'var(--vd-lab-warn-bg)', fg: 'var(--vd-lab-warn-fg)', label: 'Out of range' },
   critical: { bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', label: 'Urgent' },
   unknown: { bg: 'var(--vd-neutral-bg)', fg: 'var(--vd-neutral-fg)', label: 'No range' },
 };

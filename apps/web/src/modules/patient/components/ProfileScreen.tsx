@@ -96,7 +96,7 @@ export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
         </MenuRow>
       </Card>
 
-      {/* "Tests and things to do" is a name a developer gives a bucket. Grouped
+      {/* "Tests and follow-ups" is a name a developer gives a bucket. Grouped
           by what the patient has to do about each, oldest work collapsed. */}
       {todo.length > 0 && (
         <>

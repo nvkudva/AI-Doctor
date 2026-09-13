@@ -217,6 +217,7 @@ function Desk({ tenantName }: { tenantName: string }) {
         title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : undefined}
         tenantName={tenantName}
         pendingCount={pendingCount}
+        urgentCount={urgentCount}
         showNotifs={showNotifs}
         onToggleNotifs={() => setShowNotifs(s => !s)}
         onCloseNotifs={() => setShowNotifs(false)}

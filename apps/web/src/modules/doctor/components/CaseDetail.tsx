@@ -140,7 +140,9 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
 // that ran are as much a part of the decision as the plan itself.
 const VERDICT: Record<SafetyFlag['severity'], { label: string; bg: string; fg: string; icon: 'alert' | 'x' | 'check' }> = {
   block: { label: 'Blocked', bg: 'var(--vd-bad-bg)', fg: 'var(--vd-bad-fg)', icon: 'x' },
-  warn: { label: 'Check', bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', icon: 'alert' },
+  // "Check" beside a red flag reads as either an instruction or a past
+  // participle, and the two mean opposite things (D34).
+  warn: { label: 'Needs review', bg: 'var(--vd-warn-bg)', fg: 'var(--vd-warn-fg)', icon: 'alert' },
   info: { label: 'Clear', bg: 'var(--vd-ok-bg)', fg: 'var(--vd-ok-fg)', icon: 'check' },
 };
 const RANK: Record<SafetyFlag['severity'], number> = { block: 0, warn: 1, info: 2 };

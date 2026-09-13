@@ -49,7 +49,16 @@ function recognitionCtor(): (new () => SpeechRecognition) | null {
   }
 }
 
-export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {
+export function speak(
+  text: string,
+  opts: {
+    onDone?: () => void;
+    /** The patient talked over her. Only the server transport can detect this;
+     *  the browser's synthesiser hears nothing, so this simply never fires
+     *  there and the tap-to-interrupt control remains the way in. */
+    onBarge?: () => void;
+  } = {},
+): SpeakHandle {
   // onDone submits the consult, so it must fire at most once per utterance:
   // Chromium fires both `end` and `error` when speechSynthesis.cancel()
   // interrupts, which used to file the same consult twice (UX-01).
@@ -60,14 +69,32 @@ export function speak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
   if (realtimeConfigured()) {
     // The remote voice hands the line back if the server strays from it.
     let fell: SpeakHandle | null = null;
-    const remote = remoteSpeak(text, { ...once, onFallback: () => { fell = browserSpeak(text, once); } });
+    const remote = remoteSpeak(text, {
+      ...once,
+      onBarge: opts.onBarge,
+      onFallback: () => { fell = browserSpeak(text, once); },
+    });
     return { cancel: () => { remote.cancel(); fell && fell.cancel(); once.onDone(); } };
   }
   return browserSpeak(text, once);
 }
 
+// speechSynthesis can accept an utterance and then never speak it and never
+// fire end or error — a tab without audio activation does exactly this. The
+// turn then hangs on "speaking" forever, which is the same dead consult the
+// server path used to produce, so the fallback gets the same two deadlines:
+// one that catches an utterance that never starts, and a ceiling for one that
+// starts and never reports finishing.
+const START_MS = 400;
+/** Roughly three words a second, plus slack, floored so short lines are safe. */
+function speechCeiling(text: string): number {
+  return Math.max(6000, (text.trim().split(/\s+/).length / 3) * 1000 + 5000);
+}
+
 function browserSpeak(text: string, opts: { onDone?: () => void } = {}): SpeakHandle {
-  const done = () => opts.onDone && opts.onDone();
+  let timers: number[] = [];
+  const clear = () => { for (const t of timers) window.clearTimeout(t); timers = []; };
+  const done = () => { clear(); opts.onDone && opts.onDone(); };
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -78,11 +105,16 @@ function browserSpeak(text: string, opts: { onDone?: () => void } = {}): SpeakHa
     u.onend = done;
     u.onerror = done;
     window.speechSynthesis.speak(u);
+    timers.push(window.setTimeout(() => {
+      if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) done();
+    }, START_MS));
+    timers.push(window.setTimeout(done, speechCeiling(text)));
     // Cancelling resolves here too, so the fallback voice takes turns by the
     // same contract as the server's: cancel(), then the caller's continuation
     // listens. `once` upstream absorbs the `end` the cancel itself fires.
     return {
       cancel: () => {
+        clear();
         try { window.speechSynthesis.cancel(); } catch { /* noop */ }
         done();
       },

@@ -119,9 +119,9 @@ export function useConsult(opts: {
     if (v) {
       // Silencing her stops the sentence; it does not end the consult. The
       // cancel resolves, so the turn carries on into listening rather than
-      // leaving Mira mute and deaf with nothing to restart her.
+      // leaving Mira mute and deaf with nothing to restart her — and the
+      // microphone is not handed back, because the consult is still running.
       speakRef.current?.cancel();
-      stopAllVoice();
     }
   }, []);
 
@@ -153,6 +153,14 @@ export function useConsult(opts: {
         if (abandonRef.current) return;
         after && after();
       },
+      // Talking over her is almost always a correction — the wrong symptom, the
+      // wrong duration — so it is the highest-value thing the patient says.
+      // Cancelling resolves the turn, which hands straight on to listening, and
+      // the audio already in flight becomes that turn.
+      // Not armed while the mic is switched off: barge-in turns capture back
+      // on, and a patient who has silenced their microphone has said they do
+      // not want it live.
+      onBarge: micOffRef.current ? undefined : () => { speakRef.current?.cancel(); },
     });
   }, []);
 

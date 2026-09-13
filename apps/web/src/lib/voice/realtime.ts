@@ -225,7 +225,14 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace
 
 export function remoteSpeak(
   text: string,
-  opts: { onDone?: () => void; onFallback?: () => void } = {},
+  opts: {
+    onDone?: () => void;
+    onFallback?: () => void;
+    /** The patient started talking over her. Fires once, at the first frame of
+     *  detected speech — not when a transcript arrives, which is seconds too
+     *  late to stop her mid-sentence. */
+    onBarge?: () => void;
+  } = {},
 ): SpeakHandle {
   let cancelled = false;
   let off = () => {};
@@ -272,10 +279,26 @@ export function remoteSpeak(
     heard = '';
     judge(full);
   };
+  // Barge-in is armed only when the microphone is already ours. Speaking must
+  // never be the thing that asks for permission: a consult being typed stays
+  // typed, which means the greeting — spoken before any listen — is the one
+  // turn that cannot be interrupted by voice.
+  let barge = !!opts.onBarge && micOpen();
   connect()
     .then(s => {
       if (cancelled) return;
+      if (barge) capturing = true;
       off = on(ev => {
+        if (barge && ev.type === 'input_audio_buffer.speech_started') {
+          // Stop first, ask questions later: waiting for the transcript to
+          // confirm it was speech would let her talk over the correction the
+          // patient is trying to make.
+          barge = false;
+          stopPlayback();
+          send(s, { type: 'response.cancel' });
+          opts.onBarge!();
+          return;
+        }
         if (ev.type === 'response.output_audio_transcript.delta' && typeof ev.delta === 'string') {
           if (verdict === 'pending') judge(ev.delta);
         } else if (ev.type === 'response.output_audio_transcript.done' && typeof ev.transcript === 'string') {
@@ -327,6 +350,76 @@ export function remoteSpeak(
   };
 }
 
+// -------------------------------------------------------------- mic session
+
+// The microphone is held for the whole consult and gated by a flag, not
+// acquired and torn down per turn. Per-turn capture made the OS indicator
+// flicker on every exchange and landed the first permission prompt mid
+// conversation — but the real cost was that during Mira's reply no stream
+// existed at all, so talking over her could not be heard by anything. Barge-in
+// is not a feature that can be added on top of that; it needs the stream open.
+type Mic = { stream: MediaStream; ctx: AudioContext; node: ScriptProcessorNode };
+let mic: Mic | null = null;
+let micOpening: Promise<Mic> | null = null;
+/** Whether captured frames are sent. The stream stays open either way. */
+let capturing = false;
+
+/** Whether the mic is already ours — speaking may arm barge-in only if it is. */
+export function micOpen(): boolean {
+  return !!mic;
+}
+
+function ensureMic(): Promise<Mic> {
+  if (mic) return Promise.resolve(mic);
+  if (micOpening) return micOpening;
+  micOpening = (async () => {
+    const media = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+    });
+    const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
+    const ctx = new Ctor({ sampleRate: RATE }) as AudioContext;
+    const src = ctx.createMediaStreamSource(media);
+    const node = ctx.createScriptProcessor(2048, 1, 1);
+    node.onaudioprocess = (e: AudioProcessingEvent) => {
+      if (!capturing || !socket) return;
+      const f = e.inputBuffer.getChannelData(0);
+      const bytes = new Uint8Array(f.length * 2);
+      for (let i = 0; i < f.length; i++) {
+        const c = Math.max(-1, Math.min(1, f[i]));
+        const v = (c < 0 ? c * 0x8000 : c * 0x7fff) | 0;
+        bytes[i * 2] = v & 0xff;
+        bytes[i * 2 + 1] = (v >> 8) & 0xff;
+      }
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      send(socket, { type: 'input_audio_buffer.append', audio: btoa(bin) });
+    };
+    // A muted sink keeps the processor pulling without feeding the mic back
+    // into the speaker.
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    src.connect(node);
+    node.connect(mute);
+    mute.connect(ctx.destination);
+    mic = { stream: media, ctx, node };
+    micOpening = null;
+    return mic;
+  })();
+  micOpening.catch(() => { micOpening = null; });
+  return micOpening;
+}
+
+/** Ends the consult's hold on the microphone. Muting does not come through here. */
+export function closeMic(): void {
+  capturing = false;
+  const m = mic;
+  mic = null;
+  if (!m) return;
+  try { m.node.disconnect(); } catch { /* noop */ }
+  try { m.stream.getTracks().forEach(t => t.stop()); } catch { /* noop */ }
+  try { m.ctx.close(); } catch { /* noop */ }
+}
+
 // ----------------------------------------------------------------- listen
 
 export function remoteListenOnce(opts: {
@@ -342,9 +435,6 @@ export function remoteListenOnce(opts: {
   }
   let closed = false;
   let off = () => {};
-  let stream: MediaStream | null = null;
-  let ctx: AudioContext | null = null;
-  let node: ScriptProcessorNode | null = null;
   let heard = '';
   let settleAt: number | undefined;
 
@@ -374,15 +464,9 @@ export function remoteListenOnce(opts: {
     closed = true;
     if (settleAt) window.clearTimeout(settleAt);
     off();
-    try {
-      node && node.disconnect();
-    } catch { /* noop */ }
-    try {
-      stream && stream.getTracks().forEach(t => t.stop());
-    } catch { /* noop */ }
-    try {
-      ctx && ctx.close();
-    } catch { /* noop */ }
+    // The stream stays open for the rest of the consult; the turn only stops
+    // sending. Closing it here is what made barge-in impossible.
+    capturing = false;
     if (ended) opts.onEnd && opts.onEnd();
   };
 
@@ -391,50 +475,21 @@ export function remoteListenOnce(opts: {
     // first means a server that is down — or busy, since it serves one session
     // at a time — swallows the permission prompt entirely: the patient is never
     // asked for the mic and cannot tell why nothing is listening.
-    const media = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
-    });
+    await ensureMic();
     let s: WebSocket;
     try {
       s = await connect();
     } catch {
       // Mic granted but no server: the caller falls back to the browser's own
-      // recogniser, so this is degradation, not a failure the patient sees.
-      media.getTracks().forEach(t => t.stop());
+      // recogniser, which opens a stream of its own, so ours is handed back
+      // rather than left holding the capture indicator.
+      closeMic();
       close(false);
       opts.onUnavailable ? opts.onUnavailable() : opts.onError && opts.onError('other');
       return;
     }
-    if (closed) {
-      media.getTracks().forEach(t => t.stop());
-      return;
-    }
-    stream = media;
-    const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
-    ctx = new Ctor({ sampleRate: RATE }) as AudioContext;
-    const src = ctx.createMediaStreamSource(media);
-    node = ctx.createScriptProcessor(2048, 1, 1);
-    node.onaudioprocess = (e: AudioProcessingEvent) => {
-      if (closed) return;
-      const f = e.inputBuffer.getChannelData(0);
-      const bytes = new Uint8Array(f.length * 2);
-      for (let i = 0; i < f.length; i++) {
-        const c = Math.max(-1, Math.min(1, f[i]));
-        const v = (c < 0 ? c * 0x8000 : c * 0x7fff) | 0;
-        bytes[i * 2] = v & 0xff;
-        bytes[i * 2 + 1] = (v >> 8) & 0xff;
-      }
-      let bin = '';
-      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      send(s, { type: 'input_audio_buffer.append', audio: btoa(bin) });
-    };
-    // A muted sink keeps the processor pulling without feeding the mic back
-    // into the speaker.
-    const mute = ctx.createGain();
-    mute.gain.value = 0;
-    src.connect(node);
-    node.connect(mute);
-    mute.connect(ctx.destination);
+    if (closed) return;
+    capturing = true;
 
     off = on(ev => {
       if (ev.type === 'conversation.item.input_audio_transcription.completed') {
@@ -457,4 +512,6 @@ export function remoteListenOnce(opts: {
 export function remoteStopAll(): void {
   stopPlayback();
   if (socket) send(socket, { type: 'response.cancel' });
+  // This is end-of-consult, not mute: the hold on the microphone ends with it.
+  closeMic();
 }

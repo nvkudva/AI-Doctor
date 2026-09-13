@@ -99,6 +99,10 @@ export function useReview(opts: {
         if (abandonRef.current) return;
         after && after();
       },
+      // Not armed while the mic is switched off: barge-in turns capture back
+      // on, and a patient who has silenced their microphone has said they do
+      // not want it live.
+      onBarge: micOffRef.current ? undefined : () => { speakRef.current?.cancel(); },
     });
   }, []);
 
@@ -108,7 +112,6 @@ export function useReview(opts: {
     setSpeakerOffState(v);
     if (v) {
       speakRef.current?.cancel();
-      stopAllVoice();
     }
   }, []);
 

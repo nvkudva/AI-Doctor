@@ -120,6 +120,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       setQueue(q => q.map(c => (c.id === id ? toCaseItem({
         consult: bundle.consult,
         draft,
+        loaded: true,
         patientName: bundle.patient?.profile?.full_name || c.patient,
         details: bundle.patient?.details,
         labs: bundle.labs || [],

@@ -84,11 +84,21 @@ export function describeAllergies(d: PatientDetailsRow | null | undefined): stri
  * allergy list alone, which meant an active condition — the thing that most
  * often decides whether a drug is safe — never reached the desk at all.
  */
-export function describeHistory(d: PatientDetailsRow | null | undefined): string {
+export function describeHistory(
+  d: PatientDetailsRow | null | undefined,
+  /** The case bundle has arrived, so an absence here is a fact, not a gap. */
+  loaded = false,
+): string {
   // The queue builds its rows before the case bundle arrives. Saying "nothing
   // on file" at that point asserts an absence nobody has checked, which on a
-  // review desk is worse than saying nothing.
-  if (!d) return 'Open the case to load this patient\u2019s record.';
+  // review desk is worse than saying nothing. Once it has arrived the opposite
+  // holds: still telling the doctor to open the case they are reading is the
+  // screen admitting it did not finish (D33).
+  if (!d) {
+    return loaded
+      ? 'No medical history on file for this patient.'
+      : 'Open the case to load this patient\u2019s record.';
+  }
   const allergies = describeAllergies(d);
   const active = (d?.conditions ?? []).filter(c => c.status !== 'resolved');
   const conditions = active
@@ -126,6 +136,8 @@ export function toCaseItem(args: {
   draft?: AiDraftRow | null;
   patientName?: string;
   details?: PatientDetailsRow | null;
+  /** True once the full case bundle is in hand, not just the queue row. */
+  loaded?: boolean;
   labs?: LabResultRow[];
   priorConsults?: PastConsult[];
   transcript?: string[];
@@ -148,6 +160,18 @@ export function toCaseItem(args: {
       text: f.text || f.code,
       source: f.source || 'validator',
     }));
+  // Missing age and blood group is a prescribing hazard, so it is raised where
+  // the reviewer is already looking for hazards rather than sitting in the
+  // header as grey metadata. Only once the bundle is in hand: before that the
+  // absence is unverified (D33).
+  if (args.loaded && !demo) {
+    flags.push({
+      code: 'demographics_missing',
+      severity: 'warn',
+      text: 'No age or blood group on file — weight- and age-based dosing could not be checked.',
+      source: 'record',
+    });
+  }
   const dx = (consult.working_dx ?? []).map(d => d.label).filter(Boolean);
   // A closed consult that carries a review outcome reads as that outcome: the
   // decision is what the patient and the desk care about, not the housekeeping
@@ -166,7 +190,7 @@ export function toCaseItem(args: {
     status,
     summary: draft?.note || consult.chief_complaint || '',
     symptoms: args.transcript ?? [],
-    history: describeHistory(args.details),
+    history: describeHistory(args.details, args.loaded),
     confidence: draft?.confidence ?? 'medium',
     flags,
     stated: args.transcript ?? [],

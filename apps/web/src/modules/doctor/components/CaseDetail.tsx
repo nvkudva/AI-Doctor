@@ -185,7 +185,12 @@ export function PatientPanel({ ac }: { ac: CaseItem }) {
         </div>
         {ac.history}
         <MicroLabel>Previous consultations</MicroLabel>
-        {(ac.pastConsults || []).map((p, i) => (
+        {/* A heading over nothing reads as a section that failed to load. The
+            absence is stated instead, because "none at this clinic" is itself
+            a clinical fact the reviewer is entitled to rely on (D33). */}
+        {(ac.pastConsults || []).length === 0 ? (
+          <div className={s.pastNone}>No previous consultations at this clinic.</div>
+        ) : (ac.pastConsults || []).map((p, i) => (
           <div key={i} className={s.past}>
             <b>{p.title}</b> · {p.date}
             <div className={s.pastNote}>{p.note}</div>

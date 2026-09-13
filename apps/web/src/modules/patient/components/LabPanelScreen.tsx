@@ -66,16 +66,22 @@ export function LabPanelScreen({ panel, doctorNote, onBack }: {
       })}
 
       <div className={s.actions}>
-        <Button
-          variant="secondary"
-          fullWidth
-          icon="doc"
-          disabled={!report}
-          title={report ? undefined : 'No report file on this result'}
-          onClick={() => { /* report delivery lands with storage signing */ }}
-        >
-          {report ? 'Report PDF' : 'No report file'}
-        </Button>
+        {/* Nothing to open is not a control: a full-width disabled button still
+            reads as the thing to press, and pressing it did nothing (D33). */}
+        {report ? (
+          <Button
+            variant="secondary"
+            fullWidth
+            icon="doc"
+            onClick={() => { /* report delivery lands with storage signing */ }}
+          >
+            Report PDF
+          </Button>
+        ) : (
+          <div className={s.noReport}>
+            No report file attached. Your results above are the full record.
+          </div>
+        )}
       </div>
     </div>
   );

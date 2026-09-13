@@ -65,3 +65,16 @@
   line-height: 1;
 }
 .boxOn { background: var(--vd-ok-fg); border-color: var(--vd-ok-fg); color: var(--vd-bg-app); }
+
+/* Why the signature is withheld, said before the plan is read rather than
+   after it is agreed to (D33). */
+.blocked {
+  composes: vd-t-footnote from global;
+  display: grid;
+  gap: 4px;
+  margin-bottom: var(--vd-space-4);
+  padding: 10px 12px;
+  border-radius: var(--vd-radius-md);
+  background: var(--vd-bad-bg);
+  color: var(--vd-bad-fg);
+}

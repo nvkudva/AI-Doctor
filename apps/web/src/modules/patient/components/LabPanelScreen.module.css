@@ -83,3 +83,6 @@
 .trendAxis span { font-size: 12px; line-height: 1.45; color: var(--vd-ink-4); }
 
 .actions { display: flex; gap: var(--vd-space-3); }
+
+/* Secondary text, not a card: there is nothing here to open (D33). */
+.noReport { composes: vd-t-footnote from global; color: var(--vd-ink-3); }

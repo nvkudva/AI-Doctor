@@ -12,6 +12,13 @@ export function unresolved(flags: SafetyFlag[]): SafetyFlag[] {
   return flags.filter(f => f.severity !== 'info');
 }
 
+/** Gaps in the record that a signature cannot stand on. */
+const BLOCKING = new Set(['demographics_missing']);
+
+export function blockers(flags: SafetyFlag[]): SafetyFlag[] {
+  return flags.filter(f => BLOCKING.has(f.code));
+}
+
 export function ApproveSheet({ ac, open, accepted, onAccept, onCancel, onConfirm }: {
   ac: CaseItem;
   open: boolean;
@@ -23,6 +30,10 @@ export function ApproveSheet({ ac, open, accepted, onAccept, onCancel, onConfirm
   const rx = ac.rec.items.filter(i => !!(i.dosage && i.dosage.trim()));
   const tests = ac.rec.items.filter(i => !(i.dosage && i.dosage.trim()));
   const flags = unresolved(ac.flags);
+  // A plan signed without the facts the dose was chosen from is the failure the
+  // review step exists to catch, so the signature is withheld rather than
+  // merely warned about (D33).
+  const blocked = blockers(ac.flags);
   return (
     <Sheet
       open={open}
@@ -33,7 +44,7 @@ export function ApproveSheet({ ac, open, accepted, onAccept, onCancel, onConfirm
       footer={(
         <>
           <Button variant="tertiary" onClick={onCancel} style={{ flex: 1 }}>Cancel</Button>
-          <Button variant="approve" disabled={!accepted} onClick={onConfirm} style={{ flex: 2 }}>
+          <Button variant="approve" disabled={!accepted || blocked.length > 0} onClick={onConfirm} style={{ flex: 2 }}>
             Sign and send
           </Button>
         </>
@@ -43,6 +54,14 @@ export function ApproveSheet({ ac, open, accepted, onAccept, onCancel, onConfirm
         <div className={s.patient}>{ac.patient}</div>
         <div className={s.demo}>{ac.demo}</div>
       </div>
+
+      {blocked.length > 0 && (
+        <div className={s.blocked} role="status">
+          <b>This plan cannot be signed yet.</b>
+          {blocked.map((f, n) => <div key={n}>{f.text}</div>)}
+          <div>Add the missing details to the patient record, then reopen this case.</div>
+        </div>
+      )}
 
       <Section
         label={rx.length === 0 ? 'Medicines' : rx.length === 1 ? 'Prescribing 1 medicine' : `Prescribing ${rx.length} medicines`}

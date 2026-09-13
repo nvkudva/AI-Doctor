@@ -125,6 +125,9 @@
 
 .past { margin-bottom: var(--vd-space-2); }
 .pastNote { color: var(--vd-ink-3); }
+/* Stated absence, not a placeholder: it reads as quiet prose, not as a row
+   waiting for content (D33). */
+.pastNone { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 4px; }
 
 .lab {
   display: flex;

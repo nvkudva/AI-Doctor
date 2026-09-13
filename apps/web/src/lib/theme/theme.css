@@ -267,8 +267,17 @@
   .vd-w6 { font-weight: 600; }
   .vd-w7 { font-weight: 700; }
 
-  /* One-line truncation — the most repeated recipe in the app. */
+  /* One-line truncation — the most repeated recipe in the app. Never put it on
+     a clinical instruction or a safety reason: the half that gets cut is the
+     actionable half (DESIGN-REVIEW D31). Those wrap to two lines instead. */
   .vd-truncate { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vd-clamp2 {
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 @layer vd-base {

@@ -48,8 +48,10 @@
 .info { background: var(--vd-info-bg); color: var(--vd-info-fg); }
 
 .attnBody { flex: 1; min-width: 0; }
-.attnTitle { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
-.attnLine { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+/* The patient's complaint and the reason they need attention both wrap: the
+   tail of "clinician review same day" is the part that says what to do (D31). */
+.attnTitle { composes: vd-t-callout vd-w7 vd-clamp2 from global; color: var(--vd-ink-1); }
+.attnLine { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-3); }
 .attnMeta { composes: vd-t-caption from global; font-weight: 400; color: var(--vd-ink-4); flex: none; }
 
 @media (max-width: 799px) {

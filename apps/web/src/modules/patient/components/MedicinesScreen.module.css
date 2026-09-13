@@ -34,7 +34,9 @@
 }
 .body { flex: 1; min-width: 0; }
 .name { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
-.detail { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-3); }
+/* The dose instruction wraps rather than truncating: the trailing controls are
+   fixed-width, so it renders in full whatever the row's state (D31). */
+.detail { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-3); }
 
 /* Recording a dose is the primary act of this screen, so it is a 56px target
    at the end of the row — not a text link, and not only on missed doses. */

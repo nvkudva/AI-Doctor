@@ -24,6 +24,43 @@ const OPENERS: Suggestion[] = [
 const NOTE_ACK = 'Got it, I’ve added that for Dr. Whitfield to see.';
 const NOTE_FAILED = 'Sorry, I couldn’t save that just now. Tell me again in a moment.';
 
+// A reply is spoken as it is written. Collecting every token first and only
+// then starting to speak makes time-to-first-sound the latency of the whole
+// answer — seconds of silence over something already decided.
+const BREAK = /[.!?]["'’)\]]*\s+/g;
+// Under this a "sentence" is a fragment — a numbered item, a stray initial —
+// and is better carried into the next one than spoken on its own.
+const MIN_LINE = 24;
+// Boundaries that only look like sentence ends. Splitting here would have her
+// say "Dr." and stop.
+const ABBR = /(?:^|\s)(?:dr|mr|mrs|ms|prof|st|approx|e\.g|i\.e|vs|etc|no|fig|mg|ml|hr|hrs)\.$/i;
+
+/** Splits off every complete sentence, returning them and the unfinished tail. */
+function cut(buf: string): [string[], string] {
+  const out: string[] = [];
+  let start = 0;
+  BREAK.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = BREAK.exec(buf))) {
+    const end = m.index + m[0].length;
+    const line = buf.slice(start, end).trim();
+    if (line.length < MIN_LINE || ABBR.test(line)) continue;
+    out.push(line);
+    start = end;
+  }
+  return [out, buf.slice(start)];
+}
+
+type Stream = {
+  q: string[];
+  buf: string;
+  /** No more tokens are coming; the queue draining is the end of the reply. */
+  end: boolean;
+  busy: boolean;
+  after?: () => void;
+  force: boolean;
+};
+
 const FOLLOWUPS: Suggestion[] = [
   { label: 'Since yesterday' },
   { label: 'About a week' },
@@ -111,10 +148,15 @@ export function useConsult(opts: {
   // the panel, resetting the consult. Cancelling speech now always resolves, so
   // without this the continuation would re-open the mic on the way out.
   const abandonRef = useRef(false);
-  // The line currently being spoken, so that cutting her off can mark the turn
-  // it belongs to. Both ways of interrupting — talking over her, tapping —
-  // arrive with no idea which message they stopped.
-  const sayingRef = useRef('');
+  // Which turn is being spoken, so that cutting her off can mark it. Both ways
+  // of interrupting — talking over her, tapping — arrive with no idea which
+  // message they stopped, and a streamed reply is spoken a sentence at a time,
+  // so the sentence is not the thing to match on.
+  const saidIdxRef = useRef(-1);
+  // The turn being written into as tokens arrive, so the bubble can grow with
+  // the voice instead of appearing whole at the end.
+  const liveIdxRef = useRef(-1);
+  const streamRef = useRef<Stream | null>(null);
   // The turn arrived by typing. A patient who is typing must not be handed a
   // permission prompt and a hot mic after every reply (foundation 1).
   const typedRef = useRef(false);
@@ -146,19 +188,15 @@ export function useConsult(opts: {
   // reply whether or not the patient heard it. An interruption four words in
   // would otherwise reach review as advice delivered in full.
   const markInterrupted = useCallback(() => {
-    const text = sayingRef.current;
-    if (!text) return;
-    sayingRef.current = '';
+    const i = saidIdxRef.current;
+    saidIdxRef.current = -1;
     const msgs = messagesRef.current;
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].role !== 'mira' || msgs[i].text !== text) continue;
-      if (msgs[i].interrupted) return;
-      const next = [...msgs];
-      next[i] = { ...next[i], interrupted: true };
-      messagesRef.current = next;
-      setMessages(next);
-      return;
-    }
+    const m = msgs[i];
+    if (!m || m.role !== 'mira' || m.interrupted) return;
+    const next = [...msgs];
+    next[i] = { ...m, interrupted: true };
+    messagesRef.current = next;
+    setMessages(next);
   }, []);
 
   const stopListening = useCallback(() => {
@@ -174,10 +212,8 @@ export function useConsult(opts: {
     }
     setStatus('speaking');
     abandonRef.current = false;
-    sayingRef.current = text;
     speakRef.current = speak(text, {
       onDone: () => {
-        sayingRef.current = '';
         if (abandonRef.current) return;
         after && after();
       },
@@ -190,10 +226,92 @@ export function useConsult(opts: {
       // not want it live.
       onBarge: micOffRef.current ? undefined : () => {
         markInterrupted();
+        cutStreamRef.current();
         speakRef.current?.cancel();
       },
     });
   }, [markInterrupted]);
+
+  // Speaks the queue one line at a time, in order. A sentence is handed to the
+  // voice only when the one before it has finished, so a reply still being
+  // written is never spoken out of sequence.
+  const drain = useCallback(function d(): void {
+    const st = streamRef.current;
+    if (!st) return;
+    const line = st.q.shift();
+    if (line !== undefined) {
+      st.busy = true;
+      say(line, d, st.force);
+      return;
+    }
+    st.busy = false;
+    // The queue is empty but the model is still writing: the next token to
+    // complete a sentence restarts the drain.
+    if (!st.end) return;
+    streamRef.current = null;
+    st.after && st.after();
+  }, [say]);
+
+  const openStream = useCallback((force = false) => {
+    streamRef.current = { q: [], buf: '', end: false, busy: false, force };
+  }, []);
+
+  const pushStream = useCallback((token: string) => {
+    const st = streamRef.current;
+    if (!st) return;
+    const [lines, rest] = cut(st.buf + token);
+    st.buf = rest;
+    if (!lines.length) return;
+    st.q.push(...lines);
+    if (!st.busy) drain();
+  }, [drain]);
+
+  const endStream = useCallback((after?: () => void) => {
+    const st = streamRef.current;
+    if (!st) {
+      after && after();
+      return;
+    }
+    const tail = st.buf.trim();
+    st.buf = '';
+    if (tail) st.q.push(tail);
+    st.end = true;
+    st.after = after;
+    if (!st.busy) drain();
+  }, [drain]);
+
+  // Interrupted: the rest of the reply is dropped rather than queued behind the
+  // interruption, but the turn still ends the way a finished one would — the
+  // patient is already talking, and something has to be listening.
+  const cutStream = useCallback(() => {
+    const st = streamRef.current;
+    if (!st) return;
+    st.q.length = 0;
+    st.buf = '';
+    st.end = true;
+  }, []);
+  const cutStreamRef = useRef(cutStream);
+  cutStreamRef.current = cutStream;
+
+  /** Abandons the stream outright: no remaining lines, no continuation. */
+  const dropStream = useCallback(() => { streamRef.current = null; }, []);
+
+  // The bubble grows with the voice. A patient reading rather than listening
+  // must not be left on "Thinking…" while she is already several sentences in
+  // (foundation 1).
+  const live = useCallback((text: string) => {
+    const msgs = messagesRef.current;
+    let next: Turn[];
+    if (liveIdxRef.current < 0) {
+      liveIdxRef.current = msgs.length;
+      next = [...msgs, { role: 'mira' as const, text, at: Date.now() }];
+    } else {
+      next = [...msgs];
+      next[liveIdxRef.current] = { ...next[liveIdxRef.current], text };
+    }
+    messagesRef.current = next;
+    setMessages(next);
+  }, []);
 
   const listen = useCallback(() => {
     if (micOffRef.current) {
@@ -234,6 +352,7 @@ export function useConsult(opts: {
     text = (text || '').trim();
     if (!text || finishedRef.current) return;
     typedRef.current = typed;
+    liveIdxRef.current = -1;
     // Spoken to, she answers and listens again; typed to, the composer already
     // has the patient's attention and the turn simply ends.
     const then = typed ? () => setStatus('idle') : () => listenRef2.current();
@@ -260,6 +379,7 @@ export function useConsult(opts: {
         const ack = [...messagesRef.current, { role: 'mira' as const, text: NOTE_ACK, at: Date.now() }];
         messagesRef.current = ack;
         setMessages(ack);
+        saidIdxRef.current = ack.length - 1;
         setThinking(false);
         say(NOTE_ACK, then);
       } catch {
@@ -280,7 +400,16 @@ export function useConsult(opts: {
         // recommendation (TODO P1 SAFETY).
         const consultId = await ensureConsult();
         let streamed = '';
-        const turn = await aiConsult({ consultId, text, channel: 'text' }, (t) => { streamed += t; });
+        // Spoken and shown as it is written. The draft lookup below is a second
+        // round trip; making the first word wait on it put the whole reply
+        // behind two full latencies.
+        openStream();
+        const turn = await aiConsult({ consultId, text, channel: 'text' }, (tok) => {
+          streamed += tok;
+          setThinking(false);
+          live(streamed);
+          pushStream(tok);
+        });
         let recommendation: any = null;
         let confidence = 'high';
         let flags: string[] = [];
@@ -304,9 +433,14 @@ export function useConsult(opts: {
         data = parseAi(raw);
       }
       const reply = data.reply || 'Let me think about that for a moment.';
-      const next = [...msgs, { role: 'mira' as const, text: reply, at: Date.now() }];
+      // A streamed reply already has a turn on screen; the final text replaces
+      // the partial one rather than arriving underneath it.
+      const next = liveIdxRef.current >= 0
+        ? messagesRef.current.map((m, i) => (i === liveIdxRef.current ? { ...m, text: reply } : m))
+        : [...msgs, { role: 'mira' as const, text: reply, at: Date.now() }];
       messagesRef.current = next;
       setMessages(next);
+      saidIdxRef.current = next.length - 1;
       setNotes(n => [...n, { who: 'You', t: (data.note as string) || text.slice(0, 48) }, { who: 'Dr. Mira', t: reply.slice(0, 64) }]);
       if (data.confidence) setConfidence(data.confidence);
       if (Array.isArray(data.flags)) setFlags(data.flags);
@@ -325,12 +459,22 @@ export function useConsult(opts: {
           users: next.filter(m => m.role === 'user').map(m => m.text),
         });
         // An emergency instruction is spoken even with the speaker muted —
-        // "delivered" silently is not delivered.
-        say(reply, undefined, data.recommendation?.urgency === 'urgent');
+        // "delivered" silently is not delivered. A muted stream said nothing as
+        // it arrived, so the whole line is spoken now rather than resumed.
+        if (data.recommendation?.urgency === 'urgent' && speakerOffRef.current) {
+          dropStream();
+          say(reply, undefined, true);
+        } else {
+          endStream();
+        }
         return;
       }
-      say(reply, then);
+      endStream(then);
     } catch {
+      // Whatever she had started saying is not the answer; it stops here rather
+      // than finishing over the apology.
+      dropStream();
+      speakRef.current?.cancel();
       const err = "Sorry — I couldn't reach my clinical service just then, so nothing has been sent. Could you tell me that again?";
       const next = [...msgs];
       messagesRef.current = next;
@@ -338,6 +482,7 @@ export function useConsult(opts: {
       setThinking(false);
       setStatus('idle');
       setFailed(true);
+      saidIdxRef.current = -1;
       say(err, then);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,6 +515,7 @@ export function useConsult(opts: {
     // Resuming a consult that is still open server-side: turns append to it
     // instead of opening a second visit for the same patient.
     consultIdRef.current = resumeId ?? null;
+    saidIdxRef.current = 0;
     say(greeting, () => listenRef2.current());
   }, [say]);
 
@@ -386,6 +532,7 @@ export function useConsult(opts: {
     noteOnlyRef.current = true;
     finishedRef.current = false;
     setStarted(true);
+    saidIdxRef.current = 0;
     say(text, () => listenRef2.current());
   }, [say]);
 
@@ -393,14 +540,16 @@ export function useConsult(opts: {
   // panel must not silently end a consult the patient is part-way through.
   const silence = useCallback(() => {
     abandonRef.current = true;
+    dropStream();
     stopListening();
     speakRef.current?.cancel();
     stopAllVoice();
     setStatus('idle');
-  }, [stopListening]);
+  }, [stopListening, dropStream]);
 
   const reset = useCallback(() => {
     abandonRef.current = true;
+    dropStream();
     stopListening();
     speakRef.current?.cancel();
     stopAllVoice();
@@ -415,7 +564,7 @@ export function useConsult(opts: {
     setThinking(false);
     setStatus('idle');
     setLastTurn(0);
-  }, [stopListening]);
+  }, [stopListening, dropStream]);
 
   const orbTap = useCallback(() => {
     if (status === 'speaking') {
@@ -423,6 +572,7 @@ export function useConsult(opts: {
       // would, so listening is not started a second time here — doing both ran
       // two capture streams at once and leaked the first.
       markInterrupted();
+      cutStream();
       speakRef.current?.cancel();
     } else if (status === 'idle') {
       listenRef2.current();
@@ -430,7 +580,7 @@ export function useConsult(opts: {
       stopListening();
       setStatus('idle');
     }
-  }, [status, stopListening, markInterrupted]);
+  }, [status, stopListening, markInterrupted, cutStream]);
 
   useEffect(() => () => {
     stopListening();

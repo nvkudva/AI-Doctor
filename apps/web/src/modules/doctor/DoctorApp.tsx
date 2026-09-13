@@ -212,7 +212,7 @@ function Desk({ tenantName }: { tenantName: string }) {
         orb={{ label: 'Dr. Mira', voiceState: review.status, onClick: toggleMira }}
       />
       <div className={s.column}>
-      {onProfile ? <ProfileScreen onSelectCase={selectCase} /> : <>
+      {onProfile ? <ProfileScreen tenantName={tenantName} onSelectCase={selectCase} /> : <>
       <DeskHeader
         title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : undefined}
         tenantName={tenantName}

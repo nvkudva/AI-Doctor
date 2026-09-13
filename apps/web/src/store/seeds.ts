@@ -91,14 +91,14 @@ export const seedLabs = [
 ];
 
 // Practice figures for the doctor profile — not derivable from the demo queue.
+// No patient count, no years, no rating: a consumer-marketplace rating badge
+// on a clinical console signals the wrong product, and the hospital is the
+// tenant's, resolved once, not a second employer written into a seed
+// (DESIGN-REVIEW D29).
 export const seedDoctor = {
   registration: 'GMC-483920',
   specialty: 'General Physician',
-  patients: '1,284',
-  years: '12',
-  rating: '4.8',
   languages: 'English · Hindi · Kannada',
-  hospital: 'Apollo Clinic · Koramangala',
 };
 
 // The one patient record this demo actually holds. Anything not listed here is

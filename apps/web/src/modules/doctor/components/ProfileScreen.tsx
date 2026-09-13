@@ -6,17 +6,26 @@ import {
   AppHeader, Card, NotifyButton, ProfileSection, SignOutButton, StatRow, SwitchRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
+import { isReviewable, slaCountdown } from '../../../lib/core';
 import { useClinic } from '../../../store';
 import { seedDoctor } from '../../../store/seeds';
 import s from './ProfileScreen.module.css';
 
-export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => void }) {
+export function ProfileScreen({ tenantName, onSelectCase }: {
+  /** The hospital the app is running as, so the practice block cannot name a
+   *  different employer from every header in the product (D29). */
+  tenantName: string;
+  onSelectCase: (id: string) => void;
+}) {
   const { user, signOut, viewAs, setViewAs } = useAuth();
   const clinic = useClinic();
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(false);
   const [onDuty, setOnDuty] = useState(true);
-  const reviewed = clinic.queue.filter(c => c.reviewedAt).length;
+  const week = Date.now() - 7 * 86400000;
+  const awaiting = clinic.queue.filter(c => isReviewable(c.status)).length;
+  const decided = clinic.queue.filter(c => c.reviewedAt && c.reviewedAt >= week && c.submittedAt);
+  const breached = decided.filter(c => slaCountdown(c.submittedAt!).breached).length;
   return (
     <>
       {/* The header sits outside the scrolling body and on the desk's own
@@ -43,10 +52,11 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
       />
 
       <div className={profile.screen}>
+      {/* Work the doctor can act on, not a marketplace scorecard. */}
       <StatRow items={[
-        { label: 'Patients', value: seedDoctor.patients },
-        { label: 'Years', value: seedDoctor.years },
-        { label: 'Rating', value: seedDoctor.rating, tone: 'var(--vd-ok-fg)' },
+        { label: 'Awaiting your review', value: String(awaiting), tone: awaiting ? 'var(--vd-warn-fg)' : undefined },
+        { label: 'Median decision', value: medianDecision(decided) },
+        { label: 'Breached this week', value: String(breached), tone: breached ? 'var(--vd-bad-fg)' : undefined },
       ]} />
 
       <ProfileSection>Practice</ProfileSection>
@@ -54,9 +64,8 @@ export function ProfileScreen({ onSelectCase }: { onSelectCase: (id: string) => 
         <Card level={1} pad={12} className={s.card}>
           <Field label="Specialty" value={seedDoctor.specialty} />
           <Field label="Registration" value={seedDoctor.registration} />
-          <Field label="Hospital" value={seedDoctor.hospital} />
+          <Field label="Hospital" value={tenantName} />
           <Field label="Languages" value={seedDoctor.languages} />
-          <Field label="Cases reviewed here" value={String(reviewed)} />
         </Card>
       </div>
 
@@ -103,4 +112,17 @@ function Field({ label, value }: { label: string; value: string }) {
       <span className={s.fieldValue}>{value}</span>
     </div>
   );
+}
+
+// The middle half of this week's decisions, in whole minutes. "—" until there
+// is something to take a median of.
+function medianDecision(decided: { submittedAt?: number; reviewedAt?: number }[]): string {
+  const spans = decided
+    .map(c => (c.reviewedAt || 0) - (c.submittedAt || 0))
+    .filter(ms => ms > 0)
+    .sort((a, b) => a - b);
+  if (!spans.length) return '—';
+  const mid = spans[Math.floor(spans.length / 2)];
+  const mins = Math.round(mid / 60000);
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }

@@ -4,6 +4,7 @@
 // this bundle, which is why the direct Google Cloud STT/TTS adapter is gone.
 
 import { realtimeConfigured, remoteListenOnce, remoteSpeak, remoteStopAll } from './realtime';
+import { kokoroReady, kokoroSpeak, stopKokoro } from './kokoro';
 
 export { onVoiceHealth, voiceDegraded } from './realtime';
 
@@ -28,8 +29,9 @@ export interface ListenHandle {
   abort(): void;
 }
 
-export function voiceBackend(): 'browser' | 'remote' {
-  return realtimeConfigured() ? 'remote' : 'browser';
+export function voiceBackend(): 'browser' | 'kokoro' | 'remote' {
+  if (realtimeConfigured()) return 'remote';
+  return kokoroReady() ? 'kokoro' : 'browser';
 }
 
 export function pickVoice(voices: SpeechSynthesisVoice[] | undefined): SpeechSynthesisVoice | undefined {
@@ -72,11 +74,22 @@ export function speak(
     const remote = remoteSpeak(text, {
       ...once,
       onBarge: opts.onBarge,
-      onFallback: () => { fell = browserSpeak(text, once); },
+      onFallback: () => { fell = kokoroOrBrowser(text, once); },
     });
     return { cancel: () => { remote.cancel(); fell && fell.cancel(); once.onDone(); } };
   }
-  return browserSpeak(text, once);
+  return kokoroOrBrowser(text, once);
+}
+
+// Kokoro first, speechSynthesis until the model lands or if it fails.
+function kokoroOrBrowser(text: string, opts: { onDone?: () => void }): SpeakHandle {
+  let fell: SpeakHandle | null = null;
+  const kokoro = kokoroSpeak(text, {
+    onDone: opts.onDone,
+    onFallback: () => { fell = browserSpeak(text, opts); },
+  });
+  if (!kokoro) return browserSpeak(text, opts);
+  return { cancel: () => { kokoro.cancel(); fell && fell.cancel(); } };
 }
 
 // speechSynthesis can accept an utterance and then never speak it and never
@@ -184,6 +197,7 @@ function browserListenOnce(opts: {
 }
 
 export function stopAllVoice(): void {
+  stopKokoro();
   if (realtimeConfigured()) remoteStopAll();
   try {
     window.speechSynthesis.cancel();

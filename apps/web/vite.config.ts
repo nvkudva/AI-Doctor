@@ -80,6 +80,9 @@ export default defineConfig({
         // screenshots stay out entirely — the browser fetches those once, and
         // the app itself never renders them.
         globPatterns: ['**/*.{js,css,html}'],
+        // Kokoro voice engine (~24 MB with its ONNX WASM): lazy-loaded on
+        // first speak, never precached — an install must not pay for it.
+        globIgnores: ['**/kokoro-*.js', '**/ort-wasm-*.wasm'],
         // Offline navigation to /patient/labs or /doctor/case/… serves the
         // precached shell, which then says it is offline. It never serves
         // clinical content: the data behind those routes is in no cache.

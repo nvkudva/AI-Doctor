@@ -12,12 +12,11 @@ import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type Lis
 export type Turn = MiraTurn;
 
 // Openers while the conversation is young; follow-ups once it is running.
-// Tone tracks how the patient is doing, not what the button does.
 const OPENERS: Suggestion[] = [
-  { label: 'I have a fever', tone: 'bad' },
-  { label: 'Bad headache', tone: 'warn' },
-  { label: 'Stomach pain', tone: 'warn' },
-  { label: 'Feeling better', tone: 'ok' },
+  { label: 'I have a fever' },
+  { label: 'Bad headache' },
+  { label: 'Stomach pain' },
+  { label: 'Feeling better' },
 ];
 // Spoken back when the plan is already with a doctor: what the patient just
 // said is on the record, and nothing about the plan has changed.
@@ -65,8 +64,8 @@ const FOLLOWUPS: Suggestion[] = [
   { label: 'Since yesterday' },
   { label: 'About a week' },
   { label: 'It comes and goes' },
-  { label: 'It\u2019s getting worse', tone: 'bad' },
-  { label: 'That\u2019s all', tone: 'ok' },
+  { label: 'It\u2019s getting worse' },
+  { label: 'That\u2019s all' },
 ];
 
 export interface PatientProfile {

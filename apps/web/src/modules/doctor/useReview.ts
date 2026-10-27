@@ -28,9 +28,9 @@ const START_PILLS: Suggestion[] = [
   { label: 'What did the patient say?' },
 ];
 const REVIEW_PILLS: Suggestion[] = [
-  { label: 'Draft an approval', tone: 'ok' },
-  { label: 'Decline this', tone: 'bad' },
-  { label: 'Change the dosage', tone: 'warn' },
+  { label: 'Draft an approval' },
+  { label: 'Decline this' },
+  { label: 'Change the dosage' },
   { label: 'Add a test' },
 ];
 

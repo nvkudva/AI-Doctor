@@ -315,7 +315,7 @@ export function PatientFlow() {
         onClose={() => setMiraOpen(false)}
         session={consult}
         youLabel="You"
-        placeholder="Type instead — e.g. fever 3 days…"
+        placeholder="Type a message"
         draftKey="vd_consult_draft"
       />
       <div className={s.screen}>

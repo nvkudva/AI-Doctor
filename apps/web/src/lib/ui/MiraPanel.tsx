@@ -13,14 +13,11 @@ import { Icon, pressProps } from './Primitives';
 import { useFocusEntry } from './Dismiss';
 import { type VoiceState } from './Mira';
 import { useRailOffset } from './NavBar';
-import { toneStyle, type Tone } from '../theme';
 import { useBreakpoint } from '../../shell/viewport';
 import s from './MiraPanel.module.css';
 
 export interface Suggestion {
   label: string;
-  /** Tints the pill — a decline reads red, a reassurance green. */
-  tone?: Tone;
 }
 
 export interface MiraTurn {
@@ -89,11 +86,6 @@ function Waveform({ state, onTap, offline }: { state: VoiceState; onTap: () => v
       {...pressProps(onTap, offline ? `${label}. Natural voice unavailable — browser voice in use` : label)}
       className={s.wave}
     >
-      {/* The voice being the browser's is a property of her, not of the last
-          thing that went wrong, so it is marked on her and stays marked. The
-          notice under the composer says it once, in full; this says it for as
-          long as it is true. */}
-      {offline && <span className={s.waveOffline} aria-hidden="true">Browser voice</span>}
       {Array.from({ length: BARS }, (_, i) => (
         <span
           key={i}
@@ -257,6 +249,14 @@ export function MiraPanel({
             <span className={`${s.titleState}${connection === 'Live' ? '' : ' ' + s.titleIdle}`}>
               {connection}
             </span>
+            {/* The voice being the browser's is a property of her, not of the
+                last thing that went wrong, so it is marked for as long as it
+                is true. */}
+            {session.voiceOffline && (
+              <span className={s.voiceBadge} title="Mira’s natural voice is unavailable — using your browser’s voice. The consult works as normal.">
+                Browser voice
+              </span>
+            )}
           </div>
 
           <div
@@ -283,7 +283,6 @@ export function MiraPanel({
           <div className={s.body}>
             <Card tone="panel" bordered={false} className={s.notesCard}>
               <div className={s.notesHead}>
-                <div className={s.grabber} />
                 <span className={s.notesLabel}>Transcript</span>
               </div>
               <div ref={notesRef} className={s.notes}>
@@ -335,9 +334,8 @@ export function MiraPanel({
                   <button
                     key={sg.label}
                     type="button"
-                    className={`vd-tag ${s.pill}`}
+                    className={s.pill}
                     onClick={() => session.send(sg.label)}
-                    style={toneStyle(sg.tone ?? 'neutral')}
                   >
                     {sg.label}
                   </button>
@@ -400,12 +398,6 @@ export function MiraPanel({
                 >
                   Fix
                 </button>
-              </div>
-            ) : session.voiceOffline ? (
-              // Not a failure and nothing to act on, so it takes the slot only
-              // when nothing has actually gone wrong, and takes the muted style.
-              <div className={s.voiceNotice} role="status">
-                Mira’s natural voice is unavailable — using your browser’s voice. The consult works as normal.
               </div>
             ) : null}
 

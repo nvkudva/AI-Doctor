@@ -17,7 +17,7 @@
 
 .header { margin-bottom: var(--vd-space-3); }
 
-.grid { display: flex; flex-direction: column; gap: 2px; }
+.grid { display: flex; flex-direction: column; }
 @media (min-width: 800px) {
   .grid {
     display: grid;
@@ -42,7 +42,7 @@
   .colSide { grid-column: 2; }
 }
 
-.section { min-width: 0; margin-bottom: var(--vd-space-4); }
+.section { min-width: 0; margin-bottom: var(--vd-space-7); }
 /* A section label must not outrank the card it labels, and must sit on the
    card's own gutter. It used to be set larger and heavier than the titles
    beneath it, 4px off the content inset (DESIGN-REVIEW D20). */
@@ -53,11 +53,10 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--vd-ink-3);
-  margin: 24px var(--vd-space-4) 8px;
+  margin: 0 var(--vd-space-4) var(--vd-space-3);
 }
-.section:first-child .sectionTitle { margin-top: 0; }
 
-.row { margin-bottom: 8px; }
+.row:not(:last-child) { margin-bottom: 8px; }
 .rowInner { display: flex; gap: 12px; align-items: flex-start; }
 .rowIcon {
   flex: none;
@@ -74,7 +73,7 @@
 .rowTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
 .rowDetail { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 1px; }
 .rowMeta { composes: vd-t-caption vd-w7 from global; color: var(--vd-ink-soft); margin-top: 4px; }
-.rowChev { flex: none; display: flex; color: var(--vd-ink-4); transform: rotate(-90deg); }
+.rowChev { flex: none; align-self: center; display: flex; color: var(--vd-ink-4); }
 
 .empty {
   composes: vd-t-footnote from global;
@@ -91,6 +90,16 @@
 .ctaTitle { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
 @media (min-width: 800px) { .ctaTitle { font-size: 15px; } }
 .ctaBody { composes: vd-t-footnote from global; color: var(--vd-ink-3); margin-top: 2px; }
+
+/* The primary action: accent-tinted, with the orb that opens the same panel. */
+.hero {
+  background: color-mix(in oklab, var(--vd-brand-2) 12%, var(--vd-surface-card));
+  border-color: color-mix(in oklab, var(--vd-brand-2) 32%, transparent);
+}
+.heroInner { display: flex; align-items: center; gap: var(--vd-space-5); }
+.heroBody { flex: 1; min-width: 0; }
+.heroTitle { composes: vd-t-headline from global; color: var(--vd-ink-1); }
+.heroChev { flex: none; display: flex; color: var(--vd-nav-active); }
 
 /* Results summary: a count and what it covers, not the results themselves. */
 .summary { display: flex; align-items: center; gap: var(--vd-space-4); color: var(--vd-ink-4); }

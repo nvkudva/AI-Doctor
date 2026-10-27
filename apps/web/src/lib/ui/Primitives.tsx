@@ -5,13 +5,13 @@ import { statusPill } from '../theme';
 import s from './Primitives.module.css';
 
 // theme.statusPill is the single label source — no local duplicate map.
+export function Pill({ label, bg, fg }: { label: string; bg: string; fg: string }) {
+  return <span className={`vd-tag ${s.pill}`} style={{ backgroundColor: bg, color: fg }}>{label}</span>;
+}
+
 export function StatusPill({ status }: { status: string }) {
   const p = statusPill[status] || statusPill.pending;
-  return (
-    <span className={`vd-tag ${s.pill}`} style={{ backgroundColor: p.bg, color: p.fg }}>
-      {statusPill[status]?.label || status}
-    </span>
-  );
+  return <Pill label={statusPill[status]?.label || status} bg={p.bg} fg={p.fg} />;
 }
 
 // Placeholder geometry for a card whose data has not arrived. It says nothing

@@ -84,6 +84,15 @@ async function resolveRole(fallback: Role): Promise<Role> {
   }
 }
 
+const NETWORK_ERR = /failed to fetch|networkerror|network request failed|load failed|fetch failed/i;
+
+function humanAuthError(message: string | undefined, fallback: string): string {
+  if (message && NETWORK_ERR.test(message)) {
+    return 'Can’t reach the clinic right now. Check your connection and try again.';
+  }
+  return message || fallback;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => loadJson<AuthUser>(AUTH_KEY));
   const [ready, setReady] = useState(false);
@@ -171,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: { redirectTo: location.origin + '/patient' },
     });
     setGooglePending(false);
-    if (error) setAuthErr(error.message);
+    if (error) setAuthErr(humanAuthError(error.message, 'Could not sign in with Google'));
   };
 
   // With a project configured the demo buttons sign in as the seeded accounts,
@@ -195,13 +204,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .signInWithPassword({ email: DEMO_USERS[role].email, password: DEMO_PASSWORD })
           .then(({ data, error }) => {
             if (error || !data.user) {
-              setAuthErr(error?.message || 'Could not sign in to the demo account');
+              setAuthErr(humanAuthError(error?.message, 'Could not sign in to the demo account'));
               return;
             }
             const meta = { ...(data.user.user_metadata || {}), role } as Record<string, unknown>;
             persist({ ...toUser(data.user.id, data.user.email || '', meta), role, provider: 'demo' });
           });
       })
+      .catch((e: unknown) => setAuthErr(humanAuthError(e instanceof Error ? e.message : undefined, 'Could not sign in to the demo account')))
       .finally(() => setGooglePending(false));
   };
 

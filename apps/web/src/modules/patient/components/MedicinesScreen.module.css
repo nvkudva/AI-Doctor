@@ -1,4 +1,10 @@
 /* Dose schedule with check-off (patient-todo P1 #18, #19). */
+.screen {
+  composes: vd-scroll from global;
+  padding: 20px;
+}
+@media (min-width: 800px) { .screen { max-width: 860px; margin: 0 auto; width: 100%; padding: 20px 28px 40px; } }
+@media (min-width: 1160px) { .screen { max-width: 1180px; padding: 24px 32px 40px; } }
 .adherence { }
 .tallyRow { display: flex; align-items: baseline; gap: var(--vd-space-3); }
 /* Neutral at zero: nothing taken is not a good outcome to colour green. */
@@ -17,15 +23,15 @@
 
 .list { display: flex; flex-direction: column; gap: var(--vd-space-3); }
 
-.row { display: flex; gap: var(--vd-space-4); align-items: stretch; }
+.row { display: flex; gap: var(--vd-space-3); align-items: stretch; }
 .rowLater { opacity: 0.62; }
 .rowTaken { opacity: 0.78; }
 .time {
   composes: vd-t-caption from global;
-  width: 52px; flex: none; text-align: right; font-weight: 400;
+  width: 44px; flex: none; text-align: right; font-weight: 400;
   color: var(--vd-ink-4); padding-top: 20px;
 }
-.card { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--vd-space-4); }
+.card { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--vd-space-3); }
 .cardDue { border-color: var(--vd-rx-fg); --card-elev: var(--vd-elev-3); }
 
 .icon {
@@ -33,15 +39,15 @@
   display: flex; align-items: center; justify-content: center;
 }
 .body { flex: 1; min-width: 0; }
-.name { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
+.name { composes: vd-t-callout vd-w7 vd-clamp2 from global; color: var(--vd-ink-1); }
 /* The dose instruction wraps rather than truncating: the trailing controls are
    fixed-width, so it renders in full whatever the row's state (D31). */
 .detail { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-3); }
 
-/* Recording a dose is the primary act of this screen, so it is a 56px target
+/* Recording a dose is the primary act of this screen, so it is a 48px target
    at the end of the row — not a text link, and not only on missed doses. */
 .take {
-  width: 56px; height: 56px; flex: none;
+  width: 48px; height: 48px; flex: none;
   display: grid; place-items: center;
   border-radius: 50%; cursor: pointer;
   border: 1.5px solid var(--vd-border-strong);
@@ -52,7 +58,7 @@
 /* Skip and undo live behind the overflow: neither is the daily action. */
 .moreWrap { position: relative; flex: none; }
 .more {
-  width: 44px; height: 44px;
+  width: 44px; height: 44px; margin-right: -8px;
   display: grid; place-items: center;
   border-radius: var(--vd-radius-pill); cursor: pointer;
   border: none; background: transparent; color: var(--vd-ink-4);

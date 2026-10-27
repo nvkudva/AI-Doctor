@@ -22,12 +22,12 @@
 @media (min-width: 1160px) { .sizePrimary { height: 52px; padding: 0 32px; } }
 
 .sizeSecondary { composes: vd-t-subhead vd-w7 from global; height: 48px; padding: 0 20px; }
-@media (min-width: 800px) { .sizeSecondary { height: 50px; padding: 0 24px; font-size: 14px; } }
+@media (min-width: 800px) { .sizeSecondary, .sizeApprove { height: 50px; padding: 0 24px; font-size: 14px; } }
 
 .sizeTertiary { composes: vd-t-subhead vd-w6 from global; height: 48px; padding: 0 20px; }
 @media (min-width: 800px) { .sizeTertiary { font-size: 14px; } }
 
-.sizeApprove { composes: vd-t-caption vd-w7 from global; height: 36px; padding: 0 14px; }
+.sizeApprove { composes: vd-t-subhead vd-w7 from global; height: 48px; padding: 0 20px; }
 
 /* Declared after the size classes so it wins the padding. */
 .iconOnly { min-width: 48px; min-height: 44px; padding: 0; }
@@ -59,10 +59,10 @@
   box-shadow: var(--vd-elev-2);
 }
 .skinApprove {
-  background: var(--vd-ok-bg);
-  color: var(--vd-ok-fg);
-  border: 1px solid var(--vd-glass-border);
-  box-shadow: var(--vd-glass-hi), var(--vd-elev-1);
+  background: var(--vd-grad-approve);
+  color: var(--vd-ink-on-approve);
+  border: 1px solid transparent;
+  box-shadow: var(--vd-elev-2);
 }
 
 /* Circular glass action button — 44 on coarse pointers, 40 visual at desktop. */
@@ -102,10 +102,5 @@
   .skinTertiary:not(:disabled):hover { background: var(--vd-surface-chip); color: var(--vd-ink-1); }
   .skinPrimary:not(:disabled):hover,
   .skinDanger:not(:disabled):hover { box-shadow: var(--vd-shadow-cta), var(--vd-elev-3); }
-  .skinApprove:not(:disabled):hover { box-shadow: var(--vd-glass-hi), var(--vd-elev-3); }
-}
-
-/* A 36px primary clinical action is below the touch-target rule (QA-09). */
-@media (max-width: 799px) {
-  .sizeApprove { height: 44px; padding: 0 18px; }
+  .skinApprove:not(:disabled):hover { box-shadow: var(--vd-elev-3); }
 }

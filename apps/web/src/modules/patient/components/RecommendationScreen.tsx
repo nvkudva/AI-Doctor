@@ -247,7 +247,7 @@ function PlanItem({ name, dosage, timing, notes, why, last, booked, onBook }: {
       {!!why && <div className={s.why}><b>Why:</b> {why}</div>}
       {booked && <div className={s.booked}>Booked for {booked}</div>}
       {onBook && !booked && (
-        <Button variant="secondary" icon="clock" onClick={onBook} className={s.book}>Book this test</Button>
+        <Button variant="secondary" icon="cal" onClick={onBook} className={s.book}>Book this test</Button>
       )}
     </div>
   );

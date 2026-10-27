@@ -142,7 +142,7 @@ export function DoctorHome({ queue, appointments, onSelect, onSeeAll, onSeeRevie
             </>
           ) : (
             <EmptyState
-              icon="clock"
+              icon="cal"
               title="Nothing booked"
               body="Escalating a case from the review queue books a slot here."
               action={<Button variant="tertiary" onClick={onSeeAll}>Open appointments</Button>}

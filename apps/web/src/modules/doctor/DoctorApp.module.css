@@ -30,7 +30,7 @@
    are signing gets the width — it used to be the narrowest of three columns,
    about 185px, wrapping the assessment over two lines (DESIGN-REVIEW D15). */
 @media (min-width: 1160px) {
-  .panes { grid-template-columns: 360px minmax(0, 1fr); }
+  .panes { grid-template-columns: 320px minmax(0, 1fr); gap: 20px; }
 }
 
 .pane { min-width: 0; display: flex; flex-direction: column; gap: var(--vd-space-3); }
@@ -54,11 +54,12 @@
   color: var(--vd-ink-on-glass);
 }
 
-.queueCard { display: flex; flex-direction: column; gap: var(--vd-space-3); }
+.queueCard { display: flex; flex-direction: column; overflow: hidden; }
+.queueFilter { padding: var(--vd-space-4) var(--vd-space-5) 0; display: flex; flex-direction: column; }
 .queueEmpty {
   composes: vd-t-footnote from global;
   color: var(--vd-ink-soft);
-  padding: var(--vd-space-4) var(--vd-space-3);
+  padding: var(--vd-space-5);
   text-align: center;
 }
 
@@ -115,21 +116,13 @@
 }
 
 /* Review worklist chrome: what is being sorted, and what has run out of time. */
-.queueHead { display: flex; align-items: baseline; gap: var(--vd-space-3); flex-wrap: wrap; }
+.queueHead { display: flex; align-items: baseline; gap: var(--vd-space-3); flex-wrap: wrap; padding: var(--vd-space-5) var(--vd-space-5) var(--vd-space-3); }
+.queueHead > * { margin: 0; }
 .queueSort { composes: vd-t-footnote from global; color: var(--vd-ink-4); }
-.breachBanner {
-  composes: vd-t-callout vd-w6 from global;
-  display: flex; align-items: center; gap: var(--vd-space-3);
-  background: var(--vd-warn-bg); color: var(--vd-warn-fg);
-  border-radius: var(--vd-radius-md); padding: var(--vd-space-4);
-  margin-bottom: var(--vd-space-4);
-}
-
-/* The group heading carries the count the banner used to repeat. */
 .queueGroup {
   composes: vd-t-caption vd-w7 from global;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--vd-ink-3);
-  padding: var(--vd-space-4) 0 var(--vd-space-2);
+  padding: var(--vd-space-3) var(--vd-space-5) var(--vd-space-2);
 }

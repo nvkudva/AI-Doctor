@@ -1,5 +1,13 @@
 /* Booking a test the plan ordered (patient-todo P0 #2). */
-.screen { display: flex; flex-direction: column; gap: var(--vd-space-4); }
+.screen {
+  composes: vd-scroll from global;
+  display: flex;
+  flex-direction: column;
+  gap: var(--vd-space-4);
+  padding: 20px;
+}
+@media (min-width: 800px) { .screen { max-width: 860px; margin: 0 auto; width: 100%; padding: 20px 28px 40px; } }
+@media (min-width: 1160px) { .screen { max-width: 1180px; padding: 24px 32px 40px; } }
 
 .top { display: flex; align-items: center; gap: var(--vd-space-4); }
 .back { height: 44px; padding: 0 var(--vd-space-5); }

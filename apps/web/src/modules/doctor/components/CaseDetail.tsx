@@ -1,7 +1,7 @@
 // Full case view: AI consult summary, decision actions, patient side panel.
 import { splitPlan, type CaseItem, type SafetyFlag } from '../../../lib/core';
-import { Button, Card, Disclosure, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
-import { tints } from '../../../lib/theme';
+import { Button, Card, Disclosure, Icon, MicroLabel, Pill, StatusPill } from '../../../lib/ui';
+import { statusPill, tints } from '../../../lib/theme';
 import s from './CaseDetail.module.css';
 
 const DECISION_LABEL: Record<string, string> = {
@@ -9,6 +9,20 @@ const DECISION_LABEL: Record<string, string> = {
   rejected: 'Declined',
   changes: 'Sent back for changes',
 };
+
+// The validator's ids are machine names; the reviewer reads these.
+const CHECK_LABEL: Record<string, string> = {
+  duration_gt_2w: 'Symptoms over 2 weeks',
+  allergy_clear: 'Allergy check',
+  interaction: 'Drug interaction',
+  trigger_identified: 'Trigger identified',
+  demographics_missing: 'Demographics missing',
+};
+
+function checkLabel(code: string): string {
+  const spaced = code.replace(/_/g, ' ');
+  return CHECK_LABEL[code] ?? spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
 
 export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, onDecline, onEdit, onEscalate }: {
   ac: CaseItem; actionable: boolean;
@@ -36,12 +50,15 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
         <StatusPill status={ac.status} />
       </div>
 
-      <div className={s.split}>
+      <div className={`${s.split}${actionable ? ' ' + s.withDock : ''}`}>
       <Card level={2} className={s.card}>
         <div className={s.cardHead}>
           <span className={s.kindIcon}><Icon name="stethoscope" size={17} /></span>
           <MicroLabel>AI consultation</MicroLabel>
-          <StatusPill status={ac.confidence} />
+          <span className={s.confidence}>
+            Confidence
+            <Pill label={ac.confidence.charAt(0).toUpperCase() + ac.confidence.slice(1)} bg={(statusPill[ac.confidence] ?? statusPill.low).bg} fg={(statusPill[ac.confidence] ?? statusPill.low).fg} />
+          </span>
         </div>
         {/* The source above the conclusion, and open. Hiding what the patient
             reported while highlighting what the AI concluded from it trains
@@ -120,7 +137,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
           {blocking.length > 0 && (
             <div className={s.blocked} role="status">
               <Icon name="alert" size={15} />
-              Cannot be approved — {blocking.map(f => f.code.replace(/_/g, ' ')).join(', ')}.
+              Cannot be approved — {blocking.map(f => checkLabel(f.code)).join(', ')}.
             </div>
           )}
           <div className={s.decideRow}>
@@ -137,7 +154,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
               Approve &amp; send
             </Button>
           </div>
-          <Button variant="tertiary" icon="clock" onClick={onEscalate} className={s.decideAlt}>
+          <Button variant="tertiary" icon="cal" onClick={onEscalate} className={s.decideAlt}>
             Book an appointment instead
           </Button>
         </div>
@@ -173,8 +190,8 @@ function SafetyChecks({ flags }: { flags: SafetyFlag[] }) {
             </span>
             <div className={s.checkBody}>
               <div className={s.checkHead}>
-                <span className={s.checkCode}>{f.code.replace(/_/g, ' ')}</span>
-                <span className="vd-tag" style={{ background: v.bg, color: v.fg }}>{v.label}</span>
+                <span className={s.checkCode}>{checkLabel(f.code)}</span>
+                <Pill label={v.label} bg={v.bg} fg={v.fg} />
               </div>
               <div className={s.checkText}>{f.text}</div>
             </div>

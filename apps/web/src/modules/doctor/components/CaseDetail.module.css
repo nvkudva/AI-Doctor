@@ -8,7 +8,7 @@
   gap: var(--vd-space-4);
 }
 @media (min-width: 800px)  { .col { max-width: 720px; gap: var(--vd-space-5); } }
-@media (min-width: 1160px) { .col { max-width: 760px; gap: var(--vd-space-6); } }
+@media (min-width: 1160px) { .col { max-width: none; gap: var(--vd-space-6); } }
 
 /* Long-form measure — never wider than a comfortable line. */
 .read {
@@ -49,6 +49,9 @@
 
 .card { display: flex; flex-direction: column; }
 .cardHead { display: flex; gap: var(--vd-space-3); align-items: center; }
+.cardHead > * { white-space: nowrap; }
+.cardHead > :nth-child(2) { flex: 1; }
+.confidence { composes: vd-t-footnote from global; display: inline-flex; align-items: center; gap: var(--vd-space-2); color: var(--vd-ink-3); }
 
 .summary { composes: read; margin-bottom: var(--vd-space-3); }
 .said { composes: read; margin: 0; padding-left: 18px; }
@@ -94,10 +97,14 @@
 @media (min-width: 800px) { .decide { bottom: var(--vd-space-4); } }
 
 .decideRow { display: flex; gap: var(--vd-space-3); }
-.decideBtn { flex: 1 1 0; min-width: 0; min-height: 48px; }
+.decideBtn { flex: 1 1 0; min-width: 0; }
 /* The one asymmetry that is honest: signing is the widest because it is the
    longest label, not because it is the recommended answer. */
 .decideApprove { flex: 1.4 1 0; min-width: 180px; }
+
+/* Room under the plan equal to the sticky dock, so its last lines are never beneath it. */
+.withDock { padding-bottom: var(--dock-h, 0px); }
+@media (min-width: 800px) { .withDock { --dock-h: 148px; } }
 .decideDecline { color: var(--vd-bad-fg); }
 .decideAlt { align-self: center; }
 
@@ -167,8 +174,8 @@
   display: flex; align-items: center; justify-content: center;
 }
 .checkBody { min-width: 0; }
-.checkHead { display: flex; align-items: center; gap: var(--vd-space-2); }
-.checkCode { composes: vd-t-micro from global; color: var(--vd-ink-4); }
+.checkHead { display: flex; align-items: center; flex-wrap: wrap; gap: var(--vd-space-2); }
+.checkCode { composes: vd-t-micro from global; color: var(--vd-ink-4); white-space: nowrap; }
 .checkText { composes: vd-t-footnote from global; color: var(--vd-ink-2); margin-top: 3px; }
 
 .kindIcon {
@@ -178,14 +185,14 @@
 }
 
 
-/* Inside the case column: the plan keeps a readable measure and the patient's
-   record sits beside it as a 300px sidebar, stacking above ~1100px worth of
-   room rather than becoming a third top-level column (DESIGN-REVIEW D15). */
-@media (min-width: 1100px) {
+/* Inside the case column: the plan takes the width and the patient's record
+   sits beside it as a 250px sidebar, stacking until the pane is wide enough
+   rather than becoming a third top-level column (DESIGN-REVIEW D15). */
+@media (min-width: 1360px) {
   .split {
     display: grid;
-    grid-template-columns: minmax(0, 720px) 300px;
-    gap: var(--vd-space-5);
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: var(--vd-space-4);
     align-items: start;
   }
   .split > .panel { position: sticky; top: 0; }

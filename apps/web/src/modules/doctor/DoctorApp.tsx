@@ -26,7 +26,7 @@ type DeskTab = 'home' | 'appointments' | 'reviews';
 // Profile first and Reviews last, burying the doctor's actual job (D18).
 const NAV_ITEMS: NavItem[] = [
   { key: 'reviews', label: 'Reviews', icon: 'doc' },
-  { key: 'appointments', label: 'Appointments', icon: 'clock' },
+  { key: 'appointments', label: 'Appointments', icon: 'cal' },
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'profile', label: 'Profile', icon: 'person' },
 ];
@@ -214,7 +214,7 @@ function Desk({ tenantName }: { tenantName: string }) {
       <div className={s.column}>
       {onProfile ? <ProfileScreen tenantName={tenantName} onSelectCase={selectCase} /> : <>
       <DeskHeader
-        title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : undefined}
+        title={tab === 'reviews' ? 'Reviews' : tab === 'appointments' ? 'Appointments' : 'Home'}
         tenantName={tenantName}
         pendingCount={pendingCount}
         urgentCount={urgentCount}
@@ -249,25 +249,28 @@ function Desk({ tenantName }: { tenantName: string }) {
                   {visible.length === 0 && emptyQueue}
                 </>
               ) : (
-                <Card tone="panel" level={1} className={s.queueCard}>
-                  {bp !== 'desktop' && <QueueFilter value={filter} onChange={setFilter} counts={counts} />}
+                <Card level={1} pad={0} className={s.queueCard}>
+                  {bp !== 'desktop' && <div className={s.queueFilter}><QueueFilter value={filter} onChange={setFilter} counts={counts} /></div>}
                   <div className={s.queueHead}>
                     <MicroLabel>{queueLabel}</MicroLabel>
-                    <span className={s.queueSort}>safety flags, then urgency, then longest waiting</span>
+                    {!split && <span className={s.queueSort}>Safety flags, then urgency, then longest waiting</span>}
                   </div>
-                  {/* Two groups instead of a banner and six identically red
-                      rows: the heading carries the count, and only the case at
-                      the top of Breached gets the red treatment (D13). */}
+                  {/* Two groups instead of six identically red rows: the
+                      heading carries the count, and only the case at the top
+                      of Breached gets the red treatment (D13). The on-target
+                      heading only appears when there is a Breached group to
+                      set it apart from. */}
                   {(['breached', 'ontarget'] as const).map(group => {
                     const rows = visible.filter(c => isBreached(c) === (group === 'breached'));
                     if (rows.length === 0) return null;
+                    const hasBreached = visible.some(isBreached);
                     return (
                       <div key={group}>
-                        <div className={s.queueGroup}>
-                          {group === 'breached'
-                            ? `Breached · ${rows.length}`
-                            : `Within target · ${rows.length}`}
-                        </div>
+                        {hasBreached && (
+                          <div className={s.queueGroup}>
+                            {group === 'breached' ? `Breached · ${rows.length}` : `Within target · ${rows.length}`}
+                          </div>
+                        )}
                         {rows.map((c, i) => (
                           <ReviewRow
                             key={c.id}

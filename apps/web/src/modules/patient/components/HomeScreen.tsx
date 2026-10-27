@@ -1,9 +1,9 @@
 // Patient home dashboard: what needs attention today — the next dose, the next
 // appointment, results flagged for review, and notes from the doctor. Starting
-// a consult is the nav orb, so there is no hero here (DESIGN §11.5).
+// a consult is the hero above them, and the nav orb.
 import { useNavigate } from 'react-router';
 import { myCase, planStatus, timeLabel, whenLine } from '../../../lib/core';
-import { AppHeader, Button, Card, Icon, Skeleton, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
+import { AppHeader, Button, Card, Icon, MiraOrb, Skeleton, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
 import { useAuth } from '../../../shell/auth';
@@ -51,6 +51,21 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
       />
 
       <div className={s.grid}>
+        <Section>
+          <Card level={1} pad="16px" onClick={onStart} aria-label="Start a consultation with Dr. Mira" className={s.hero}>
+            <div className={s.heroInner}>
+              <MiraOrb size={52} />
+              <div className={s.heroBody}>
+                <div className={s.heroTitle}>Start a consultation</div>
+                <div className={s.ctaBody}>
+                  Talk to Dr. Mira — no forms. A licensed doctor reviews every plan.
+                </div>
+              </div>
+              <span className={s.heroChev}><Icon name="chevR" size={18} /></span>
+            </div>
+          </Card>
+        </Section>
+
         {/* Answering replaces this card in place rather than leaving it asking
             again — the patient could not tell whether their answer landed, and
             answering twice sends the doctor conflicting signals (D27). */}
@@ -118,9 +133,9 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
             : upcoming.map(a => (
               <Row
                 key={a.id}
-                icon="clock"
+                icon="cal"
                 title={a.reason || KIND_LABEL[a.kind]}
-                detail={a.location}
+                detail={a.location && a.location !== (a.reason || KIND_LABEL[a.kind]) ? a.location : undefined}
                 meta={whenLine(a.startsAt)}
               />
             ))}
@@ -175,14 +190,6 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
           </Section>
         )}
 
-        <Section side>
-          <Card level={1} pad="13px 15px" onClick={onStart} aria-label="Start a consultation with Dr. Mira">
-            <div className={s.ctaTitle}>Start a consultation</div>
-            <div className={s.ctaBody}>
-              Talk to Dr. Mira — no forms. A licensed doctor reviews every plan.
-            </div>
-          </Card>
-        </Section>
       </div>
     </div>
   );
@@ -222,7 +229,7 @@ function Row({ icon, title, detail, meta, tone, onClick, label }: {
           {detail && <div className={s.rowDetail}>{detail}</div>}
           {meta && <div className={s.rowMeta} style={tone ? { color: tone } : undefined}>{meta}</div>}
         </div>
-        {onClick && <span className={s.rowChev}><Icon name="chevD" size={16} /></span>}
+        {onClick && <span className={s.rowChev}><Icon name="chevR" size={16} /></span>}
       </div>
     </Card>
   );

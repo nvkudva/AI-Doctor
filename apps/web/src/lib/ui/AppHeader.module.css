@@ -42,8 +42,7 @@
 .titleRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
 .title { composes: vd-t-largeTitle vd-truncate from global; color: var(--vd-ink-1); }
-@media (min-width: 800px)  { .title { font-size: 30px; } }
-@media (min-width: 1160px) { .title { font-size: 32px; } }
+@media (min-width: 800px) { .title { font-size: 34px; } }
 
 .subtitle { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 2px; }
 @media (min-width: 800px) { .subtitle { font-size: 15px; } }

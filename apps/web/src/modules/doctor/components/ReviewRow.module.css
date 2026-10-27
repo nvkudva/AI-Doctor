@@ -1,24 +1,33 @@
-/* Review worklist row (PRD D-2). Wide and flat: one decision per line. */
-.row { display: flex; align-items: center; gap: var(--vd-space-5); color: var(--vd-ink-4); }
-.urgent { --card-elev: var(--vd-elev-2), var(--vd-urgent-glow); }
-.breached { border-color: var(--vd-bad-bg); }
+/* Review worklist row (PRD D-2): one decision per line, hairline-separated
+   inside the queue's single rounded surface. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--vd-space-5);
+  padding: 14px var(--vd-space-5);
+  color: var(--vd-ink-4);
+  cursor: pointer;
+}
+.row + .row { border-top: 1px solid var(--vd-border); }
+.selected { background: color-mix(in oklab, var(--vd-selected-ring) 14%, transparent); }
+.breached { box-shadow: inset 3px 0 0 var(--vd-bad-fg); }
 
 @media (pointer: fine) {
-  .row { transition: box-shadow var(--vd-dur-2) var(--vd-ease-spring), border-color var(--vd-dur-2) var(--vd-ease-spring); }
-  .row:hover:not(.urgent) { --card-elev: var(--vd-elev-3); }
+  .row:hover:not(.selected) { background: var(--vd-surface-chip); }
 }
 
 .confidence { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
-.who { width: 172px; flex: none; min-width: 0; }
-.rowCompact { gap: var(--vd-space-3); }
-.rowCompact .who { width: auto; flex: 1 1 auto; }
-.compactTags { display: flex; gap: var(--vd-space-2); align-items: center; flex: none; }
-.rowCompact .wait { min-width: 0; }
-.patient { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
-.dx { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-4); }
+/* Name and diagnosis get more room than the plan: the diagnosis is the longer
+   string, and it used to be cut to "airwa…" beside an under-used middle. */
+.who { flex: 5 1 0; min-width: 0; }
+.patient { composes: vd-t-body vd-w7 from global; color: var(--vd-ink-1); }
+.dx { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-4); }
 
-.plan { flex: 1 1 auto; min-width: 0; }
+/* Narrow list beside an open case: name on its own line, chips and time under. */
+.compactMeta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--vd-space-2); margin-top: var(--vd-space-1); }
+
+.plan { flex: 4 1 0; min-width: 0; }
 .title { composes: vd-t-callout vd-truncate from global; color: var(--vd-ink-2); }
 .tags { display: flex; gap: var(--vd-space-2); align-items: center; margin-top: var(--vd-space-2); flex-wrap: wrap; }
 
@@ -27,16 +36,14 @@
   display: inline-flex; align-items: center; gap: var(--vd-space-1);
   background: var(--vd-warn-bg); color: var(--vd-warn-fg);
   border-radius: var(--vd-radius-pill); padding: 3px 9px;
+  white-space: nowrap;
 }
 
-/* flex: 0 0 auto beside a min-width: 0 title: the wait column sizes to its
-   own content instead of being overrun by the pills (DESIGN-REVIEW D15). */
-.wait { flex: 0 0 auto; min-width: 140px; text-align: right; }
-.waited { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
-.sla { composes: vd-t-caption from global; font-weight: 700; margin-top: 2px; }
+.wait { flex: 0 0 auto; min-width: 120px; text-align: right; }
+.waited { composes: vd-t-footnote vd-w7 from global; color: var(--vd-ink-2); white-space: nowrap; }
+.waitMain { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); white-space: nowrap; }
+.sla { composes: vd-t-caption from global; font-weight: 700; margin-top: 2px; white-space: nowrap; }
 
 @media (max-width: 799px) {
   .row { gap: var(--vd-space-3); }
-  .who { width: 132px; }
-  .wait { width: 108px; }
 }

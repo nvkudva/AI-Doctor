@@ -28,14 +28,14 @@ export function MedicinesScreen({ doses, onTaken, onSkipped }: {
   );
   if (doses.length === 0) {
     return (
-      <>
+      <div className={s.screen}>
         {header}
         <EmptyState
           icon="drop"
           title="No medicines to take"
           body="An approved prescription puts its doses on this schedule."
         />
-      </>
+      </div>
     );
   }
   const past = doses.filter(d => doseState(d) !== 'later');
@@ -48,7 +48,7 @@ export function MedicinesScreen({ doses, onTaken, onSkipped }: {
   ].filter(g => g.rows.length > 0);
 
   return (
-    <>
+    <div className={s.screen}>
       {header}
       <Card className={s.adherence}>
         {/* Green is for confirmed-good only: no doses taken is not that, so the
@@ -86,7 +86,7 @@ export function MedicinesScreen({ doses, onTaken, onSkipped }: {
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }
 

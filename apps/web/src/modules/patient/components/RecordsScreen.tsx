@@ -59,14 +59,13 @@ export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
             tabIndex={tab === t ? 0 : -1}
             className={`${s.tab}${tab === t ? ' ' + s.tabOn : ''}`}
           >
-            {t}
+            {t[0].toUpperCase() + t.slice(1)}
           </div>
         ))}
       </div>
 
       {tab === 'history' && (
         <>
-          <SectionTitle>Consultation history</SectionTitle>
           <SectionSub>Your past visits with Dr. Mira</SectionSub>
           {consults.length === 0
             ? <EmptyState icon="clock" title="No visits yet" body="Your visits will appear here after your first consult." />
@@ -76,7 +75,6 @@ export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
 
       {tab === 'labs' && (
         <>
-          <SectionTitle>Lab tests</SectionTitle>
           <SectionSub>Results from your tests</SectionSub>
           {panels.length === 0
             ? <EmptyState icon="drop" title="No lab results yet" body="Results ordered through a consult land here." />
@@ -86,10 +84,6 @@ export function RecordsScreen({ consults, panels, onPanel, tab, onTab }: {
 
     </div>
   );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className={s.sectionTitle}>{children}</div>;
 }
 
 function SectionSub({ children }: { children: React.ReactNode }) {

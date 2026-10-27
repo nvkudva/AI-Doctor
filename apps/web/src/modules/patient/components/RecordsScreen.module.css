@@ -49,7 +49,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  text-transform: capitalize;
   color: var(--vd-ink-soft);
 }
 @media (min-width: 800px) { .tab { font-size: 14px; } }
@@ -77,8 +76,7 @@
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 }
 
-.sectionTitle { composes: vd-t-subhead vd-w7 from global; color: var(--vd-ink-1); margin: 14px 4px 10px; }
-.sectionSub { composes: vd-t-footnote from global; color: var(--vd-ink-soft); margin-bottom: 12px; }
+.sectionSub { composes: vd-t-footnote from global; color: var(--vd-ink-soft); margin: 0 var(--vd-space-4) var(--vd-space-4); }
 
 .doc { margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
 .docIcon { display: flex; color: var(--vd-ink-soft); }

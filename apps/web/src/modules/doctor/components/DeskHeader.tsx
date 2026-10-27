@@ -6,7 +6,7 @@ import { useBreakpoint } from '../../../shell/viewport';
 import s from './DeskHeader.module.css';
 
 export function DeskHeader({ title, tenantName, pendingCount, urgentCount = 0, showNotifs, onToggleNotifs, onCloseNotifs, onSelectCase, filter }: {
-  /** The screen's own name. Home falls back to the work itself (D18, D34). */
+  /** The screen's own name. */
   title?: string;
   tenantName: string; pendingCount: number; urgentCount?: number;
   showNotifs: boolean; onToggleNotifs: () => void; onCloseNotifs: () => void;
@@ -19,8 +19,6 @@ export function DeskHeader({ title, tenantName, pendingCount, urgentCount = 0, s
   const mobile = useBreakpoint() === 'mobile';
   return (
     <AppHeader
-      // A console opens on the work, not on the time of day: "Good evening,
-      // Sara" is the one line on the screen that cannot be acted on (D34).
       title={title || 'Reviews'}
       className={s.header}
       subtitle={mobile

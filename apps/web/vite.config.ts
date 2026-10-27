@@ -82,7 +82,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html}'],
         // Kokoro voice engine (~24 MB with its ONNX WASM): lazy-loaded on
         // first speak, never precached — an install must not pay for it.
-        globIgnores: ['**/kokoro-*.js', '**/ort-wasm-*.wasm'],
+        globIgnores: ['**/kokoro-*.js', '**/transformers.web-*.js', '**/ort-wasm-*.wasm'],
         // Offline navigation to /patient/labs or /doctor/case/… serves the
         // precached shell, which then says it is offline. It never serves
         // clinical content: the data behind those routes is in no cache.

@@ -36,11 +36,6 @@ function toLabRow(v: LabValue) {
 
 // What the check-in answer says to Mira, so the follow-up starts from what the
 // patient already told the app rather than asking them to repeat it.
-const CHECK_IN_LINE: Record<'better' | 'same' | 'worse', string> = {
-  better: 'The plan is working — I am feeling better.',
-  same: 'It has been a few days and I am about the same — no better, no worse.',
-  worse: 'It has got worse since the plan was approved.',
-};
 
 // Shown when the orb is tapped while a plan is already with the doctor: the
 // panel always opens, and it says what can be done from here (UX-11, UX-12).
@@ -182,20 +177,16 @@ export function PatientFlow() {
     },
   });
 
-  // A consult left unfinished when the tab went away is closed out and shown in
-  // History, instead of vanishing without trace (UX-15).
+  // A consult left unfinished when the tab went away is restored into the
+  // panel (transcript + narration slots), not closed out (QA P2). It only
+  // becomes a History record via the 30-minute abandonment timer below.
   const swept = useRef(false);
   useEffect(() => {
     if (swept.current) return;
     swept.current = true;
     const draft = restoreLocal()?.draftConsult;
     if (!draft || !draft.messages?.length) return;
-    persistLocal({ draftConsult: null });
-    clinic.addConsultRecord({
-      id: `ab-${draft.at}`, title: 'Visit ended early', date: 'Today', status: 'Unfinished',
-      note: 'This visit was interrupted before Dr. Mira could finish, so no plan was sent. You can start a fresh consult anytime.',
-      user: true,
-    });
+    consult.resume(draft.messages, draft.slots);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -347,11 +338,18 @@ export function PatientFlow() {
                 plan={clinic.checkIn.plan}
                 alternatives={clinic.checkIn.alternatives}
                 onAnswer={(a, followUp, id) => {
+                  const checkInId = clinic.checkIn?.consultId;
                   clinic.answerCheckIn(a, id);
                   nav('/patient');
-                  if (followUp) setTimeout(() => { setMiraOpen(true); consult.send(CHECK_IN_LINE[a]); }, 0);
+                  // Note-mode against the approved consult: the reply is
+                  // recorded for the doctor instead of running a new
+                  // consult turn on a finished visit (QA P2).
+                  if (followUp) setTimeout(() => {
+                    setMiraOpen(true);
+                    consult.note('Thanks for telling me. Tell me a bit more about how you are feeling now — whatever you say goes to your doctor.', checkInId);
+                  }, 0);
                 }}
-                onDismiss={() => nav('/patient')}
+                onDismiss={() => { clinic.dismissCheckIn?.(); nav('/patient'); }}
               />
             : <EmptyRecommendation onHome={() => nav('/patient')} />
         )}

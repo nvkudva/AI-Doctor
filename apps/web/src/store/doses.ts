@@ -38,12 +38,14 @@ export function buildSchedule(
   const out: Dose[] = [];
   const midnight = new Date(now);
   midnight.setHours(0, 0, 0, 0);
-  rx.filter(isDosed).forEach((r, i) => {
+  rx.filter(isDosed).forEach((r) => {
     const hours = doseHours(r.detail || '');
     for (let d = 0; d < days; d++) {
       for (const h of hours) {
         const at = midnight.getTime() + d * 86400000 + h * 3600000;
-        const id = `${i}:${d}:${h}`;
+        // Keyed by medicine, not list position: a new approval prepends a
+        // prescription and must not move yesterday's marks (QA P2).
+        const id = `${r.name}|${r.detail || ''}:${d}:${h}`;
         const mark = taken[id];
         out.push({
           id, rx: r.name, detail: r.detail || '', at,

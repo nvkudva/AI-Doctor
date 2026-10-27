@@ -89,7 +89,10 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     const rows = asDoctor ? await getDoctorAppointments(id) : await getMyAppointments(id);
     const names = await getProfiles([...new Set(rows.map(r => r.patient_id))]);
     const nameOf = new Map(names.map(p => [p.id, p.full_name || 'Patient']));
-    setAppointments(rows.map((r: AppointmentRow) => ({
+    // Locally booked test slots have no backend row yet; keep them merged
+    // across refreshes instead of wiping a confirmed booking (QA P2).
+    const localBooked = (restoreLocal()?.booked as AppointmentSlot[]) || [];
+    setAppointments([...rows.map((r: AppointmentRow) => ({
       id: r.id,
       patient: nameOf.get(r.patient_id) || 'Patient',
       patientId: r.patient_id,
@@ -99,7 +102,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       minutes: r.duration_minutes,
       location: r.location || '',
       status: r.status,
-    })));
+    })), ...localBooked.filter(b => !rows.some(r => r.id === b.id))]);
   }, []);
 
   const refreshQueue = useCallback(async () => {
@@ -261,7 +264,16 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   }, [uid, isDoctor, queue, refresh]);
 
   const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
-  const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
+  const [checkInSnoozedUntil, setCheckInSnoozedUntil] = useState<number>(() => restoreLocal()?.checkInSnoozeUntil || 0);
+  const checkIn = useMemo(
+    () => (checkInSnoozedUntil > Date.now() ? null : pendingCheckIn(queue, checkIns)),
+    [queue, checkIns, checkInSnoozedUntil],
+  );
+  const dismissCheckIn = () => {
+    const until = Date.now() + 86400000;
+    setCheckInSnoozedUntil(until);
+    persistLocal({ checkInSnoozeUntil: until });
+  };
 
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
@@ -288,6 +300,16 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     decide: (id, decision, opts = {}) => {
       const c = queue.find(x => x.id === id);
       const signed = drafts.current[id];
+      // No draft loaded means there is nothing signable: stamping the case
+      // and announcing "sent" would be a false approval (QA P1).
+      if (c && decision !== 'changes' && !signed) {
+        setNotices(n => [{
+          t: 'That decision did not go through',
+          d: 'No draft is loaded for this case — open it again and retry.',
+          kind: 'case', at: Date.now(), caseId: id,
+        }, ...n]);
+        return false;
+      }
       const status: ConsultStatus = decision === 'approved' ? 'approved' : decision === 'changes' ? 'changes' : 'rejected';
       const reason = opts.reason || '';
       const stamped = c ? { ...c, status, decision, reviewedBy: user?.name || 'Your doctor', reviewedAt: Date.now(), rejectReason: reason || c.rejectReason } as CaseItem : null;
@@ -301,7 +323,8 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       }
       // 'changes' is the desk's own state: §3.2 has no transition for it, and a
       // half-edited draft must stay in the queue rather than reach anyone.
-      if (decision === 'changes' || !c || !signed) return;
+      if (decision === 'changes') return true;
+      if (!c || !signed) return false;
 
       const call = decision === 'approved'
         ? approveConsult({
@@ -318,7 +341,8 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
           idempotencyKey: `reject:${id}:${signed.id}`,
         });
 
-      call.then(refresh).catch((e) => {
+      // Callers announce "sent" only when this resolves true (QA P1).
+      return call.then(() => { refresh(); return true; }).catch((e) => {
         // The decision did not happen. Say so rather than leaving a card that
         // claims a prescription was sent.
         console.warn('[vd] decision refused:', e);
@@ -332,6 +356,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
           kind: 'case', at: Date.now(), caseId: id,
         }, ...n]);
         refresh();
+        return false;
       });
     },
 
@@ -368,10 +393,14 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // Attendance is a plain column update — RLS decides whether it lands.
     // Booking has no availability table yet: the slot the patient picks is
     // written straight in as a booked appointment (patient-todo.md).
-    bookSlot: (title, startsAt, location) => setAppointments(a => [...a, {
-      id: `bk-${startsAt}`, patient: title, reason: title, kind: 'imaging',
-      startsAt, minutes: 15, location, status: 'booked',
-    }]),
+    bookSlot: (title, startsAt, location) => setAppointments(a => {
+      const next = [...a, {
+        id: `bk-${startsAt}`, patient: title, reason: title, kind: 'imaging',
+        startsAt, minutes: 15, location, status: 'booked',
+      } as AppointmentSlot];
+      persistLocal({ booked: next.filter(x => x.id.startsWith('bk-')) });
+      return next;
+    }),
 
     // The value is when it was recorded, so the row can say so afterwards.
     setDoseTaken: (id, t) => {
@@ -427,6 +456,8 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
         return next;
       });
     },
+
+    dismissCheckIn,
 
     setSlotStatus: (id, status) => {
       setAppointments(a => a.map(x => (x.id === id ? { ...x, status } : x)));

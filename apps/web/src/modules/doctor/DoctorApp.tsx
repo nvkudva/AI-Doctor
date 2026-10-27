@@ -140,20 +140,23 @@ function Desk({ tenantName }: { tenantName: string }) {
     setAccepted(false);
     setApproveFor(id);
   };
-  const approveId = (id: string) => {
+  const approveId = async (id: string) => {
     const c = queue.find(x => x.id === id);
     review.stop();
-    clinic.decide(id, 'approved');
-    announce(id, `Approved and sent to ${c?.patient || 'the patient'}.`);
+    // Announce only after the decision actually lands (QA P1).
+    if (await clinic.decide(id, 'approved')) {
+      announce(id, `Approved and sent to ${c?.patient || 'the patient'}.`);
+    }
     setApproveFor(null);
     setAccepted(false);
   };
-  const confirmDecline = () => {
+  const confirmDecline = async () => {
     if (!declineFor) return;
     review.stop();
     const c = queue.find(x => x.id === declineFor);
-    clinic.decide(declineFor, 'rejected', { reason: declineReason });
-    announce(declineFor, `Sent to ${c?.patient || 'the patient'}: not approved, with your reason.`);
+    if (await clinic.decide(declineFor, 'rejected', { reason: declineReason })) {
+      announce(declineFor, `Sent to ${c?.patient || 'the patient'}: not approved, with your reason.`);
+    }
     setDeclining(false);
     setDeclineFor(null);
   };

@@ -47,3 +47,5 @@
 - [ ] Cut local Supabase memory: supabase start -x studio,imgproxy,mailpit,logflare,vector,supavisor,postgres-meta,realtime,edge-runtime. Docker plus the voice server's 3 pipelines exhausted swap and put Postgres into 167-second checkpoints, which made auth 504.
 - [ ] realtime.ts leftovers: reconnect-after-close path never exercised, and mic capture uses the deprecated ScriptProcessor rather than an AudioWorklet.
 - [x] VITE_VOICE_WS_URL added to the main checkout's apps/web/.env.local.
+- [x] Local 2-way voice loop: Distil-Whisper STT + SmolLM2 brain + Kokoro TTS in browser, providers switched in lib/models/config.ts, narration scripts/slots in lib/models/narration.ts
+- [x] Production audit pass: seed expansion, QA+PM agents, audit.md written, P1/P2 fixes implemented (see work-summary.md)

@@ -1,6 +1,7 @@
 // The plan screen: review status, plan card, doctor card, timeline, actions.
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
+import { persistLocal, restoreLocal } from '../../../lib/api';
 import type { Recommendation } from '../../../lib/core';
 import { Button, Card, Icon, MicroLabel, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
@@ -24,7 +25,13 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
 }) {
   const bp = useBreakpoint();
   const mobile = bp === 'mobile';
-  const [ordered, setOrdered] = useState(false);
+  // Persisted per plan, so "Order placed" survives a reload (QA P2).
+  const [ordered, setOrdered] = useState(() => (restoreLocal()?.orders || []).includes(rec.title));
+  const placeOrder = () => {
+    const orders = restoreLocal()?.orders || [];
+    if (!orders.includes(rec.title)) persistLocal({ orders: [...orders, rec.title] });
+    setOrdered(true);
+  };
   const [showCare, setShowCare] = useState(false);
   const approved = reviewStatus === 'approved';
   const pending = reviewStatus === 'pending' || reviewStatus === 'idle';
@@ -173,7 +180,7 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
 
           <div className={bp === 'desktop' ? `${s.actions} vd-glass-thin` : s.actions}>
             {approved && isRx && !ordered ? (
-              <Button fullWidth={mobile} onClick={() => setOrdered(true)}>Order medicine</Button>
+              <Button fullWidth={mobile} onClick={placeOrder}>Order medicine</Button>
             ) : (
               <Button fullWidth={mobile} onClick={onFollowUp}>Ask a follow-up</Button>
             )}

@@ -56,7 +56,7 @@ export interface MiraSession {
   silence?: () => void;
   micDenied?: boolean;
   clearMicDenied?: () => void;
-  /** The natural voice server is unreachable; the browser's own voice is in use. */
+  /** The natural voice server is unreachable; the local Kokoro voice is in use. */
   voiceOffline?: boolean;
   failed?: boolean;
   retry?: () => void;
@@ -86,14 +86,14 @@ function Waveform({ state, onTap, offline }: { state: VoiceState; onTap: () => v
   const label = state === 'speaking' ? 'Interrupt Dr. Mira' : 'Talk to Dr. Mira';
   return (
     <div
-      {...pressProps(onTap, offline ? `${label}. Natural voice unavailable — browser voice in use` : label)}
+      {...pressProps(onTap, offline ? `${label}. Natural voice unavailable — local voice in use` : label)}
       className={s.wave}
     >
       {/* The voice being the browser's is a property of her, not of the last
           thing that went wrong, so it is marked on her and stays marked. The
           notice under the composer says it once, in full; this says it for as
           long as it is true. */}
-      {offline && <span className={s.waveOffline} aria-hidden="true">Browser voice</span>}
+      {offline && <span className={s.waveOffline} aria-hidden="true">Local voice</span>}
       {Array.from({ length: BARS }, (_, i) => (
         <span
           key={i}
@@ -257,6 +257,8 @@ export function MiraPanel({
             <span className={`${s.titleState}${connection === 'Live' ? '' : ' ' + s.titleIdle}`}>
               {connection}
             </span>
+            {/* Persistent AI disclosure, not just the spoken greeting (PM P2). */}
+            <span className={s.titleState}> · AI — a doctor reviews every plan</span>
           </div>
 
           <div

@@ -8,6 +8,10 @@ import {
   startConsult, type ChatMessage,
 } from '../../lib/api';
 import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type ListenHandle, type SpeakHandle } from '../../lib/voice';
+import { checkRedFlag, freshSlots, narrationGuidance, nextQuestion, recordAnswer, type ConsultSlots } from '../../lib/models/narration';
+import { warmLlm } from '../../lib/models/llm';
+import { warmStt } from '../../lib/models/stt';
+import { warmKokoro } from '../../lib/voice/kokoro';
 
 export type Turn = MiraTurn;
 
@@ -21,6 +25,14 @@ const OPENERS: Suggestion[] = [
 ];
 // Spoken back when the plan is already with a doctor: what the patient just
 // said is on the record, and nothing about the plan has changed.
+const URGENT_REPLY =
+  "What you're describing could be serious, and I don't want to take chances with you. Please get to urgent in-person care or call emergency services now. I've flagged this for Dr. Whitfield right away.";
+const URGENT_REC = {
+  type: 'investigation', title: 'Urgent in-person assessment',
+  summary: 'Red-flag symptoms reported; immediate in-person evaluation advised.',
+  items: [{ name: 'Emergency department visit', dosage: '', timing: 'Immediately', notes: 'Do not drive yourself if unwell.', why: 'These symptoms need hands-on assessment right away.', detail: 'Immediate in-person evaluation.' }],
+  advice: 'Call emergency services now if symptoms are worsening.', urgency: 'urgent',
+};
 const NOTE_ACK = 'Got it, I’ve added that for Dr. Whitfield to see.';
 const NOTE_FAILED = 'Sorry, I couldn’t save that just now. Tell me again in a moment.';
 
@@ -127,6 +139,9 @@ export function useConsult(opts: {
   // do, so it is reported once and never blocks the consult.
   const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
   useEffect(() => onVoiceHealth(setVoiceOffline), []);
+  // Warm the local voice models as soon as the consult surface mounts, so
+  // the greeting is Kokoro's voice rather than the OS fallback's.
+  useEffect(() => { warmKokoro(); warmStt(); warmLlm(); }, []);
   const [failed, setFailed] = useState(false);
   const [started, setStarted] = useState(false);
   const [lastTurn, setLastTurn] = useState(0);
@@ -134,6 +149,12 @@ export function useConsult(opts: {
   const [flags, setFlags] = useState<string[]>([]);
   const listenRef = useRef<ListenHandle | null>(null);
   const speakRef = useRef<SpeakHandle | null>(null);
+  // Narration slots for this visit (lib/models/narration): what the script
+  // has gathered so far, persisted with the draft consult every turn.
+  const slotsRef = useRef<ConsultSlots>(freshSlots());
+  // Single-flight: two sends in the same thinking window used to race
+  // ensureConsult into two server consults / two filed cases (QA P1).
+  const inFlightRef = useRef(false);
   const onDoneRef = useRef(opts.onDone);
   onDoneRef.current = opts.onDone;
   const patientRef = useRef(opts.patient);
@@ -325,13 +346,15 @@ export function useConsult(opts: {
         setStatus('idle');
       },
       onEnd: () => setStatus((s) => (s === 'listening' ? 'idle' : s)),
+      // "Listening" only once capture is real: while Whisper downloads the
+      // patient must not talk into a mic that is not open yet (QA P2).
+      onStart: () => setStatus('listening'),
     });
     if (!h) {
       setStatus('idle');
       return;
     }
     listenRef.current = h;
-    setStatus('listening');
   }, []);
 
   // The server-side consult this session writes into (§4.1 row 4). Null in
@@ -350,7 +373,8 @@ export function useConsult(opts: {
 
   const handleUser = useCallback(async (text: string, typed = false) => {
     text = (text || '').trim();
-    if (!text || finishedRef.current) return;
+    if (!text || finishedRef.current || inFlightRef.current) return;
+    inFlightRef.current = true;
     typedRef.current = typed;
     liveIdxRef.current = -1;
     // Spoken to, she answers and listens again; typed to, the composer already
@@ -366,9 +390,13 @@ export function useConsult(opts: {
     const msgs: Turn[] = [...messagesRef.current, { role: 'user', text, at: Date.now(), image }];
     messagesRef.current = msgs;
     setMessages(msgs);
+    // Narration: this turn fills the slot Mira's last question asked about;
+    // the next unfilled slot is what her reply must ask.
+    recordAnswer(slotsRef.current, text);
+    slotsRef.current.pendingSlot = nextQuestion(slotsRef.current)?.slot ?? null;
     // Written every turn so a reload or a closed tab still leaves a trace of
     // the visit that was started (UX-15).
-    persistLocal({ draftConsult: { messages: msgs, at: Date.now() } });
+    persistLocal({ draftConsult: { messages: msgs, at: Date.now(), slots: slotsRef.current } });
     // The plan is already a doctor's to move: what the patient says now is
     // recorded against the consult, not run as a turn. Mira acknowledges and
     // keeps listening, so the conversation continues without anything
@@ -387,6 +415,7 @@ export function useConsult(opts: {
         setFailed(true);
         say(NOTE_FAILED, then);
       }
+      inFlightRef.current = false;
       return;
     }
     try {
@@ -395,8 +424,8 @@ export function useConsult(opts: {
       if (hasSupabase()) {
         // §4.1 row 7. The model turn happens inside the Edge Function, which
         // holds the provider key; the browser only streams tokens back.
-        // No silent fallback to the demo engine: its fixed real-drug drafts
-        // must never reach a doctor's queue as this patient's AI
+        // No silent fallback anywhere: a scripted engine's fixed real-drug
+        // drafts must never reach a doctor's queue as this patient's AI
         // recommendation (TODO P1 SAFETY).
         const consultId = await ensureConsult();
         let streamed = '';
@@ -429,8 +458,23 @@ export function useConsult(opts: {
           recommendation,
         };
       } else {
-        const raw = await aiComplete({ system: systemPrompt(patientRef.current), messages: api, max_tokens: 800 });
+        const system = `${systemPrompt(patientRef.current)}\n${narrationGuidance(slotsRef.current)}`;
+        const raw = await aiComplete({ system, messages: api, max_tokens: 800 });
         data = parseAi(raw);
+      }
+      // Deterministic red-flag gate: the model's own urgency judgement is
+      // advisory only. A script red flag forces the urgent path and files
+      // the case for the doctor whatever the model answered (QA P1).
+      const redFlag = checkRedFlag(slotsRef.current, text);
+      if (redFlag) {
+        data = {
+          ...data,
+          reply: URGENT_REPLY,
+          confidence: 'low',
+          flags: [...(Array.isArray(data.flags) ? data.flags : []), redFlag],
+          done: true,
+          recommendation: data.recommendation?.urgency === 'urgent' ? data.recommendation : URGENT_REC,
+        };
       }
       const reply = data.reply || 'Let me think about that for a moment.';
       // A streamed reply already has a turn on screen; the final text replaces
@@ -467,6 +511,7 @@ export function useConsult(opts: {
         } else {
           endStream();
         }
+        inFlightRef.current = false;
         return;
       }
       endStream(then);
@@ -485,6 +530,7 @@ export function useConsult(opts: {
       saidIdxRef.current = -1;
       say(err, then);
     }
+    inFlightRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -512,12 +558,32 @@ export function useConsult(opts: {
     setLastTurn(Date.now());
     finishedRef.current = false;
     noteOnlyRef.current = false;
+    slotsRef.current = freshSlots();
+    // Start the local models downloading now (user-gesture turn): by the
+    // patient's second reply, Whisper + SmolLM2 are usually ready and the
+    // fallbacks retire on their own.
+    warmStt();
+    warmLlm();
     // Resuming a consult that is still open server-side: turns append to it
     // instead of opening a second visit for the same patient.
     consultIdRef.current = resumeId ?? null;
     saidIdxRef.current = 0;
     say(greeting, () => listenRef2.current());
   }, [say]);
+
+  // Restore a consult interrupted by a reload/closed tab: transcript and
+  // narration slots come back, and the next orb tap listens (QA P2). The
+  // visit is not spoken over until the patient reopens the panel.
+  const resume = useCallback((draftMessages: Turn[], draftSlots?: ConsultSlots) => {
+    if (!draftMessages?.length) return;
+    messagesRef.current = draftMessages;
+    setMessages(draftMessages);
+    if (draftSlots) slotsRef.current = draftSlots;
+    finishedRef.current = false;
+    noteOnlyRef.current = false;
+    setStarted(true);
+    setLastTurn(Date.now());
+  }, []);
 
   // A Mira line with no model call — used when the panel opens on a state that
   // has no consult to run (e.g. a plan already awaiting review, UX-11).
@@ -554,6 +620,7 @@ export function useConsult(opts: {
     speakRef.current?.cancel();
     stopAllVoice();
     finishedRef.current = false;
+    slotsRef.current = freshSlots();
     consultIdRef.current = null;
     persistLocal({ draftConsult: null });
     messagesRef.current = [];
@@ -597,15 +664,31 @@ export function useConsult(opts: {
   }, []);
 
   const retry = useCallback(() => {
-    const last = [...messagesRef.current].reverse().find(m => m.role === 'user');
-    if (last) handleUserRef.current(last.text, typedRef.current);
+    // Resend without duplicating: the failed turn is already in the
+    // transcript and its narration slot is already filled (QA P2). Pull
+    // both back out so the resend lands exactly once.
+    const msgs = [...messagesRef.current];
+    const idx = msgs.map(m => m.role).lastIndexOf('user');
+    if (idx < 0) return;
+    const last = msgs[idx];
+    const trimmed = msgs.filter((_, i) => i !== idx);
+    messagesRef.current = trimmed;
+    setMessages(trimmed);
+    const slots = slotsRef.current;
+    for (const [slot, answer] of Object.entries(slots.answers)) {
+      if (answer === last.text) {
+        delete slots.answers[slot as keyof typeof slots.answers];
+        slots.pendingSlot = slot as typeof slots.pendingSlot;
+      }
+    }
+    handleUserRef.current(last.text, typedRef.current);
   }, []);
 
   return {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
     micDenied, clearMicDenied: () => setMicDenied(false), voiceOffline, failed, retry, started, lastTurn,
-    confidence, flags, start, note, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t, true),
+    confidence, flags, start, note, resume, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t, true),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

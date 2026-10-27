@@ -15,7 +15,7 @@ export interface LocalSnapshot {
   profile?: { age: string; blood: string; allergies: string } | null;
   /** A consult still in progress. Cleared when it completes or is reset, so a
    *  leftover one means the patient walked away mid-visit (UX-15). */
-  draftConsult?: { messages: any[]; at: number } | null;
+  draftConsult?: { messages: any[]; at: number; slots?: any } | null;
   /** Dismissed-or-not notification list, so a dismissal survives reload (QA-05). */
   notices?: any[];
   /** Review decisions keyed by case id, including decisions on seeded cases,
@@ -31,6 +31,10 @@ export interface LocalSnapshot {
   checkIns?: Record<string, string>;
   /** Test slots the patient booked from a plan, until booking has a backend. */
   booked?: any[];
+  /** Plans the patient tapped 'Order medicine' on, by plan title (QA P2). */
+  orders?: string[];
+  /** Check-in sheet snoozed until this epoch ms (QA P2). */
+  checkInSnoozeUntil?: number;
 }
 
 export interface ReviewDecision {
@@ -63,10 +67,14 @@ export function persistLocal(patch: LocalSnapshot): LocalSnapshot {
 }
 
 // Sign-out must not leave one account's clinical snapshot on the device for
-// the next person who signs in on the same browser (QA-02).
+// the next person who signs in on the same browser (QA-02). Composer drafts
+// hold unsent clinical text under their own keys — they go too (QA P2).
 export function clearLocal(): void {
   try {
     localStorage.removeItem(STATE_KEY);
+    localStorage.removeItem('vd_consult_draft');
+    localStorage.removeItem('vd_review_draft');
+    localStorage.removeItem('vd_auth_v1');
   } catch { /* storage unavailable */ }
 }
 

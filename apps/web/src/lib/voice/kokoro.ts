@@ -1,13 +1,13 @@
 // Kokoro-82M in the browser: natural local TTS, no server, no key.
 // Model (~92 MB, q8/WASM) downloads once from Hugging Face on first use and
-// stays in the browser cache. Until it is ready — or if it fails (offline
-// first visit, no WASM) — callers fall back to speechSynthesis, so a consult
-// never waits on the download.
+// stays in the browser cache. There is no OS-voice fallback: callers wait
+// for this model (kokoroWhenReady) and resolve unsaid if it cannot load.
 
 import type { SpeakHandle } from './index';
+import { modelConfig } from '../models/config';
 
-const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
-const VOICE = 'af_heart';
+const MODEL_ID = modelConfig.tts.local.modelId;
+const VOICE = modelConfig.tts.local.voice;
 
 interface KokoroAudio {
   audio: Float32Array;
@@ -28,7 +28,10 @@ function loadKokoro(): Promise<KokoroModel | null> {
   loading = (async () => {
     try {
       const kokoro = await import('kokoro-js');
-      const tts = await kokoro.KokoroTTS.from_pretrained(MODEL_ID, { dtype: 'q8', device: 'wasm' });
+      const tts = await kokoro.KokoroTTS.from_pretrained(MODEL_ID, {
+        dtype: modelConfig.tts.local.dtype,
+        device: modelConfig.tts.local.device,
+      });
       model = tts as unknown as KokoroModel;
       return model;
     } catch {
@@ -45,6 +48,16 @@ export function kokoroReady(): boolean {
 
 export function warmKokoro(): void {
   if (!loadFailed) void loadKokoro();
+}
+
+/** True when the model is usable within timeoutMs; false on failure/timeout. */
+export function kokoroWhenReady(timeoutMs: number): Promise<boolean> {
+  if (modelConfig.tts.provider !== 'local' || loadFailed) return Promise.resolve(false);
+  if (model) return Promise.resolve(true);
+  return Promise.race([
+    loadKokoro().then(loaded => !!loaded),
+    new Promise<boolean>(resolve => window.setTimeout(() => resolve(false), timeoutMs)),
+  ]);
 }
 
 let audioCtx: AudioContext | null = null;
@@ -69,7 +82,7 @@ export function kokoroSpeak(
   text: string,
   opts: { onDone?: () => void; onFallback?: () => void } = {},
 ): SpeakHandle | null {
-  if (loadFailed || !text.trim()) return null;
+  if (modelConfig.tts.provider !== 'local' || loadFailed || !text.trim()) return null;
   if (!model) {
     warmKokoro();
     return null;
@@ -91,9 +104,12 @@ export function kokoroSpeak(
   };
 
   readyModel
-    .generate(text, { voice: VOICE, speed: 1 })
+    .generate(text, { voice: VOICE, speed: modelConfig.tts.local.speed })
     .then((rawAudio) => {
-      if (finished || token !== playToken) return;
+      if (finished) return;
+      // Superseded by a newer line while generating: resolve this line's
+      // continuation instead of dropping it (QA P2).
+      if (token !== playToken) { finish(); return; }
       const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!Ctor) {
         fallback();
@@ -116,6 +132,7 @@ export function kokoroSpeak(
     })
     .catch(() => {
       if (token === playToken) fallback();
+      else finish();
     });
 
   return {

@@ -21,7 +21,15 @@ export function ProfileScreen({ tenantName, onSelectCase }: {
   const clinic = useClinic();
   const nav = useNavigate();
   const [notifs, setNotifs] = useState(false);
-  const [onDuty, setOnDuty] = useState(true);
+  // Persisted, so the duty state survives a reload (QA P3). Gating queue
+  // intake on it needs the assignment backend; this records the choice.
+  const [onDuty, setOnDuty] = useState(() => {
+    try { return localStorage.getItem('vd_on_duty') !== '0'; } catch { return true; }
+  });
+  const changeDuty = (v: boolean) => {
+    setOnDuty(v);
+    try { localStorage.setItem('vd_on_duty', v ? '1' : '0'); } catch { /* private mode */ }
+  };
   const week = Date.now() - 7 * 86400000;
   const awaiting = clinic.queue.filter(c => isReviewable(c.status)).length;
   const decided = clinic.queue.filter(c => c.reviewedAt && c.reviewedAt >= week && c.submittedAt);
@@ -80,7 +88,7 @@ export function ProfileScreen({ tenantName, onSelectCase }: {
           icon="check"
           checked={onDuty}
           detail="Accepting new reviews"
-          onChange={setOnDuty}
+          onChange={changeDuty}
         >
           On duty
         </SwitchRow>

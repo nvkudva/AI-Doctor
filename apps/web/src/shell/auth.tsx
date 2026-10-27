@@ -23,7 +23,7 @@ interface AuthCtx {
   googlePending: boolean;
   authErr: string;
   signInGoogle: () => Promise<void>;
-  signInDemo: (role: Role) => void;
+  signInDemo: (role: Role) => Promise<boolean>;
   signOut: () => void;
 }
 
@@ -136,14 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .getSession()
         .then(({ data }) => {
           if (data.session?.user) adopt(data.session.user);
+          // A resolved "no session" is authoritative: the stored user is
+          // stale or forged and must not keep role routes open (QA P1).
+          else persist(null);
         })
         .catch(() => { /* offline or unreachable: keep the restored session */ })
         .finally(() => {
           clearTimeout(timer);
           finish();
         });
-      const { data: sub } = sb.auth.onAuthStateChange((_ev, session) => {
+      const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
         if (session?.user) adopt(session.user);
+        else if (event === 'SIGNED_OUT') persist(null);
       });
       unsubscribe = () => sub.subscription.unsubscribe();
       if (!live) unsubscribe();
@@ -187,32 +191,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // With a project configured the demo buttons sign in as the seeded accounts,
   // so the app runs on real rows under real RLS. Without one they are exactly
   // what they always were: a local user over the seeds.
-  const signInDemo = (role: Role) => {
+  const signInDemo = async (role: Role): Promise<boolean> => {
     setAuthErr('');
     if (!configured || !DEMO_PASSWORD) {
       persist(DEMO_USERS[role]);
-      return;
+      return true;
     }
     setGooglePending(true);
-    void loadSdk()
-      .then(({ supabase }) => {
-        const sb = supabase();
-        if (!sb) {
-          persist(DEMO_USERS[role]);
-          return;
-        }
-        return sb.auth
-          .signInWithPassword({ email: DEMO_USERS[role].email, password: DEMO_PASSWORD })
-          .then(({ data, error }) => {
-            if (error || !data.user) {
-              setAuthErr(error?.message || 'Could not sign in to the demo account');
-              return;
-            }
-            const meta = { ...(data.user.user_metadata || {}), role } as Record<string, unknown>;
-            persist({ ...toUser(data.user.id, data.user.email || '', meta), role, provider: 'demo' });
-          });
-      })
-      .finally(() => setGooglePending(false));
+    try {
+      const { supabase } = await loadSdk();
+      const sb = supabase();
+      if (!sb) {
+        persist(DEMO_USERS[role]);
+        return true;
+      }
+      const { data, error } = await sb.auth.signInWithPassword({
+        email: DEMO_USERS[role].email, password: DEMO_PASSWORD,
+      });
+      if (error || !data.user) {
+        setAuthErr(error?.message || 'Could not sign in to the demo account');
+        return false;
+      }
+      const meta = { ...(data.user.user_metadata || {}), role } as Record<string, unknown>;
+      persist({ ...toUser(data.user.id, data.user.email || '', meta), role, provider: 'demo' });
+      return true;
+    } catch {
+      setAuthErr('Could not sign in to the demo account');
+      return false;
+    } finally {
+      setGooglePending(false);
+    }
   };
 
   const signOut = () => {

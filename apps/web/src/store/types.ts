@@ -138,7 +138,7 @@ export interface Clinic {
   addLiveCase: (c: CaseItem) => void;
   setReview: (status: string, reason?: string) => void;
   setLiveCaseId: (id: string | null) => void;
-  decide: (id: string, decision: 'approved' | 'changes' | 'rejected', opts?: { reason?: string }) => void;
+  decide: (id: string, decision: 'approved' | 'changes' | 'rejected', opts?: { reason?: string }) => boolean | Promise<boolean>;
   updateRec: (id: string, rec: Recommendation) => void;
   pushNotice: (n: Notice) => void;
   dismissNotice: (index: number) => void;
@@ -156,6 +156,8 @@ export interface Clinic {
   /** `consultId` names the plan rated, which with several running is not
    *  necessarily the one the sheet opened on (DESIGN-REVIEW D27). */
   answerCheckIn: (answer: 'better' | 'same' | 'worse', consultId?: string) => void;
+  /** Snooze the day-3 check-in sheet until tomorrow. */
+  dismissCheckIn?: () => void;
   setProfile: (p: HealthProfile) => void;
   slaTick: () => void;
 }

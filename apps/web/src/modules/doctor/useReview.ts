@@ -7,6 +7,9 @@ import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, aiReview, hasSupabase, type ChatMessage } from '../../lib/api';
 import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type SpeakHandle } from '../../lib/voice';
+import { warmKokoro } from '../../lib/voice/kokoro';
+import { warmStt } from '../../lib/models/stt';
+import { warmLlm } from '../../lib/models/llm';
 
 function parseAi(raw: string): any {
   if (!raw) return { reply: '', done: false, action: 'none' };
@@ -62,6 +65,7 @@ export function useReview(opts: {
   const abandonRef = useRef(false);
   const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
   useEffect(() => onVoiceHealth(setVoiceOffline), []);
+  useEffect(() => { warmKokoro(); warmStt(); warmLlm(); }, []);
   // Two separate switches: whether Mira speaks, and whether she listens.
   const [speakerOff, setSpeakerOffState] = useState(false);
   const [micOff, setMicOffState] = useState(false);
@@ -130,9 +134,9 @@ export function useReview(opts: {
       onText: (t) => commandRef.current(t, false),
       onError: () => setStatus('idle'),
       onEnd: () => setStatus(s => (s === 'listening' ? 'idle' : s)),
+      onStart: () => setStatus('listening'),
     });
-    if (h) setStatus('listening');
-    else setStatus('idle');
+    if (!h) setStatus('idle');
   }, []);
 
   const command = useCallback(async (text: string, typed: boolean) => {

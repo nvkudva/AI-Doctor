@@ -22,12 +22,13 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
   // that it was pressed, and says so if it fails (DESIGN-REVIEW D24).
   const [pending, setPending] = useState<Role | null>(null);
   const [failed, setFailed] = useState(false);
-  const demo = (role: Role) => {
+  const demo = async (role: Role) => {
     setFailed(false);
     setPending(role);
     try {
-      signInDemo(role);
-      nav(role === 'doctor' ? '/doctor/reviews' : '/patient');
+      const ok = await signInDemo(role);
+      if (ok) nav(role === 'doctor' ? '/doctor/reviews' : '/patient');
+      else setFailed(true);
     } catch {
       setFailed(true);
     } finally {
@@ -114,11 +115,7 @@ export function LoginPage({ hospitalName }: { hospitalName: string }) {
         </Card>
 
         <div className={s.legal}>
-          <a href="/terms">Terms</a>
-          <span aria-hidden>·</span>
-          <a href="/privacy">Privacy</a>
-          <span aria-hidden>·</span>
-          <a href="/help">Trouble signing in?</a>
+          Trouble signing in? Ask at reception and they will get you in.
         </div>
       </div>
     </div>

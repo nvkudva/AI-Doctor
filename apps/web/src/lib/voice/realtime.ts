@@ -54,7 +54,7 @@ export function realtimeConfigured(): boolean {
 }
 
 // Whether the server is currently reachable. A dead server is not an error the
-// patient has to act on — the browser's own voice takes over — but it is worth
+// patient has to act on — the local Kokoro voice takes over — but it is worth
 // saying once, because the voice changes and nothing else would explain it.
 let down = false;
 const health = new Set<(down: boolean) => void>();
@@ -365,7 +365,7 @@ export function remoteSpeak(
         },
       });
     })
-    // The server is unreachable: hand the line to the browser's own voice
+    // The server is unreachable: hand the line to the local Kokoro voice
     // rather than letting Mira go silent mid-consult.
     .catch(() => { if (opts.onFallback) opts.onFallback(); else finish(); });
   return {

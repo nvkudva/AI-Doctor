@@ -36,8 +36,12 @@ export function setDocumentTitle(title: string): void {
 
 export function speechSupported(): boolean {
   try {
-    const w = window as any;
-    return !!(window.speechSynthesis && (w.SpeechRecognition || w.webkitSpeechRecognition));
+    // Local voice loop needs mic capture, WebAudio playback and WASM.
+    return !!(
+      typeof navigator.mediaDevices?.getUserMedia === 'function' &&
+      (window as any).AudioContext &&
+      typeof WebAssembly !== 'undefined'
+    );
   } catch {
     return false;
   }

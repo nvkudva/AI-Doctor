@@ -65,7 +65,16 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
   useEffect(() => { persistLocal({ booked: appointments.filter(a => a.id.startsWith('bk-')) }); }, [appointments]);
 
   const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
-  const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
+  const [checkInSnoozedUntil, setCheckInSnoozedUntil] = useState<number>(() => restoreLocal()?.checkInSnoozeUntil || 0);
+  const checkIn = useMemo(
+    () => (checkInSnoozedUntil > Date.now() ? null : pendingCheckIn(queue, checkIns)),
+    [queue, checkIns, checkInSnoozedUntil],
+  );
+  const dismissCheckIn = () => {
+    const until = Date.now() + 86400000;
+    setCheckInSnoozedUntil(until);
+    persistLocal({ checkInSnoozeUntil: until });
+  };
   useEffect(() => {
     persistLocal({ consultsAdd: consults.filter(c => c.user) });
   }, [consults]);
@@ -124,7 +133,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
       // only holds the signed-in demo patient's own record, so a case that is
       // not theirs must never file a prescription or consult against them
       // (QA-01).
-      if (!c || !c.mine) return;
+      if (!c || !c.mine) return true;
       const rec = c.rec;
       if (decision === 'approved') {
         if (rec.type === 'prescription' && rec.items[0]) {
@@ -140,7 +149,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
           t: 'Dr. Whitfield approved your plan', d: rec.title, kind: 'review',
           at: now, caseId: c.id,
         }, ...n]);
-        return;
+        return true;
       }
       // A decline is not a dead end: it leaves a record the patient can find
       // and a notice that points back at it (UX-05, UX-06).
@@ -158,6 +167,7 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
         d: declined ? (reason || 'Open the plan to see what to do next.') : rec.title,
         kind: 'review', at: now, caseId: c.id,
       }, ...n]);
+      return true;
     },
 
     updateRec: (id, rec) => {
@@ -211,6 +221,8 @@ export function LocalClinic({ seedQueue, seedConsults, seedRx, seedProfile, chil
       setTimeout(() => setJustAnswered(j => (j && j.consultId === id ? null : j)), UNDO_WINDOW);
       setCheckIns(c => ({ ...c, [id]: answer }));
     },
+
+    dismissCheckIn,
 
     // Escalation is a decision like any other: the case leaves the queue and a
     // slot appears in the book carrying the consult with it.

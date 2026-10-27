@@ -52,3 +52,12 @@
   environment; local demo mode carried the runtime verification.
 - No automated test suite exists in the repo; verification was typecheck,
   build, and real-browser probes.
+
+## Ship record
+
+- Commit: bf79891 on branch t3/natural-browser-tts-options, pushed to origin.
+- Deploy: Cloudflare Worker `aidoctor`, version 71bc4493-3559-47ba-ab62-27257a76dcbe.
+- Live: https://aidoctor.nvkudva.workers.dev — smoke: /, /patient,
+  /doctor/reviews all HTTP 200, title "AI Doctor".
+- Note: deployed from the feature branch on the user's explicit instruction
+  for this task, rather than post-merge from main.

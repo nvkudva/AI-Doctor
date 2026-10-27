@@ -2,6 +2,7 @@
 // free time visible between the bookings. This is the screen that used to be a
 // second copy of the review queue.
 import { useEffect, useMemo, useState } from 'react';
+import { startOfDay, timeLabel } from '../../../lib/core';
 import { Button, Card, EmptyState, Icon, MenuRow, MicroLabel, Popover } from '../../../lib/ui';
 import { statusPill } from '../../../lib/theme';
 import type { AppointmentSlot, SlotStatus } from '../../../store/types';
@@ -200,16 +201,8 @@ function count(rows: AppointmentSlot[], status: SlotStatus, label: string): stri
   return n ? `${n} ${label}` : '';
 }
 
-function startOfDay(at: number): number {
-  const d = new Date(at);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 function hourOf(at: number): number { return new Date(at).getHours(); }
 function pad(n: number): string { return String(n).padStart(2, '0'); }
-function timeLabel(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 function dayLabel(at: number): string {
   const days = Math.round((at - startOfDay(Date.now())) / 86400000);
   const d = new Date(at);

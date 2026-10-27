@@ -1,7 +1,7 @@
 // The plan screen: review status, plan card, doctor card, timeline, actions.
 // Two-column at ≥800 (plan left, doctor + timeline right); sticky action bar ≥1160.
 import { useState } from 'react';
-import type { Recommendation } from '../../../lib/core';
+import { splitPlan, type Recommendation } from '../../../lib/core';
 import { Button, Card, Icon, MicroLabel, Paper, PaperItem, StatusPill } from '../../../lib/ui';
 import { useBreakpoint } from '../../../shell/viewport';
 import s from './RecommendationScreen.module.css';
@@ -32,8 +32,7 @@ export function RecommendationScreen({ rec, reviewStatus, rejectReason, allergie
   const expired = reviewStatus === 'expired';
   const changed = reviewStatus === 'changes';
   const isRx = rec.type === 'prescription';
-  const tests = rec.items.filter(i => !(i.dosage && i.dosage.trim()));
-  const rx = rec.items.filter(i => !!(i.dosage && i.dosage.trim()));
+  const { rx, tests } = splitPlan(rec.items);
   const headline = approved
     ? `Dr. Whitfield reviewed your ${isRx ? 'prescription' : 'plan'} — here it is.`
     : 'Sent to Dr. Whitfield for a quick review.';

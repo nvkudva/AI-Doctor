@@ -3,6 +3,8 @@
 // into consults / reviews / consult_events once keys are configured.
 // ---------------------------------------------------------------------------
 
+import { loadJson, saveJson } from '../platform';
+
 const STATE_KEY = 'vd_state_v1';
 
 export interface LocalSnapshot {
@@ -37,28 +39,13 @@ export interface ReviewDecision {
   status: string; decision: string; reviewedBy: string; reviewedAt: number; rejectReason?: string;
 }
 
-function lsGet(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
 export function restoreLocal(): LocalSnapshot | null {
-  try {
-    const raw = lsGet(STATE_KEY);
-    return raw ? (JSON.parse(raw) as LocalSnapshot) : null;
-  } catch {
-    return null;
-  }
+  return loadJson<LocalSnapshot>(STATE_KEY);
 }
 
 export function persistLocal(patch: LocalSnapshot): LocalSnapshot {
   const next = { ...(restoreLocal() || {}), ...patch };
-  try {
-    localStorage.setItem(STATE_KEY, JSON.stringify(next));
-  } catch { /* storage unavailable — records stay in memory */ }
+  saveJson(STATE_KEY, next);
   return next;
 }
 
@@ -68,9 +55,4 @@ export function clearLocal(): void {
   try {
     localStorage.removeItem(STATE_KEY);
   } catch { /* storage unavailable */ }
-}
-
-export function recordEvent(log: any[] | undefined, ev: { consultId: string; actor: string; kind: string; detail: string }): any[] {
-  const next = [...(log || []), { at: Date.now(), ...ev }];
-  return next.slice(-200);
 }

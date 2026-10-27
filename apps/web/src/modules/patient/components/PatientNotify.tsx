@@ -6,7 +6,7 @@ import { useClinic } from '../../../store';
 
 /** Notices about this patient's own cases, with their unfiltered indices kept
  *  so dismissNotice still addresses the right row. */
-export function usePatientNotices() {
+function usePatientNotices() {
   const clinic = useClinic();
   return useMemo(() => {
     const mine = new Set(clinic.queue.filter(c => c.mine).map(c => c.id));

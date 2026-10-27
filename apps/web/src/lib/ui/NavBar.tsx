@@ -14,9 +14,6 @@ export interface NavItem {
   icon: IconName;
 }
 
-/** Scroll padding a screen needs so its last row clears the bottom bar. */
-export const bottomBarInset = 'calc(110px + env(safe-area-inset-bottom))';
-
 const COLLAPSE_KEY = 'vd_nav_collapsed';
 
 // Module-level so <MiraPanel> can anchor beside the rail at whatever width the

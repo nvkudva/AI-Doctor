@@ -3,6 +3,7 @@
 // records a swallowed dose. Where that record lives is stated in Profile ->
 // About rather than in this screen's header (DESIGN-REVIEW D14).
 import { useState } from 'react';
+import { startOfDay, timeLabel } from '../../../lib/core';
 import { AppHeader, Card, EmptyState, Icon, MenuRow, MicroLabel, Popover, ThemeToggle } from '../../../lib/ui';
 import { PatientNotify } from './PatientNotify';
 import { doseForm, doseState, type DoseState } from '../../../store/doses';
@@ -160,11 +161,3 @@ function DoseRow({ d, onTaken, onSkipped }: {
   );
 }
 
-function startOfDay(at: number): number {
-  const d = new Date(at);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-function timeLabel(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}

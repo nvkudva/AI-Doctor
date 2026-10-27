@@ -1,6 +1,7 @@
 // One lab panel, explained: the value against its own reference range, one
 // honest sentence about where it sits, and the readings before it. Nothing here
 // diagnoses — it says what was measured and defers to the doctor for the rest.
+import { dateLabel } from '../../../lib/core';
 import { Button, Card, MicroLabel } from '../../../lib/ui';
 import { explain, formatValue, rangeLabel, rangePlot, trendNote, type LabPanel } from '../../../store/labs';
 import type { LabValue } from '../../../store/types';
@@ -33,7 +34,7 @@ export function LabPanelScreen({ panel, doctorNote, onBack }: {
         <div className={s.head}>
           <span className="vd-tag" style={{ background: tone.bg, color: tone.fg }}>{tone.label}</span>
           <span className={s.when}>
-            {new Date(panel.observedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+            {dateLabel(panel.observedAt)}
           </span>
         </div>
         {panel.values.map(v => <ValueRow key={v.id} v={v} history={panel.history[v.analyte] || []} />)}

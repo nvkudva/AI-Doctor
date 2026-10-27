@@ -6,7 +6,7 @@ import {
   AppHeader, Card, NotifyButton, ProfileSection, SignOutButton, StatRow, SwitchRow, ThemeToggle, profile,
 } from '../../../lib/ui';
 import { useAuth } from '../../../shell/auth';
-import { isNamedTenant, isReviewable, slaCountdown } from '../../../lib/core';
+import { isNamedTenant, isReviewable, minutesLabel, slaCountdown } from '../../../lib/core';
 import { useClinic } from '../../../store';
 import { seedDoctor } from '../../../store/seeds';
 import s from './ProfileScreen.module.css';
@@ -127,6 +127,5 @@ function medianDecision(decided: { submittedAt?: number; reviewedAt?: number }[]
     .sort((a, b) => a - b);
   if (!spans.length) return '—';
   const mid = spans[Math.floor(spans.length / 2)];
-  const mins = Math.round(mid / 60000);
-  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  return minutesLabel(Math.round(mid / 60000));
 }

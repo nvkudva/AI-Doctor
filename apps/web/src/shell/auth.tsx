@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { clearLocal } from '../lib/api/storage';
 import { hasSupabase } from '../lib/api/env';
+import { loadJson, saveJson } from '../lib/platform';
 
 export type Role = 'patient' | 'doctor';
 
@@ -69,15 +70,6 @@ function toUser(id: string, email: string, meta: Record<string, unknown>): AuthU
   return { id, name, email, role, provider: 'google' };
 }
 
-function restore(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
-}
-
 // Ask the database who this account is. Without it a clinician whose metadata
 // says nothing lands in the patient module under their own name, with no route
 // back to the review desk (DESIGN-REVIEW D1).
@@ -93,7 +85,7 @@ async function resolveRole(fallback: Role): Promise<Role> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => restore());
+  const [user, setUser] = useState<AuthUser | null>(() => loadJson<AuthUser>(AUTH_KEY));
   const [ready, setReady] = useState(false);
   const [googlePending, setGooglePending] = useState(false);
   const [authErr, setAuthErr] = useState('');
@@ -157,10 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persist = (u: AuthUser | null) => {
     setUser(u);
-    try {
-      if (u) localStorage.setItem(AUTH_KEY, JSON.stringify(u));
-      else localStorage.removeItem(AUTH_KEY);
-    } catch { /* private mode */ }
+    if (u) saveJson(AUTH_KEY, u);
+    else try { localStorage.removeItem(AUTH_KEY); } catch { /* private mode */ }
   };
 
   // A borrowed view belongs to one session of one account: signing out, or a

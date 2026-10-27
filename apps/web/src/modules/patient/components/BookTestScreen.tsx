@@ -3,6 +3,7 @@
 // patient picks is written straight in as a booked appointment. The lab list
 // and the real availability lookup are in patient-todo.md.
 import { useMemo, useState } from 'react';
+import { dayTimeLine, startOfDay, timeLabel } from '../../../lib/core';
 import { Button, Card, Icon, MicroLabel } from '../../../lib/ui';
 import type { AppointmentSlot } from '../../../store/types';
 import s from './BookTestScreen.module.css';
@@ -57,7 +58,7 @@ export function BookTestScreen({ title, note, booked, onConfirm, onBack }: {
         <Card className={s.confirmed}>
           <div className={s.confirmedHead}>
             <span className={s.tick}><Icon name="check" size={16} /></span>
-            <div className={s.confirmedWhen}>{whenLine(booked.startsAt)}</div>
+            <div className={s.confirmedWhen}>{dayTimeLine(booked.startsAt)}</div>
           </div>
           <div className={s.confirmedWhere}>{booked.location}. Bring a photo ID.</div>
         </Card>
@@ -118,7 +119,7 @@ export function BookTestScreen({ title, note, booked, onConfirm, onBack }: {
 
           {picked !== null && (
             <Card tone="panel" bordered={false} className={s.summary}>
-              <div className={s.summaryWhen}>{whenLine(picked)}</div>
+              <div className={s.summaryWhen}>{dayTimeLine(picked)}</div>
               <div className={s.summaryWhere}>{LABS[labIdx].name}. Bring a photo ID.</div>
             </Card>
           )}
@@ -136,15 +137,3 @@ export function BookTestScreen({ title, note, booked, onConfirm, onBack }: {
   );
 }
 
-function startOfDay(at: number): number {
-  const d = new Date(at);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-function timeLabel(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-function whenLine(at: number): string {
-  const d = new Date(at);
-  return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${timeLabel(at)}`;
-}

@@ -6,11 +6,9 @@
 // database refuses any of them that the §3.4 gate would not allow.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
-import type { CaseItem, ConsultStatus, Recommendation } from '../lib/core';
-import { resolveTenantSlug } from '../lib/core';
+import { decisionStatus, resolveTenantSlug, splitPlan, stampDecision, type CaseItem, type Recommendation } from '../lib/core';
 import {
   approveConsult, escalateConsult, getDoctorAppointments, getMyAppointments, getMyCurrentDrafts, getMyLabs,
-  persistLocal, restoreLocal,
   getMyRecords, getMyReviewOutcomes, getNotifications, getPatientDetails, getProfiles,
   getReviewQueue, markNotificationRead, openConsult, rejectConsult, resolveHospitalId,
   reviseDraft, savePatientDetails, setAppointmentStatus, shortDate,
@@ -20,7 +18,7 @@ import {
 } from '../lib/api';
 import { useAuth } from '../shell/auth';
 import { Ctx } from './context';
-import { buildSchedule, pendingCheckIn, UNDO_WINDOW } from './doses';
+import { useDeviceState } from './useDeviceState';
 import type { AppointmentSlot, Clinic, ClinicSeeds, HealthProfile, LabValue, Notice, UserConsult, UserRx } from './types';
 
 /** §4.2 row 18: the documented fallback when the channel cannot be held. */
@@ -63,16 +61,9 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
   );
   const [appointments, setAppointments] = useState<AppointmentSlot[]>([]);
   const [labs, setLabs] = useState<LabValue[]>([]);
-  // No schema records a swallowed dose or a check-in answer, so both stay on
-  // this device until one does (see store/doses.ts).
-  const [taken, setTaken] = useState<Record<string, boolean | number>>(() => restoreLocal()?.doses || {});
-  const [skipped, setSkipped] = useState<Record<string, boolean>>(() => restoreLocal()?.skipped || {});
-  const [checkIns, setCheckIns] = useState<Record<string, string>>(() => restoreLocal()?.checkIns || {});
-  const [justAnswered, setJustAnswered] = useState<Clinic['justAnswered']>(null);
-  const [liveCaseId, setLiveCaseId] = useState<string | null>(null);
-  const [reviewStatus, setReviewStatus] = useState('idle');
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [rejectReason, setRejectReason] = useState('');
+  const device = useDeviceState({ queue, prescriptions, setQueue, setNotices, setConsults, setAppointments });
+  const { doses, checkIn, justAnswered, liveCaseId, reviewStatus, rejectReason, setLiveCaseId, setReviewStatus, setRejectReason } = device;
 
   // The draft a decision must be signed against. §4.2 rows 21–24 all take the
   // draft id *and* its hash, so a doctor can never sign a version they did not
@@ -260,9 +251,6 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     return () => clearInterval(t);
   }, [uid, isDoctor, queue, refresh]);
 
-  const doses = useMemo(() => buildSchedule(prescriptions, taken, 2, Date.now(), skipped), [prescriptions, taken, skipped]);
-  const checkIn = useMemo(() => pendingCheckIn(queue, checkIns), [queue, checkIns]);
-
   const value = useMemo<Clinic>(() => ({
     queue, appointments, labs, doses, checkIn, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason,
     load, retry, justAnswered,
@@ -270,44 +258,32 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // The consult already exists server-side — `start_consult` opened it and
     // `ai-consult` wrote the draft. All this does is show it and pull the real
     // rows in behind it.
-    addLiveCase: (c) => {
-      setQueue(q => [c, ...q]);
-      setLiveCaseId(c.id);
-      setReviewStatus('pending');
-      setRejectReason('');
-      refresh();
-    },
-
-    setReview: (status, reason = '') => {
-      setReviewStatus(status);
-      setRejectReason(reason);
-    },
-
-    setLiveCaseId,
+    ...device.actions,
+    addLiveCase: (c) => device.actions.addLiveCase(c, refresh),
 
     decide: (id, decision, opts = {}) => {
       const c = queue.find(x => x.id === id);
       const signed = drafts.current[id];
-      const status: ConsultStatus = decision === 'approved' ? 'approved' : decision === 'changes' ? 'changes' : 'rejected';
       const reason = opts.reason || '';
-      const stamped = c ? { ...c, status, decision, reviewedBy: user?.name || 'Your doctor', reviewedAt: Date.now(), rejectReason: reason || c.rejectReason } as CaseItem : null;
+      const stamped = c ? { ...c, ...stampDecision(decision, user?.name || 'Your doctor', reason || c.rejectReason) } as CaseItem : null;
       if (stamped) {
         decided.current = [stamped, ...decided.current.filter(x => x.id !== id)];
         setQueue(q => q.map(x => (x.id === id ? stamped : x)));
       }
       if (c && c.id === liveCaseId) {
-        setReviewStatus(decision === 'approved' ? 'approved' : decision === 'changes' ? 'changes' : 'rejected');
+        setReviewStatus(decisionStatus(decision));
         setRejectReason(reason);
       }
       // 'changes' is the desk's own state: §3.2 has no transition for it, and a
       // half-edited draft must stay in the queue rather than reach anyone.
       if (decision === 'changes' || !c || !signed) return;
 
+      const plan = splitPlan(c.rec.items || []);
       const call = decision === 'approved'
         ? approveConsult({
           consultId: id, draftId: signed.id, draftHash: signed.hash,
-          finalItems: (c.rec.items || []).filter(i => !!(i.dosage && i.dosage.trim())),
-          investigations: (c.rec.items || []).filter(i => !(i.dosage && i.dosage.trim())),
+          finalItems: plan.rx,
+          investigations: plan.tests,
           advice: c.rec.advice || '',
           idempotencyKey: `approve:${id}:${signed.id}`,
         })
@@ -350,10 +326,6 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
         });
     },
 
-    // Nothing writes `notifications` from a client (§3.6): a locally raised
-    // notice is a UI event and lives only for this session.
-    pushNotice: (n) => setNotices(s => [{ at: Date.now(), ...n }, ...s]),
-
     // §4.1 row 15 — dismissing marks the row read; the trigger allows nothing else.
     dismissNotice: (index) => {
       const n = notices[index];
@@ -361,73 +333,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       if (n?.id) markNotificationRead(n.id).catch(() => { /* stays unread server-side */ });
     },
 
-    // Used for "visit ended early", which has no row of its own: the server
-    // records abandonment through `run_consult_timers`, not from the client.
-    addConsultRecord: (c) => setConsults(s => [c, ...s]),
-
     // Attendance is a plain column update — RLS decides whether it lands.
-    // Booking has no availability table yet: the slot the patient picks is
-    // written straight in as a booked appointment (patient-todo.md).
-    bookSlot: (title, startsAt, location) => setAppointments(a => [...a, {
-      id: `bk-${startsAt}`, patient: title, reason: title, kind: 'imaging',
-      startsAt, minutes: 15, location, status: 'booked',
-    }]),
-
-    // The value is when it was recorded, so the row can say so afterwards.
-    setDoseTaken: (id, t) => {
-      setSkipped(sk => {
-        if (!sk[id]) return sk;
-        const next = { ...sk, [id]: false };
-        persistLocal({ skipped: next });
-        return next;
-      });
-      setTaken(d => {
-        const next = { ...d, [id]: t ? Date.now() : false };
-        persistLocal({ doses: next });
-        return next;
-      });
-    },
-    setDoseSkipped: (id, sk) => {
-      setTaken(d => {
-        if (!d[id]) return d;
-        const next = { ...d, [id]: false };
-        persistLocal({ doses: next });
-        return next;
-      });
-      setSkipped(s => {
-        const next = { ...s, [id]: sk };
-        persistLocal({ skipped: next });
-        return next;
-      });
-    },
-
-    undoCheckIn: (consultId) => {
-      setJustAnswered(null);
-      setCheckIns(c => {
-        const next = { ...c };
-        delete next[consultId];
-        persistLocal({ checkIns: next });
-        return next;
-      });
-    },
-
-    answerCheckIn: (answer, consultId) => {
-      const id = consultId || checkIn?.consultId;
-      if (!id) return;
-      // The plan actually rated, which with several running is not necessarily
-      // the one the sheet opened on.
-      const rated = id === checkIn?.consultId
-        ? checkIn
-        : checkIn?.alternatives.find(a => a.id === id);
-      setJustAnswered({ consultId: id, title: rated?.title || '', answer });
-      setTimeout(() => setJustAnswered(j => (j && j.consultId === id ? null : j)), UNDO_WINDOW);
-      setCheckIns(c => {
-        const next = { ...c, [id]: answer };
-        persistLocal({ checkIns: next });
-        return next;
-      });
-    },
-
     setSlotStatus: (id, status) => {
       setAppointments(a => a.map(x => (x.id === id ? { ...x, status } : x)));
       setAppointmentStatus(id, status).catch((e) => {
@@ -443,9 +349,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
       const signed = drafts.current[id];
       if (c) {
         const stamped = {
-          ...c, status: 'rejected' as ConsultStatus, decision: 'escalated',
-          reviewedBy: user?.name || 'Your doctor', reviewedAt: Date.now(),
-          rejectReason: 'Escalated to an appointment.',
+          ...c, ...stampDecision('escalated', user?.name || 'Your doctor', 'Escalated to an appointment.'),
         } as CaseItem;
         decided.current = [stamped, ...decided.current.filter(x => x.id !== id)];
         setQueue(q => q.map(x => (x.id === id ? stamped : x)));
@@ -484,7 +388,7 @@ export function SupabaseClinic({ seedProfile, children }: ClinicSeeds & { childr
     // SLA warning, expiry and abandonment are `run_consult_timers()` on the
     // server (§4.3 row 33). The client does not sweep its own queue.
     slaTick: () => {},
-  }), [queue, appointments, labs, doses, checkIn, justAnswered, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
+  }), [queue, appointments, labs, doses, checkIn, justAnswered, device.actions, consults, prescriptions, notices, profile, liveCaseId, reviewStatus, rejectReason, load, retry, uid, user?.name, refresh, refreshAppointments]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

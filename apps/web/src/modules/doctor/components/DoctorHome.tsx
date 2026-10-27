@@ -3,7 +3,7 @@
 // target, and what is booked next. Everything here links out; nothing is
 // reviewed in place.
 import {
-  isReviewable, slaCountdown, waitAge, type CaseItem,
+  isReviewable, slaCountdown, startOfDay, waitAge, type CaseItem,
 } from '../../../lib/core';
 import { Button, Card, CardHeader, EmptyState, Icon, StatusPill } from '../../../lib/ui';
 import type { AppointmentSlot } from '../../../store/types';
@@ -166,19 +166,13 @@ function isToday(at: number): boolean {
   return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
 }
 
-export function whenLabel(at: number): string {
+function whenLabel(at: number): string {
   const d = new Date(at);
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const days = Math.round((startOfDay(at) - startOfDay(Date.now())) / 86400000);
   if (days === 0) return time;
   if (days === 1) return `Tomorrow ${time}`;
   return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
-}
-
-function startOfDay(at: number): number {
-  const d = new Date(at);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 function Stat({ value, label, tone, sub }: { value: string; label: string; tone: string; sub: string }) {

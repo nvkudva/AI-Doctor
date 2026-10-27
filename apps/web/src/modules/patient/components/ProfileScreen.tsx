@@ -7,14 +7,14 @@ import {
 } from '../../../lib/ui';
 import { doseForm } from '../../../store/doses';
 import { useAuth } from '../../../shell/auth';
+import { splitPlan } from '../../../lib/core';
 import { useClinic } from '../../../store';
 import type { HealthProfile, UserRx } from '../../../store';
 import { PatientNotify } from './PatientNotify';
 import s from './ProfileScreen.module.css';
 
 export function ProfileScreen({ prescriptions }: { prescriptions: UserRx[] }) {
-  const drugs = prescriptions.filter(x => !!x.dosage?.trim());
-  const todo = prescriptions.filter(x => !x.dosage?.trim());
+  const { rx: drugs, tests: todo } = splitPlan(prescriptions);
   const { user, signOut } = useAuth();
   const clinic = useClinic();
   const [editing, setEditing] = useState(false);

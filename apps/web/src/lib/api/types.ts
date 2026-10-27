@@ -2,9 +2,9 @@
 // the app builds with no local stack running; field names and nullability
 // track §2 exactly.
 
-export type Urgency = 'routine' | 'soon' | 'urgent';
-export type Confidence = 'high' | 'medium' | 'low';
-export type MemberRole = 'patient' | 'doctor' | 'admin';
+import type { Urgency, Confidence } from '../core';
+
+type MemberRole = 'patient' | 'doctor' | 'admin';
 export type DbConsultStatus =
   | 'active' | 'pending_review' | 'needs_human' | 'approved'
   | 'rejected' | 'escalated' | 'expired' | 'abandoned' | 'closed';
@@ -35,7 +35,7 @@ export interface MembershipRow {
   status: string;
 }
 
-export interface AllergyEntry {
+interface AllergyEntry {
   substance: string;
   class?: string | null;
   severity?: string | null;
@@ -116,7 +116,7 @@ export interface AiDraftRow {
 }
 
 /** §2.7 */
-export interface ConsultSlotRow {
+interface ConsultSlotRow {
   slot_id: string;
   status: 'unknown' | 'asked' | 'filled' | 'refused' | 'not_applicable' | 'unanswered';
   value: string | null;
@@ -125,7 +125,7 @@ export interface ConsultSlotRow {
 }
 
 /** §2.19 */
-export interface PrescriptionItemRow {
+interface PrescriptionItemRow {
   id: string;
   prescription_id: string;
   position: number;
@@ -139,7 +139,7 @@ export interface PrescriptionItemRow {
 }
 
 /** §2.20 */
-export interface InvestigationOrderRow {
+interface InvestigationOrderRow {
   id: string;
   prescription_id: string;
   position?: number;

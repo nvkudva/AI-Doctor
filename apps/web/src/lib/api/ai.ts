@@ -18,11 +18,6 @@ export async function aiComplete(args: { system: string; messages: ChatMessage[]
   return demoComplete(args);
 }
 
-export function aiBackendName(): string {
-  const w = window as any;
-  return w.claude && typeof w.claude.complete === 'function' ? 'claude-helper' : 'demo';
-}
-
 function demoComplete(args: { system: string; messages: ChatMessage[] }): Promise<string> {
   const isDocReview = /reviewing your recommendation/i.test(args.system || '');
   const raw = isDocReview ? demoDoctor(args.system, args.messages) : demoPatient(args.messages);

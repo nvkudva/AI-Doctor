@@ -6,7 +6,7 @@ export type ConsultStatus =
   | 'active' | 'pending' | 'pending_review' | 'approved'
   | 'changes' | 'rejected' | 'expired' | 'abandoned';
 
-export interface RecItem {
+interface RecItem {
   name: string; dosage: string; timing: string;
   notes: string; why: string; detail: string;
 }
@@ -17,7 +17,7 @@ export interface Recommendation {
   items: RecItem[]; advice: string; urgency: Urgency;
 }
 
-export type FlagSeverity = 'block' | 'warn' | 'info';
+type FlagSeverity = 'block' | 'warn' | 'info';
 
 /** One validator verdict on a draft — allergy, interaction, dose, red flag. */
 export interface SafetyFlag {
@@ -41,7 +41,7 @@ export interface CaseItem {
   editedBy?: string; editedAt?: number; rejectReason?: string;
 }
 
-export interface AuditEvent { at: number; consultId: string; actor: string; kind: string; detail: string }
+interface AuditEvent { at: number; consultId: string; actor: string; kind: string; detail: string }
 
 // 'changes' is still the doctor's to finish: it stays in the review queue and
 // keeps its decision controls, instead of vanishing into a state nothing in the
@@ -74,17 +74,35 @@ export function myCase(queue: CaseItem[]): CaseItem | undefined {
   return queue.find(c => c.mine);
 }
 
+/** A booked test or a diet plan is a plan item, but it is not a dose: only
+ *  something with a dosage belongs on a schedule of what to take, when. */
+export function isDosed(i: { dosage?: string | null }): boolean {
+  return !!i.dosage?.trim();
+}
+
+export function splitPlan<T extends { dosage?: string | null }>(items: T[]): { rx: T[]; tests: T[] } {
+  return { rx: items.filter(isDosed), tests: items.filter(i => !isDosed(i)) };
+}
+
+export function decisionStatus(decision: string): ConsultStatus {
+  return decision === 'approved' ? 'approved' : decision === 'changes' ? 'changes' : 'rejected';
+}
+
+export function stampDecision(decision: string, reviewedBy: string, rejectReason?: string, reviewedAt = Date.now()) {
+  return { status: decisionStatus(decision), decision, reviewedBy, reviewedAt, rejectReason };
+}
+
 export function isReviewable(s: ConsultStatus): boolean {
   return REVIEWABLE.includes(s);
 }
 
-export function urgencyRank(c: Pick<CaseItem, 'rec'>): number {
+function urgencyRank(c: Pick<CaseItem, 'rec'>): number {
   const u = c.rec?.urgency;
   return u === 'urgent' ? 0 : u === 'soon' ? 1 : 2;
 }
 
 /** Unresolved safety flags — 'info' is a check that passed. */
-export function concernCount(c: Pick<CaseItem, 'flags'>): number {
+function concernCount(c: Pick<CaseItem, 'flags'>): number {
   return (c.flags || []).filter(f => f.severity !== 'info').length;
 }
 

@@ -3,7 +3,7 @@ import type { CaseItem, ConsultStatus } from '../lib/core';
 
 const HOUR = 3600 * 1000;
 
-export interface SlaResult {
+interface SlaResult {
   next: CaseItem[];
   changed: boolean;
   notify: boolean;

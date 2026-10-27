@@ -1,6 +1,7 @@
 // Records: history · labs · profile, behind a segmented control.
 // Columns widen at ≥800 / ≥1160 (DESIGN §10.5); lab results use tint pairs.
 import { useState } from 'react';
+import { dateLabel } from '../../../lib/core';
 import { AppHeader, Card, EmptyState, Icon, MicroLabel, StatusPill, ThemeToggle } from '../../../lib/ui';
 import { formatValue, type LabPanel } from '../../../store/labs';
 import { PatientNotify } from './PatientNotify';
@@ -187,7 +188,7 @@ function PanelRow({ p, onOpen }: { p: LabPanel; onOpen: () => void }) {
         <div className={s.labName}>{p.panel}</div>
         <div className={s.labHeadline}>{headline(p)}</div>
         <div className={s.labDate}>
-          {new Date(p.observedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+          {dateLabel(p.observedAt)}
           {' · '}{p.values.length} value{p.values.length === 1 ? '' : 's'}
         </div>
       </div>

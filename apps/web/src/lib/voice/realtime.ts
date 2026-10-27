@@ -397,7 +397,7 @@ let micOpening: Promise<Mic> | null = null;
 let capturing = false;
 
 /** Whether the mic is already ours — speaking may arm barge-in only if it is. */
-export function micOpen(): boolean {
+function micOpen(): boolean {
   return !!mic;
 }
 
@@ -442,7 +442,7 @@ function ensureMic(): Promise<Mic> {
 }
 
 /** Ends the consult's hold on the microphone. Muting does not come through here. */
-export function closeMic(): void {
+function closeMic(): void {
   capturing = false;
   const m = mic;
   mic = null;

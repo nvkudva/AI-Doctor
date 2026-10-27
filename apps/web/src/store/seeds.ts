@@ -1,7 +1,7 @@
 // Demo seed: pilot-hospital queue and patient history. Replaced by Supabase
 // seed + generated types in Phase 1; shapes already match lib/core.
 import type { CaseItem } from '../lib/core';
-import type { Appointment, AppointmentSlot, LabValue, UserConsult, UserRx } from './types';
+import type { AppointmentSlot, LabValue, UserConsult, UserRx } from './types';
 
 export const seedQueue: CaseItem[] = [
   { id: 'c1', patient: 'Maria Gonzalez', demo: '29 · Female · O−', title: 'Persistent dry cough, 2 weeks', meta: 'Submitted 14 min ago', status: 'pending',
@@ -79,15 +79,6 @@ export const seedConsults: UserConsult[] = [
 
 export const seedRx: UserRx[] = [
   { name: 'Cetirizine 10mg', dosage: '10 mg', detail: 'Once daily, 14 days', date: 'Mar 4, 2026', nextDose: 'Tonight, 8:00 pm' },
-];
-
-export const seedAppointments: Appointment[] = [
-  { id: 'a1', title: 'Chest X-ray (PA view)', kind: 'Imaging', when: 'Fri 12 Sep · 10:30 am', where: 'Apollo Diagnostics · Koramangala' },
-];
-
-export const seedLabs = [
-  { name: 'Complete Blood Count', date: 'Feb 2, 2026', result: 'Normal', ok: true },
-  { name: 'Lipid Profile', date: 'Feb 2, 2026', result: 'Borderline', ok: false },
 ];
 
 // Practice figures for the doctor profile — not derivable from the demo queue.

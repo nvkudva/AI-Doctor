@@ -2,7 +2,7 @@
 // appointment, results flagged for review, and notes from the doctor. Starting
 // a consult is the nav orb, so there is no hero here (DESIGN §11.5).
 import { useNavigate } from 'react-router';
-import { myCase, planStatus } from '../../../lib/core';
+import { myCase, planStatus, timeLabel, whenLine } from '../../../lib/core';
 import { AppHeader, Button, Card, Icon, Skeleton, StatusPill, ThemeToggle, greeting, type IconName } from '../../../lib/ui';
 import { doseState } from '../../../store/doses';
 import { toPanels } from '../../../store/labs';
@@ -186,25 +186,6 @@ export function HomeScreen({ onStart, onCheckIn }: { onStart: () => void; onChec
       </div>
     </div>
   );
-}
-
-function timeLabel(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function whenLine(at: number): string {
-  const d = new Date(at);
-  const days = Math.round((startOfDay(at) - startOfDay(Date.now())) / 86400000);
-  const time = timeLabel(at);
-  if (days === 0) return `Today · ${time}`;
-  if (days === 1) return `Tomorrow · ${time}`;
-  return `${d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${time}`;
-}
-
-function startOfDay(at: number): number {
-  const d = new Date(at);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 // A heading is only worth a line of chrome when it groups something the cards

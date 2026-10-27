@@ -3,19 +3,19 @@
 // what they will receive, and every safety flag still standing, and it does not
 // arm `Sign and send` until the doctor accepts clinical responsibility for it
 // (DESIGN-REVIEW D2).
-import type { CaseItem, SafetyFlag } from '../../../lib/core';
+import { splitPlan, type CaseItem, type SafetyFlag } from '../../../lib/core';
 import { Button, Sheet } from '../../../lib/ui';
 import s from './ApproveSheet.module.css';
 
 /** A flag the doctor has not dealt with: 'info' is a check that passed. */
-export function unresolved(flags: SafetyFlag[]): SafetyFlag[] {
+function unresolved(flags: SafetyFlag[]): SafetyFlag[] {
   return flags.filter(f => f.severity !== 'info');
 }
 
 /** Gaps in the record that a signature cannot stand on. */
 const BLOCKING = new Set(['demographics_missing']);
 
-export function blockers(flags: SafetyFlag[]): SafetyFlag[] {
+function blockers(flags: SafetyFlag[]): SafetyFlag[] {
   return flags.filter(f => BLOCKING.has(f.code));
 }
 
@@ -27,8 +27,7 @@ export function ApproveSheet({ ac, open, accepted, onAccept, onCancel, onConfirm
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const rx = ac.rec.items.filter(i => !!(i.dosage && i.dosage.trim()));
-  const tests = ac.rec.items.filter(i => !(i.dosage && i.dosage.trim()));
+  const { rx, tests } = splitPlan(ac.rec.items);
   const flags = unresolved(ac.flags);
   // A plan signed without the facts the dose was chosen from is the failure the
   // review step exists to catch, so the signature is withheld rather than

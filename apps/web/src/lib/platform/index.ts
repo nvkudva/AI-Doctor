@@ -18,27 +18,10 @@ export function saveJson(key: string, value: unknown): void {
   }
 }
 
-export function getQueryParam(name: string): string | null {
-  try {
-    return new URLSearchParams(location.search).get(name);
-  } catch {
-    return null;
-  }
-}
-
 export function setDocumentTitle(title: string): void {
   try {
     document.title = title;
   } catch {
     /* non-DOM environment */
-  }
-}
-
-export function speechSupported(): boolean {
-  try {
-    const w = window as any;
-    return !!(window.speechSynthesis && (w.SpeechRecognition || w.webkitSpeechRecognition));
-  } catch {
-    return false;
   }
 }

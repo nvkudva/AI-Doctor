@@ -1,5 +1,5 @@
 // Full case view: AI consult summary, decision actions, patient side panel.
-import type { CaseItem, SafetyFlag } from '../../../lib/core';
+import { splitPlan, type CaseItem, type SafetyFlag } from '../../../lib/core';
 import { Button, Card, Disclosure, Icon, MicroLabel, StatusPill } from '../../../lib/ui';
 import { tints } from '../../../lib/theme';
 import s from './CaseDetail.module.css';
@@ -20,8 +20,7 @@ export function CaseDetail({ ac, actionable, asideInPanel, staged, onApprove, on
   /** Book the patient in instead of signing the plan (§4.2 row 24). */
   onEscalate: () => void;
 }) {
-  const tests = ac.rec.items.filter(i => !(i.dosage && i.dosage.trim()));
-  const rx = ac.rec.items.filter(i => !!(i.dosage && i.dosage.trim()));
+  const { rx, tests } = splitPlan(ac.rec.items);
   // A plan the validators blocked is not the doctor's to wave through: the
   // block has to be dealt with upstream, so the control says so instead of
   // taking the press (DESIGN-REVIEW D2).
@@ -159,7 +158,7 @@ const VERDICT: Record<SafetyFlag['severity'], { label: string; bg: string; fg: s
 };
 const RANK: Record<SafetyFlag['severity'], number> = { block: 0, warn: 1, info: 2 };
 
-export function SafetyChecks({ flags }: { flags: SafetyFlag[] }) {
+function SafetyChecks({ flags }: { flags: SafetyFlag[] }) {
   if (!flags.length) return null;
   const sorted = [...flags].sort((a, b) => RANK[a.severity] - RANK[b.severity]);
   return (
@@ -187,7 +186,7 @@ export function SafetyChecks({ flags }: { flags: SafetyFlag[] }) {
 }
 
 // Pane 3 at desktop, inline in the case column below it (PRD D-3).
-export function PatientPanel({ ac }: { ac: CaseItem }) {
+function PatientPanel({ ac }: { ac: CaseItem }) {
   const labs = [...(ac.relevantLabs || []), ...(ac.pastLabs || [])];
   return (
     <div className={s.panel}>

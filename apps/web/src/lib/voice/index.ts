@@ -7,7 +7,7 @@ import { realtimeConfigured, remoteListenOnce, remoteSpeak, remoteStopAll } from
 
 export { onVoiceHealth, voiceDegraded } from './realtime';
 
-export type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
+type VoiceStatus = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 // Web Speech API is not in TS's DOM lib — minimal structural declarations.
 interface SpeechRecognition extends EventTarget {
@@ -28,11 +28,7 @@ export interface ListenHandle {
   abort(): void;
 }
 
-export function voiceBackend(): 'browser' | 'remote' {
-  return realtimeConfigured() ? 'remote' : 'browser';
-}
-
-export function pickVoice(voices: SpeechSynthesisVoice[] | undefined): SpeechSynthesisVoice | undefined {
+function pickVoice(voices: SpeechSynthesisVoice[] | undefined): SpeechSynthesisVoice | undefined {
   const vs = voices || [];
   return (
     vs.find(x => /en/i.test(x.lang) && /female|samantha|karen|victoria|zira|google uk english female/i.test(x.name)) ||

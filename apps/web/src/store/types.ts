@@ -1,5 +1,5 @@
 // Clinic store record types shared by patient + doctor modules.
-import type { CaseItem, ConsultStatus, Recommendation } from '../lib/core';
+import type { CaseItem, Recommendation } from '../lib/core';
 
 export interface ConsultDetail {
   summary: string; evaluation: string; advice: string;
@@ -18,10 +18,6 @@ export interface UserRx {
   dosage?: string;
   /** When the next dose is due — drives the home dashboard's medication card. */
   nextDose?: string;
-}
-
-export interface Appointment {
-  id: string; title: string; kind: string; when: string; where: string;
 }
 
 export type SlotStatus = 'booked' | 'cancelled' | 'completed' | 'no_show';
@@ -160,4 +156,4 @@ export interface Clinic {
   slaTick: () => void;
 }
 
-export type { CaseItem, ConsultStatus, Recommendation };
+export type { CaseItem };

@@ -2,6 +2,7 @@
 // often — never the clock times, and never whether anything was swallowed. So
 // the times are read out of the prescription's own timing text against a fixed
 // convention, and the ticks live in localStorage until a schedule table exists.
+import { isDosed } from '../lib/core';
 import type { CaseItem, CheckIn, Dose, UserRx } from './types';
 
 // Morning, evening, night — the three slots almost every oral regimen lands on.
@@ -10,19 +11,13 @@ const TWICE = [8, 20];
 const THRICE = [8, 14, 20];
 const NIGHT = [21];
 
-export function doseHours(timing: string): number[] {
+function doseHours(timing: string): number[] {
   const t = timing.toLowerCase();
   if (/\b(tds|tid)\b|three times|3 times|thrice/.test(t)) return THRICE;
   if (/\b(bd|bid)\b|twice|two times|2 times/.test(t)) return TWICE;
   if (/night|bedtime|nocte/.test(t)) return NIGHT;
   if (/as needed|prn|when required/.test(t)) return [];
   return ONCE;
-}
-
-/** A booked test or a diet plan is a prescription item, but it is not a dose:
- *  only something with a dosage belongs on a schedule of what to take, when. */
-function isDosed(r: UserRx): boolean {
-  return !!(r.dosage && r.dosage.trim());
 }
 
 // `taken` values are the epoch ms the patient recorded the dose; `true`

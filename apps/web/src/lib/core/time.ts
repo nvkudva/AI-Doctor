@@ -6,7 +6,36 @@ export function relAge(at: number): string {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-export function waitMinutes(submittedAt: number): number {
+export function startOfDay(at: number): number {
+  const d = new Date(at);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function timeLabel(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function dateLabel(at: number | Date): string {
+  return new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function dayTimeLine(at: number): string {
+  return `${new Date(at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · ${timeLabel(at)}`;
+}
+
+export function whenLine(at: number): string {
+  const days = Math.round((startOfDay(at) - startOfDay(Date.now())) / 86400000);
+  if (days === 0) return `Today · ${timeLabel(at)}`;
+  if (days === 1) return `Tomorrow · ${timeLabel(at)}`;
+  return dayTimeLine(at);
+}
+
+export function minutesLabel(m: number): string {
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+function waitMinutes(submittedAt: number): number {
   return Math.max(0, Math.round((Date.now() - submittedAt) / 60000));
 }
 
@@ -17,16 +46,14 @@ export function waitTone(submittedAt: number): string {
 
 export function waitAge(submittedAt: number): string {
   const m = Math.max(1, Math.round((Date.now() - submittedAt) / 60000));
-  if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
-  return h < 24 ? `${h}h ${m % 60}m` : `${Math.floor(h / 24)}d ${h % 24}h`;
+  return h < 24 ? minutesLabel(m) : `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
 // The review target the desk is judged against (DATA-MODEL §3.5): a 2h nudge
 // and a 24h expiry. The countdown is what a doctor reads on a row — how long
 // is left, not how long it has been.
-export const SLA_TARGET_MIN = 120;
-export const SLA_EXPIRY_MIN = 24 * 60;
+const SLA_TARGET_MIN = 120;
 
 export interface Sla {
   /** Minutes left before the 2h target; negative once it has passed. */

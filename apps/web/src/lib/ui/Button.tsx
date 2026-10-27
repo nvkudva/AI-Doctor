@@ -3,7 +3,7 @@
 import { Icon, type IconName } from './Primitives';
 import s from './Button.module.css';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'approve';
+type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'approve';
 
 const SIZE: Record<ButtonVariant, string> = {
   primary: s.sizePrimary,

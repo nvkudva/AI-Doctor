@@ -30,7 +30,7 @@
 - [x] P1: patient can never re-read their own prescription — /patient/recommendation is empty on reload, History drops items/dosage (UX-03, UX-04)
 - [ ] Backend: Supabase implementation of DATA-MODEL §4 in supabase — migrations, RLS policies, pg functions, Edge Functions, buckets (local artifacts only, nothing deployed)
 - [ ] Wire apps/web to the supabase API (replaces localStorage store) — separate task, after QA fixes land
-- [ ] Run supabase db reset + test db — first real execution of the SQL and the 35 pgTAP assertions
+- [x] Run supabase db reset + test db — 12 migrations + seed applied clean on a fresh volume; 36 pgTAP assertions across approval gate, state transitions and RLS isolation all PASS.
 - [ ] QA sweep against the DB-backed app (both modes: Supabase env set, and demo/localStorage)
 - [ ] Dev fixes the QA queue from that sweep
 - [ ] REVISIT: full speech-to-speech on the local Realtime server (ws://127.0.0.1:1235/v1/realtime) — push Mira persona + tools into session.instructions and let it run the turn end-to-end; needs the JSON contract, red-flag sweep and draft creation re-expressed as tool calls back into ai-consult. Rejected for now in favour of transport-only STT/TTS, which keeps the brain in the Edge Function.

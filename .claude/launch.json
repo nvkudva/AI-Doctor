@@ -7,6 +7,14 @@
       "runtimeArgs": ["--cwd", "apps/web", "dev"],
       "url": "http://localhost:3001",
       "port": 3001,
+      "autoPort": true
+    },
+    {
+      "name": "dev-voice",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["--cwd", "/Users/vijay/dev/projects/AI Doctor/.claude/worktrees/agent-aed50599b0cbddc08/apps/web", "dev", "--port", "3017", "--strictPort"],
+      "url": "http://localhost:3017",
+      "port": 3017,
       "autoPort": false
     }
   ]

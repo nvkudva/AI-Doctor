@@ -58,6 +58,8 @@ export interface MiraSession {
   clearMicDenied?: () => void;
   /** The natural voice server is unreachable; the local Kokoro voice is in use. */
   voiceOffline?: boolean;
+  /** Kokoro is still downloading; there is no voice until it lands. */
+  voiceLoading?: boolean;
   failed?: boolean;
   retry?: () => void;
 }
@@ -259,6 +261,9 @@ export function MiraPanel({
             </span>
             {/* Persistent AI disclosure, not just the spoken greeting (PM P2). */}
             <span className={s.titleState}> · AI — a doctor reviews every plan</span>
+            {session.voiceLoading && (
+              <span className={s.titleState}> · Loading her voice…</span>
+            )}
           </div>
 
           <div

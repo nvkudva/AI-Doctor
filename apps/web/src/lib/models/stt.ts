@@ -184,10 +184,29 @@ export function whisperListenOnce(opts: {
     }
     const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
     ctx = new Ctor() as AudioContext;
+    // This context is created long after the patient's tap (post model
+    // load), so Chrome leaves it suspended: the stream is live but no
+    // audio frame ever processes and the turn hangs silently (field bug).
+    // Resume it, and watch for frames actually arriving.
+    if (ctx.state === 'suspended') ctx.resume().catch(() => { /* watchdog below reports */ });
+    let framesSeen = 0;
+    const frameWatchdog = window.setTimeout(() => {
+      if (closed || framesSeen > 0) return;
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => { /* next check reports */ });
+      window.setTimeout(() => {
+        if (closed || framesSeen > 0) return;
+        closed = true;
+        cleanup();
+        opts.onError && opts.onError('other');
+        opts.onEnd && opts.onEnd();
+      }, 3000);
+    }, 3000);
     const source = ctx.createMediaStreamSource(media);
     node = ctx.createScriptProcessor(4096, 1, 1);
     node.onaudioprocess = (event: AudioProcessingEvent) => {
       if (closed) return;
+      framesSeen += 1;
+      if (framesSeen === 1) window.clearTimeout(frameWatchdog);
       const frame = event.inputBuffer.getChannelData(0);
       chunks.push(new Float32Array(frame));
       let sum = 0;

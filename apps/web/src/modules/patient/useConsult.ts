@@ -11,7 +11,7 @@ import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type Lis
 import { checkRedFlag, freshSlots, narrationGuidance, nextQuestion, recordAnswer, type ConsultSlots } from '../../lib/models/narration';
 import { warmLlm } from '../../lib/models/llm';
 import { warmStt } from '../../lib/models/stt';
-import { warmKokoro } from '../../lib/voice/kokoro';
+import { kokoroReady, kokoroWhenReady, warmKokoro } from '../../lib/voice/kokoro';
 
 export type Turn = MiraTurn;
 
@@ -139,9 +139,20 @@ export function useConsult(opts: {
   // do, so it is reported once and never blocks the consult.
   const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
   useEffect(() => onVoiceHealth(setVoiceOffline), []);
-  // Warm the local voice models as soon as the consult surface mounts, so
-  // the greeting is Kokoro's voice rather than the OS fallback's.
-  useEffect(() => { warmKokoro(); warmStt(); warmLlm(); }, []);
+  // Warm Kokoro first: it is the voice the patient hears first, and three
+  // ~500 MB downloads at once leave it last. Ears and brain follow once it
+  // lands (or after 20 s if it cannot), so they never starve the greeting.
+  const [voiceLoading, setVoiceLoading] = useState(true);
+  useEffect(() => {
+    warmKokoro();
+    let live = true;
+    const poll = window.setInterval(() => {
+      if (kokoroReady()) { setVoiceLoading(false); window.clearInterval(poll); }
+    }, 1000);
+    const rest = window.setTimeout(() => { warmStt(); warmLlm(); }, 20000);
+    void kokoroWhenReady(120000).then(() => { if (live) { warmStt(); warmLlm(); } });
+    return () => { live = false; window.clearInterval(poll); window.clearTimeout(rest); };
+  }, []);
   const [failed, setFailed] = useState(false);
   const [started, setStarted] = useState(false);
   const [lastTurn, setLastTurn] = useState(0);
@@ -559,11 +570,8 @@ export function useConsult(opts: {
     finishedRef.current = false;
     noteOnlyRef.current = false;
     slotsRef.current = freshSlots();
-    // Start the local models downloading now (user-gesture turn): by the
-    // patient's second reply, Whisper + SmolLM2 are usually ready and the
-    // fallbacks retire on their own.
-    warmStt();
-    warmLlm();
+    // Ears/brain warm-up is staggered behind Kokoro at mount (see above),
+    // so it never competes with the greeting the patient is waiting for.
     // Resuming a consult that is still open server-side: turns append to it
     // instead of opening a second visit for the same patient.
     consultIdRef.current = resumeId ?? null;
@@ -688,7 +696,7 @@ export function useConsult(opts: {
     messages, notes, status: (thinking ? 'thinking' : status) as 'idle' | 'listening' | 'thinking' | 'speaking',
     thinking, speakerOff, setSpeakerOff, micOff, setMicOff,
     micDenied, clearMicDenied: () => setMicDenied(false), voiceOffline, failed, retry, started, lastTurn,
-    confidence, flags, start, note, resume, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t, true),
+    confidence, flags, voiceLoading, start, note, resume, reset, orbTap, attach, silence, send: (t: string) => handleUserRef.current(t, true),
     suggestions: messages.length <= 2 ? OPENERS : FOLLOWUPS,
   };
 }

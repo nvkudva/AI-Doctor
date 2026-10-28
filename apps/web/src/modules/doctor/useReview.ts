@@ -7,7 +7,7 @@ import type { CaseItem } from '../../lib/core';
 import type { MiraTurn, Suggestion } from '../../lib/ui';
 import { aiComplete, aiReview, hasSupabase, type ChatMessage } from '../../lib/api';
 import { listenOnce, onVoiceHealth, speak, stopAllVoice, voiceDegraded, type SpeakHandle } from '../../lib/voice';
-import { warmKokoro } from '../../lib/voice/kokoro';
+import { kokoroReady, kokoroWhenReady, warmKokoro } from '../../lib/voice/kokoro';
 import { warmStt } from '../../lib/models/stt';
 import { warmLlm } from '../../lib/models/llm';
 
@@ -65,7 +65,17 @@ export function useReview(opts: {
   const abandonRef = useRef(false);
   const [voiceOffline, setVoiceOffline] = useState(voiceDegraded());
   useEffect(() => onVoiceHealth(setVoiceOffline), []);
-  useEffect(() => { warmKokoro(); warmStt(); warmLlm(); }, []);
+  const [voiceLoading, setVoiceLoading] = useState(true);
+  useEffect(() => {
+    warmKokoro();
+    let live = true;
+    const poll = window.setInterval(() => {
+      if (kokoroReady()) { setVoiceLoading(false); window.clearInterval(poll); }
+    }, 1000);
+    const rest = window.setTimeout(() => { warmStt(); warmLlm(); }, 20000);
+    void kokoroWhenReady(120000).then(() => { if (live) { warmStt(); warmLlm(); } });
+    return () => { live = false; window.clearInterval(poll); window.clearTimeout(rest); };
+  }, []);
   // Two separate switches: whether Mira speaks, and whether she listens.
   const [speakerOff, setSpeakerOffState] = useState(false);
   const [micOff, setMicOffState] = useState(false);
@@ -256,7 +266,7 @@ Keep item fields: name, dosage, timing, notes, why, detail. Respond ONLY with JS
 
   return {
     active, status, messages, speakerOff, setSpeakerOff, micOff, setMicOff, start, stop, orbTap, failedCmd,
-    voiceOffline,
+    voiceOffline, voiceLoading,
     silence: stop,
     approvalStaged,
     command: (t: string) => commandRef.current(t, true),

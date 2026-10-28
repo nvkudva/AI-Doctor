@@ -26,6 +26,7 @@ function loadKokoro(): Promise<KokoroModel | null> {
   if (model) return Promise.resolve(model);
   if (loading) return loading;
   loading = (async () => {
+    loadFailed = false;
     try {
       const kokoro = await import('kokoro-js');
       const tts = await kokoro.KokoroTTS.from_pretrained(MODEL_ID, {
@@ -35,7 +36,9 @@ function loadKokoro(): Promise<KokoroModel | null> {
       model = tts as unknown as KokoroModel;
       return model;
     } catch {
+      // Not latched: the next speak/warm retries the download (QA/deploy fix).
       loadFailed = true;
+      loading = null;
       return null;
     }
   })();
@@ -47,12 +50,12 @@ export function kokoroReady(): boolean {
 }
 
 export function warmKokoro(): void {
-  if (!loadFailed) void loadKokoro();
+  void loadKokoro();
 }
 
 /** True when the model is usable within timeoutMs; false on failure/timeout. */
 export function kokoroWhenReady(timeoutMs: number): Promise<boolean> {
-  if (modelConfig.tts.provider !== 'local' || loadFailed) return Promise.resolve(false);
+  if (modelConfig.tts.provider !== 'local') return Promise.resolve(false);
   if (model) return Promise.resolve(true);
   return Promise.race([
     loadKokoro().then(loaded => !!loaded),
@@ -82,7 +85,7 @@ export function kokoroSpeak(
   text: string,
   opts: { onDone?: () => void; onFallback?: () => void } = {},
 ): SpeakHandle | null {
-  if (modelConfig.tts.provider !== 'local' || loadFailed || !text.trim()) return null;
+  if (modelConfig.tts.provider !== 'local' || !text.trim()) return null;
   if (!model) {
     warmKokoro();
     return null;

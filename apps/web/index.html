@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Hugging Face rejects model downloads that carry a workers.dev referrer
+     (fetch fails, models never load, no audio). No referrer, no rejection. -->
+<meta name="referrer" content="no-referrer">
 <!-- One meta, not a media-query pair: the theme is a stored choice that can
      disagree with the OS, and the pre-paint script below owns the answer. -->
 <meta name="theme-color" id="vd-theme-color" content="#CDB6EC">

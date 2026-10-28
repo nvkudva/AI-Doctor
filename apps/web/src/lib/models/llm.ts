@@ -36,6 +36,7 @@ async function loadLocal(): Promise<Generator | null> {
       return generator;
     } catch {
       loadFailed = true;
+      loading = null;
       return null;
     }
   })();
@@ -47,7 +48,7 @@ export function llmReady(): boolean {
 }
 
 export function warmLlm(): void {
-  if (modelConfig.brain.provider === 'local' && !loadFailed) void loadLocal();
+  if (modelConfig.brain.provider === 'local') void loadLocal();
 }
 
 async function apiComplete(args: CompleteArgs): Promise<string | null> {
@@ -74,7 +75,6 @@ async function apiComplete(args: CompleteArgs): Promise<string | null> {
 }
 
 async function localComplete(args: CompleteArgs): Promise<string | null> {
-  if (loadFailed) return null;
   // No scripted fallback: a turn waits for the model (the caller is already
   // showing "thinking") rather than being answered by something else.
   if (!generator) await loadLocal();

@@ -29,6 +29,7 @@ async function loadLocal(): Promise<Transcriber | null> {
       return transcriber;
     } catch {
       loadFailed = true;
+      loading = null;
       return null;
     }
   })();
@@ -40,13 +41,12 @@ export function sttReady(): boolean {
 }
 
 export function warmStt(): void {
-  if (modelConfig.stt.provider === 'local' && !loadFailed) void loadLocal();
+  if (modelConfig.stt.provider === 'local') void loadLocal();
 }
 
 /** True when the transcriber is usable within timeoutMs (API: immediate). */
 export function sttWhenReady(timeoutMs: number): Promise<boolean> {
   if (modelConfig.stt.provider === 'api') return Promise.resolve(true);
-  if (loadFailed) return Promise.resolve(false);
   if (transcriber) return Promise.resolve(true);
   return Promise.race([
     loadLocal().then(loaded => !!loaded),
@@ -114,7 +114,6 @@ export function whisperListenOnce(opts: {
 }): ListenHandle | null {
   const useApi = modelConfig.stt.provider === 'api';
   if (!useApi) {
-    if (loadFailed) return null;
     if (!transcriber) {
       warmStt();
       return null;

@@ -61,3 +61,9 @@
   /doctor/reviews all HTTP 200, title "AI Doctor".
 - Note: deployed from the feature branch on the user's explicit instruction
   for this task, rather than post-merge from main.
+- Follow-up fix (deployed no-audio): Hugging Face rejects model downloads
+  carrying a workers.dev referrer. Added <meta name="referrer"
+  content="no-referrer"> and made all model loaders retryable instead of
+  latching a session-long failure. Redeployed (version 4b9ca1f7) and
+  verified on the live origin: HF 200, Kokoro generated audio in-browser.
+  Users on the old service worker need one hard reload to pick this up.

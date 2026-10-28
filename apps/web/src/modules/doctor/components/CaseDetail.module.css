@@ -48,7 +48,7 @@
 
 
 .card { display: flex; flex-direction: column; }
-.cardHead { display: flex; gap: var(--vd-space-3); align-items: center; }
+.cardHead { display: flex; flex-wrap: wrap; gap: var(--vd-space-2) var(--vd-space-3); align-items: center; }
 .cardHead > * { white-space: nowrap; }
 .cardHead > :nth-child(2) { flex: 1; }
 .confidence { composes: vd-t-footnote from global; display: inline-flex; align-items: center; gap: var(--vd-space-2); color: var(--vd-ink-3); }

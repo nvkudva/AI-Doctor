@@ -6,7 +6,7 @@
 @media (max-width: 799px) { .stat:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 .statValue { composes: vd-t-largeTitle from global; line-height: 1; }
 .statLabel { composes: vd-t-caption from global; color: var(--vd-ink-3); margin-top: var(--vd-space-2); }
-.statSub { composes: vd-t-footnote vd-truncate from global; color: var(--vd-ink-4); margin-top: 2px; }
+.statSub { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-4); margin-top: 2px; }
 
 .banner {
   display: flex; align-items: center; gap: var(--vd-space-4);

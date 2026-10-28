@@ -28,6 +28,7 @@
 }
 
 .statLabel { composes: vd-t-micro from global; color: var(--vd-ink-3); }
+@media (max-width: 339.98px) { .statLabel { letter-spacing: 0; } }
 .statValue { composes: vd-t-callout vd-w7 from global; color: var(--vd-ink-1); }
 .stat { text-align: center; }
 

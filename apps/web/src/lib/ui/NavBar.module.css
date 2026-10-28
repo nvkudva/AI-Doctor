@@ -180,6 +180,7 @@
   text-overflow: clip;
   transition: color var(--vd-dur-2) var(--vd-ease-spring);
 }
+@media (max-width: 339.98px) { .tabLabel { font-size: 9px; letter-spacing: -0.06em; } }
 .tabLabelActive { font-weight: 700; }
 
 /* Pointer affordance. Behind `hover: hover` so it never sticks on touch. */

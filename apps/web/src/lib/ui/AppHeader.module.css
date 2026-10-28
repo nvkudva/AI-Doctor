@@ -44,6 +44,7 @@
 .title { composes: vd-t-largeTitle vd-truncate from global; color: var(--vd-ink-1); }
 @media (min-width: 800px) { .title { font-size: 34px; } }
 @media (max-width: 399.98px) { .title { font-size: 22px; } }
+@media (max-width: 339.98px) { .title { font-size: 18px; } }
 
 .subtitle { composes: vd-t-callout from global; color: var(--vd-ink-soft); margin-top: 2px; }
 @media (min-width: 800px) { .subtitle { font-size: 15px; } }

@@ -65,3 +65,10 @@
 }
 
 .stamp { composes: vd-t-caption vd-w6 from global; color: var(--vd-ink-4); margin-top: 2px; }
+
+@media (max-width: 339.98px) {
+  .time { width: 38px; }
+  .row { gap: var(--vd-space-2); }
+  .take { width: 48px; height: 48px; }
+  .more { width: 36px; }
+}

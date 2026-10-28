@@ -161,4 +161,4 @@
 
 /* The result the panel is about, on the row, so the list answers the question
    without a tap (DESIGN-REVIEW D26). */
-.labHeadline { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
+.labHeadline { composes: vd-t-callout vd-w7 vd-clamp2 from global; color: var(--vd-ink-1); }

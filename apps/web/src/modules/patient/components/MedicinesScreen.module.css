@@ -33,7 +33,7 @@
   display: flex; align-items: center; justify-content: center;
 }
 .body { flex: 1; min-width: 0; }
-.name { composes: vd-t-callout vd-w7 vd-truncate from global; color: var(--vd-ink-1); }
+.name { composes: vd-t-callout vd-w7 vd-clamp2 from global; color: var(--vd-ink-1); }
 /* The dose instruction wraps rather than truncating: the trailing controls are
    fixed-width, so it renders in full whatever the row's state (D31). */
 .detail { composes: vd-t-footnote vd-clamp2 from global; color: var(--vd-ink-3); }
